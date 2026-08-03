@@ -1,0 +1,75 @@
+BMC bioinformatics
+https://link.springer.com/journal/12859/volumes-and-issues
+
+Polygence worth it?
+https://www.reddit.com/r/ApplyingToCollege/comments/10exg0d/polygence_research_program_is_it_worth_it/
+
+BDA3 book
+https://sites.stat.columbia.edu/gelman/book/BDA3.pdf
+
+YouTube, very good about Bayesian model.
+https://www.youtube.com/watch?v=iO9nO8Lp3ZU&list=PLFDbGp5YzjqXQ4oE4w9GVWdiokWB9gEpm
+
+Video about variational inference
+https://www.youtube.com/watch?v=G5xcC5ABVjA
+https://www.youtube.com/watch?v=iL1c1KmYPM0 // not very good, from Stanford
+
+
+ATAC-Seq: Mapping Open Chromatin
+https://www.youtube.com/watch?v=L2Kxaq9yRE4&t=136s
+https://www.youtube.com/watch?v=6Tf-LKmaWGg
+
+Started by Yale people
+https://www.atlasxomics.com/spatial-atac-seq
+https://www.atlasxomics.com/our-team
+
+Spatial profiling of chromatin accessibility in mouse and human tissues*** 
+https://www.nature.com/articles/s41586-022-05094-1
+https://github.com/dyxmvp/Spatial_ATAC-seq
+
+Spatial transcriptomics deconvolution methods generalize well to spatial chromatin accessibility data
+https://github.com/theislab/deconvATAC
+https://deconvatac.readthedocs.io/en/latest/
+https://zenodo.org/records/15089738
+People in the lab: https://www.helmholtz-munich.de/en/icb/research-groups/theis-lab
+
+Guo P, Mao L, Chen Y et al. “Multiplexed spatial mapping of chromatin
+features, transcriptome and proteins in tissues”. en. Nat
+Methods 2025;22:520–9.
+(https://github.com/liranmao/Spatial_multi_omics and archived at Zenodo (https://zenodo.org/records/13964086).
+
+
+
+https://www.youtube.com/watch?v=uuxpyhGNDsk
+https://www.youtube.com/watch?v=yEKZJVjc5DY
+
+
+
+
+Inferring cell trajectories of spatial transcriptomics via optimal transport analysis
+https://github.com/yzf072/spaTrack
+
+
+
+https://www.heartcellatlas.org/
+
+
+===============================================
+Cell2Location:
+https://github.com/BayraktarLab/cell2location
+https://cell2location.readthedocs.io/en/latest/
+===============================================
+
+======================================================================
+Predict A/P sites
+
+RiboA: a web application to identify ribosome A-site locations in
+ribosome profiling data*** code, implementation of the next paper
+
+Identifying A- and P-site locations on ribosome-protected mRNA
+fragments using Integer Programming
+
+Ribosome A and P sites revealed by length analysis of ribosome
+profling data
+
+

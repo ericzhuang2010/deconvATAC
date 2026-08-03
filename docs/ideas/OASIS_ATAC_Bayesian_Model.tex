@@ -1,0 +1,883 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{titlesec}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=blue!60!black,
+  urlcolor=blue!60!black
+}
+
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{OASIS-ATAC}
+\rhead{Bayesian spatial ATAC deconvolution}
+\cfoot{\thepage\ of \pageref{LastPage}}
+
+\setlist[itemize]{leftmargin=1.5em,itemsep=0.25em,topsep=0.25em}
+\setlist[enumerate]{leftmargin=1.7em,itemsep=0.25em,topsep=0.25em}
+\renewcommand{\arraystretch}{1.2}
+\sloppy
+
+\newcommand{\NB}{\operatorname{NB}}
+\newcommand{\Pois}{\operatorname{Poisson}}
+\newcommand{\Bern}{\operatorname{Bernoulli}}
+\newcommand{\Binom}{\operatorname{Binomial}}
+\newcommand{\Cat}{\operatorname{Categorical}}
+\newcommand{\Dir}{\operatorname{Dirichlet}}
+\newcommand{\Normal}{\operatorname{Normal}}
+\newcommand{\GammaDist}{\operatorname{Gamma}}
+\newcommand{\softmax}{\operatorname{softmax}}
+\newcommand{\logit}{\operatorname{logit}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\operatorname{Var}}
+
+\title{\vspace{-1.0cm}\textbf{OASIS-ATAC: An Open-Allele Bayesian Count Model for Deconvolving Spatial Chromatin Accessibility}\\[0.6em]
+\large A concrete, interpretable, ATAC-native method proposal}
+\author{Prepared as a method-development draft}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Spatial ATAC-seq spots often aggregate chromatin fragments from multiple nuclei, so cell-type deconvolution is needed before one can interpret spatial accessibility maps. Existing spatial transcriptomics deconvolution models can be transferred to spatial ATAC, but they were not designed around the biology and technical structure of ATAC-seq: binary or near-binary accessibility at each allele, peak-specific capture bias, extreme sparsity, peak-level feature selection, and the possibility that disease or development introduces chromatin states missing from the reference. This document proposes \textbf{OASIS-ATAC} (\textbf{O}pen-\textbf{A}llele \textbf{S}patial \textbf{I}nference with \textbf{S}hrinkage), a Bayesian count model in which a spatial spot is interpreted as a bag of nuclei, each cell type contributes a characteristic number of open alleles at each peak, and observed fragments are noisy draws from these open-allele dosages after peak-specific technical capture. The most novel component is a \textbf{Bayesian peak-role gate}: each peak is allowed to behave as a deconvolution peak, a normalization peak, or a residual-state peak. This preserves the simplicity of a count mixture model while making the method more ATAC-native than a direct RNA-model transfer or a plain learned-peak-weight model.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Executive summary}
+
+\subsection{The method in one sentence}
+
+\textbf{OASIS-ATAC models each spatial ATAC count as:}
+\[
+\text{fragments at a peak}
+\approx
+\text{spot capture}
+\times
+\text{peak detectability}
+\times
+\text{mixture-weighted open-allele dosage}.
+\]
+
+\subsection{The method in plain language}
+
+A spatial ATAC spot is a small piece of tissue containing several nuclei. For each cell type and each peak, a scATAC or multiome reference tells us how often that peak is open. If a spot contains many cells of a type that opens a particular peak, the spot should have many fragments at that peak. If the peak is open in every cell type, it is useful for measuring sequencing depth but not for identifying the cell types. If the peak has strong signal that no reference cell type explains, the model should not force it into the nearest known cell type; it should place it into a residual chromatin-state component.
+
+\subsection{The core novelty}
+
+A plain ATAC count deconvolution model would write
+\[
+Y_{sp} \sim \NB\left(\ell_s \sum_c a_{sc}\theta_{cp},\phi_p\right),
+\]
+where $Y_{sp}$ is the count for spot $s$ and peak $p$, $a_{sc}$ is the abundance of cell type $c$ in spot $s$, and $\theta_{cp}$ is the accessibility of peak $p$ in cell type $c$.
+
+That baseline is useful, but it is close to a direct peak-count adaptation of spatial transcriptomics models. OASIS-ATAC adds three ATAC-native ideas:
+
+\begin{enumerate}
+    \item \textbf{Open-allele dosage.} The biological signature is not an RNA expression rate. It is an effective probability that a regulatory element is accessible in a nucleus or allele of a given cell type.
+    \item \textbf{Peak detectability.} Each peak has its own technical capture factor driven by peak width, GC content, mappability, Tn5 sequence bias, and background accessibility.
+    \item \textbf{Peak-role gating.} Peaks are not merely upweighted or downweighted. They are assigned interpretable roles: deconvolution peaks, normalization peaks, or residual-state peaks.
+\end{enumerate}
+
+\subsection{The claim to make carefully}
+
+The safest novelty claim is not ``first Bayesian spatial ATAC deconvolution model.'' The stronger and more defensible claim is:
+
+\begin{quote}
+\textit{To our knowledge, OASIS-ATAC is the first spatial ATAC deconvolution model that combines an open-allele count likelihood, peak-specific ATAC detectability, Bayesian peak-role gating, and residual chromatin-state protection in one interpretable framework.}
+\end{quote}
+
+This avoids overclaiming, because general Bayesian count models, peak weighting, and transferred spatial RNA deconvolution methods already exist.
+
+\section{Motivation and literature position}
+
+Spot-based spatial chromatin accessibility assays measure aggregate accessibility profiles from tissue regions that can contain multiple cells. Spatial-ATAC-seq explicitly reports that pixels may contain more than one nucleus, with examples ranging from approximately one to two cells per $10\,\mu$m pixel to approximately 25 cells per $50\,\mu$m pixel in mouse embryo tissue \cite{deng2022spatialatac}. The same paper shows ATAC-specific quality features such as TSS enrichment, fragment size distribution, and nucleosomal or subnucleosomal fragments, all of which are absent from RNA-based spatial deconvolution \cite{deng2022spatialatac}.
+
+The clearest current benchmark for deconvolving spatial chromatin accessibility data is deconvATAC \cite{ouologuem2025deconvatac}. It evaluated Cell2location, RCTD, Tangram, SpatialDWLS, and DestVI on spatial chromatin accessibility-like data. The benchmark showed that Cell2location and RCTD transfer surprisingly well, but RNA-based deconvolution still performed slightly better than ATAC-based deconvolution, especially for rare cell types. It also found that highly variable peaks outperform merely highly accessible peaks, making feature selection a central ATAC-specific issue \cite{ouologuem2025deconvatac}. This creates a clear opening: do not discard the robust count-model insight from Cell2location and RCTD, but redesign the generative model around ATAC biology.
+
+Spatial-Mux-seq and related multi-omic spatial assays further show that chromatin accessibility can disagree with RNA and can reveal regulatory states, priming, bivalency, and enhancer programs that a pure transcriptomic model would miss \cite{guo2025spatialmux}. Thus, the output should be more than a cell-type proportion matrix. It should also distinguish true cell composition from reference-missing chromatin states.
+
+\section{Design requirements}
+
+The model is designed to satisfy three requirements.
+
+\subsection{Easy to explain}
+
+The model should be explainable with a single physical analogy:
+
+\begin{quote}
+\textit{Each spot is a bag of nuclei. Each cell type opens a characteristic set of regulatory elements. The observed fragments are noisy counts generated from the number of open regulatory elements in the bag.}
+\end{quote}
+
+\subsection{Intuitive}
+
+Every major parameter should correspond to something a biologist or computational genomics researcher already understands:
+
+\begin{center}
+\begin{tabular}{p{0.26\linewidth}p{0.62\linewidth}}
+\toprule
+Parameter & Interpretation \\
+\midrule
+$n_{sc}$ & Number of cells of type $c$ in spot $s$ \\
+$\theta_{cp}$ & Probability that peak $p$ is accessible in cell type $c$ \\
+$b_p$ & How easy peak $p$ is to observe technically \\
+$\kappa_s$ & Spot-level capture and sequencing efficiency \\
+$r_p$ & Role of peak $p$: deconvolution, normalization, or residual state \\
+$u_{sk}$ & Activity of an unknown or missing chromatin module in spot $s$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Novel without becoming too complex}
+
+The key is not to add a large black-box network. The proposed model remains a count model, but with ATAC-specific structure. The most distinctive innovation is not ``learned peak weights'' alone. It is the combination of mechanistic open-allele dosage and a probabilistic role for each peak.
+
+\section{Notation}
+
+Let
+\begin{itemize}
+    \item $S$ be the number of spatial spots.
+    \item $P$ be the number of peaks.
+    \item $C$ be the number of reference cell types.
+    \item $K$ be the number of optional residual chromatin modules.
+    \item $Y_{sp}$ be the observed number of spatial ATAC fragments in spot $s$ and peak $p$.
+    \item $X_{ip}$ be the scATAC count or binary accessibility indicator for reference cell $i$ and peak $p$.
+    \item $c(i)$ be the annotated cell type of reference cell $i$.
+    \item $\ell_s$ be a known spot-level library-size offset, often total usable fragments in spot $s$.
+    \item $N_s$ be an optional image-derived or prior expected number of nuclei in spot $s$.
+\end{itemize}
+
+The central unknowns are:
+\begin{itemize}
+    \item $n_{sc}$, the abundance or count of cell type $c$ in spot $s$;
+    \item $\theta_{cp}$, the effective open-allele probability of peak $p$ in cell type $c$;
+    \item $b_p$, peak detectability;
+    \item $r_p \in \{D,N,R\}$, the role of peak $p$.
+\end{itemize}
+
+The roles are:
+\begin{itemize}
+    \item $D$: deconvolution peak, informative for cell-type mixture;
+    \item $N$: normalization peak, open broadly or technically strong, useful for depth but not composition;
+    \item $R$: residual-state peak, suggesting accessibility not explained by known reference cell types.
+\end{itemize}
+
+\section{The core generative model}
+
+\subsection{Reference layer: estimating open-allele probabilities}
+
+For a reference scATAC cell $i$ of type $c(i)=c$, define a binary accessibility indicator
+\[
+B_{ip} = \mathbb{1}\{X_{ip}>0\}.
+\]
+A simple reference model is
+\[
+B_{ip} \mid \theta_{c(i)p}, q_i, b^{\mathrm{ref}}_p
+\sim
+\Bern\left(1-\exp\{-q_i b^{\mathrm{ref}}_p \theta_{c(i)p}\}\right),
+\]
+where $q_i$ captures reference-cell depth and $b^{\mathrm{ref}}_p$ captures reference peak detectability. A faster first implementation can use the beta-binomial approximation
+\[
+\theta_{cp} \mid X^{\mathrm{ref}} \sim \operatorname{Beta}(\alpha_{cp}^{\mathrm{post}},\beta_{cp}^{\mathrm{post}}),
+\]
+with
+\[
+\alpha_{cp}^{\mathrm{post}} = \alpha_{0p}+m_{cp},
+\qquad
+\beta_{cp}^{\mathrm{post}} = \beta_{0p}+n_c-m_{cp},
+\]
+where $m_{cp}=\sum_{i:c(i)=c} B_{ip}$ and $n_c$ is the number of reference cells of type $c$.
+
+To stabilize rare cell types, use a logistic-normal shrinkage model:
+\[
+\logit(\theta_{cp}) = \alpha_p + \delta_{cp},
+\qquad
+\delta_{cp}\sim \Normal(0,\tau_p^2),
+\qquad
+\tau_p\sim \operatorname{HalfCauchy}(s_\tau).
+\]
+Here $\alpha_p$ is baseline accessibility of peak $p$ and $\delta_{cp}$ is the cell-type-specific deviation. A large $\tau_p$ means the peak differs strongly across cell types and is likely useful for deconvolution. A small $\tau_p$ means the peak is broadly accessible or uninformative.
+
+\subsection{Spatial layer: expected open-allele dosage}
+
+The expected number of accessible copies of peak $p$ in spot $s$ is
+\[
+D_{sp}=\epsilon_p + \sum_{c=1}^{C} n_{sc} h_{cp}\theta_{cp},
+\]
+where $h_{cp}$ is the effective copy number for peak $p$ in cell type $c$. In normal diploid tissue, $h_{cp}$ can be set to 2 or absorbed into $\theta_{cp}$. In tumors, $h_{cp}$ can optionally be replaced by a copy-number-aware estimate.
+
+This is the key ATAC-native idea: the spatial count is driven by the number of open regulatory copies, not by an RNA expression rate.
+
+\subsection{Peak detectability}
+
+Not every peak is equally observable. A broad promoter, a GC-favorable region, or a mappable peak may yield more fragments than a short enhancer with low mappability even when both are open. Model peak detectability as
+\[
+\log b_p = \mathbf{z}_p^\top\beta + \xi_p,
+\qquad
+\xi_p\sim \Normal(0,\sigma_b^2),
+\]
+where $\mathbf{z}_p$ may include
+\begin{itemize}
+    \item log peak width;
+    \item GC content;
+    \item mappability;
+    \item Tn5 sequence preference score;
+    \item distance to TSS;
+    \item reference pseudobulk accessibility.
+\end{itemize}
+
+A minimal implementation can estimate $b_p$ before deconvolution and hold it fixed.
+
+\subsection{Count likelihood}
+
+The spatial count is modeled as a negative binomial:
+\[
+Y_{sp} \mid \mu_{sp},\phi_p
+\sim
+\NB(\mu_{sp},\phi_p),
+\]
+with
+\[
+\E[Y_{sp}]=\mu_{sp},
+\qquad
+\Var(Y_{sp})=\mu_{sp}+\frac{\mu_{sp}^2}{\phi_p}.
+\]
+The mean is
+\[
+\mu_{sp}=\kappa_s b_p D_{sp},
+\]
+where $\kappa_s$ is a spot-specific capture scale. If total fragments are used as an offset, one may write
+\[
+\mu_{sp}=\ell_s b_p \left(\epsilon_p + \sum_c a_{sc}\theta_{cp}\right),
+\qquad
+\sum_c a_{sc}=1,
+\]
+where $a_{sc}$ is the cell-type proportion. The absolute-count version with $n_{sc}$ is preferable when nuclear counts are available.
+
+The Poisson model is recovered as $\phi_p\rightarrow\infty$:
+\[
+Y_{sp}\sim\Pois(\mu_{sp}).
+\]
+Therefore the same framework can compare Poisson, negative-binomial, and Poisson-gamma parameterizations.
+
+\section{Bayesian peak-role gating}
+
+\subsection{Why gating is different from peak weighting}
+
+A learned weight asks: ``How much should this peak matter?'' A peak-role gate asks a more interpretable question:
+
+\begin{quote}
+\textit{What job is this peak doing in the model?}
+\end{quote}
+
+This is important because spatial ATAC contains at least three classes of peaks:
+
+\begin{enumerate}
+    \item \textbf{Cell-type peaks}: open in specific cell types and useful for deconvolution.
+    \item \textbf{Ubiquitous peaks}: open in many cells and useful for normalization or quality control.
+    \item \textbf{Reference-missing peaks}: spatially coherent but poorly explained by known cell types, often representing disease, developmental, activation, or tumor states absent from the reference.
+\end{enumerate}
+
+\subsection{Role-specific mean functions}
+
+Let
+\[
+r_p\in\{D,N,R\}
+\]
+be the latent role of peak $p$. Define
+\[
+\lambda_{sp}^{(D)}=\epsilon_p+\sum_{c=1}^C n_{sc}h_{cp}\theta_{cp},
+\]
+\[
+\lambda_{sp}^{(N)}=\epsilon_p+N_s\bar{h}_p\bar{\theta}_p,
+\]
+\[
+\lambda_{sp}^{(R)}=\epsilon_p+\sum_{c=1}^C n_{sc}h_{cp}\theta_{cp}+\sum_{k=1}^{K}u_{sk}\rho_{kp},
+\]
+where
+\[
+\bar{\theta}_p = \frac{1}{C}\sum_{c=1}^C\theta_{cp}.
+\]
+Then
+\[
+D_{sp}=\lambda_{sp}^{(r_p)},
+\qquad
+\mu_{sp}=\kappa_s b_p D_{sp}.
+\]
+
+The interpretation is simple:
+\begin{itemize}
+    \item If $r_p=D$, the peak votes for cell-type composition.
+    \item If $r_p=N$, the peak helps estimate depth or technical scale but does not distinguish cell types.
+    \item If $r_p=R$, the peak is allowed to carry unexplained spatial accessibility through residual modules.
+\end{itemize}
+
+\subsection{Prior for peak role}
+
+Use a categorical prior:
+\[
+r_p\sim\Cat(\omega_p),
+\qquad
+\omega_p=\softmax(A\mathbf{s}_p),
+\]
+where $\mathbf{s}_p$ contains interpretable peak-level scores:
+\begin{itemize}
+    \item cell-type contrast from the reference, such as $\widehat{\tau}_p$;
+    \item entropy of accessibility across cell types;
+    \item reproducibility across donors or batches;
+    \item technical bias score;
+    \item residual spatial autocorrelation after a first-pass fit;
+    \item motif or marker-gene linkage evidence.
+\end{itemize}
+
+A practical first implementation can set $r_p$ using deterministic rules:
+\begin{itemize}
+    \item $D$: high cell-type contrast, acceptable technical quality;
+    \item $N$: high accessibility but low cell-type contrast;
+    \item $R$: high unexplained residual after fitting the known cell-type mixture.
+\end{itemize}
+
+This deterministic version is much easier to implement and can later be replaced by a fully Bayesian gate.
+
+\section{Cell abundance priors}
+
+\subsection{When nuclear counts are available}
+
+If DAPI, H\&E segmentation, or another imaging modality provides a spot-level estimate $N_s$ of the number of nuclei, use
+\[
+\mathbf{n}_s=(n_{s1},\ldots,n_{sC})\sim\operatorname{Multinomial}(N_s,\boldsymbol{\pi}_s),
+\]
+\[
+\boldsymbol{\pi}_s=\softmax(\boldsymbol{\eta}_s).
+\]
+This gives a natural cell-budget constraint:
+\[
+\sum_{c=1}^C n_{sc}=N_s.
+\]
+
+This is especially appropriate for ATAC because the assay is nuclear.
+
+\subsection{When nuclear counts are not available}
+
+If $N_s$ is unavailable, use nonnegative abundances:
+\[
+w_{sc}\sim\GammaDist(\alpha_c,\beta_c),
+\qquad
+\mu_{sp}=b_p\left(\epsilon_p+\sum_c w_{sc}h_{cp}\theta_{cp}\right).
+\]
+The proportions are then
+\[
+a_{sc}=\frac{w_{sc}}{\sum_{c'}w_{sc'}}.
+\]
+This version is easier and should be the first implementation.
+
+\subsection{Spatial smoothness prior}
+
+Nearby spots often have related composition, but smoothing across boundaries is dangerous. Let $G=(V,E)$ be a graph over spatial spots with edge weights $W_{st}$. A conditional autoregressive prior can be used:
+\[
+\eta_{sc}\mid \eta_{-s,c}
+\sim
+\Normal\left(
+\frac{\sum_{t\in\mathcal{N}(s)}W_{st}\eta_{tc}}{\sum_{t\in\mathcal{N}(s)}W_{st}},
+\frac{\sigma_c^2}{\sum_{t\in\mathcal{N}(s)}W_{st}}
+\right).
+\]
+For boundary preservation, set
+\[
+W_{st}=\exp\left(-\frac{\|x_s-x_t\|^2}{2\sigma_x^2}\right)
+\exp\left(-\frac{\|g_s-g_t\|^2}{2\sigma_g^2}\right),
+\]
+where $x_s$ is the physical coordinate and $g_s$ is an ATAC-derived low-dimensional representation, motif-topic vector, or histology feature. Spatial smoothing is therefore strong only when spots are both close and chromatin-similar.
+
+\section{Residual chromatin-state module}
+
+\subsection{Why residuals matter}
+
+A deconvolution model should not force all accessibility into known reference cell types. Tumors, disease tissues, developmental tissues, and stimulated immune tissues may contain states missing from the reference. If these signals are forced into known signatures, the model can produce false cell-type calls.
+
+OASIS-ATAC adds residual modules:
+\[
+R_{sp}=\sum_{k=1}^{K}u_{sk}\rho_{kp},
+\]
+where $u_{sk}$ is the spatial activity of residual module $k$ and $\rho_{kp}$ is the loading of peak $p$ in module $k$.
+
+Use sparse priors:
+\[
+u_{sk}\sim\GammaDist(\alpha_u,\beta_u),
+\qquad
+\rho_{kp}\sim\GammaDist(\alpha_\rho,\beta_\rho),
+\]
+with small shape parameters to encourage only a few active modules and peaks.
+
+\subsection{Interpretation of residual modules}
+
+After fitting, each residual module should be interpreted by:
+\begin{itemize}
+    \item motif enrichment;
+    \item gene activity near loaded peaks;
+    \item overlap with disease-associated variants;
+    \item spatial localization;
+    \item comparison with held-out or external scATAC references.
+\end{itemize}
+
+A residual module is not automatically a new cell type. It is a candidate missing cell state or regulatory program.
+
+\section{Full model specification}
+
+The full generative model is:
+
+\begin{align}
+\logit(\theta_{cp}) &= \alpha_p + \delta_{cp}, &
+\delta_{cp} &\sim \Normal(0,\tau_p^2), \\
+\tau_p &\sim \operatorname{HalfCauchy}(s_\tau), &
+\log b_p &= \mathbf{z}_p^\top\beta+\xi_p, \\
+\xi_p&\sim\Normal(0,\sigma_b^2), &
+ r_p&\sim\Cat(\omega_p), \\
+\omega_p&=\softmax(A\mathbf{s}_p), &
+\boldsymbol{\pi}_s&=\softmax(\boldsymbol{\eta}_s), \\
+\mathbf{n}_s&\sim\operatorname{Multinomial}(N_s,\boldsymbol{\pi}_s), &
+D_{sp}&=\lambda_{sp}^{(r_p)}, \\
+\mu_{sp}&=\kappa_s b_p D_{sp}, &
+Y_{sp}&\sim\NB(\mu_{sp},\phi_p).
+\end{align}
+
+If $N_s$ is unavailable, replace the multinomial cell budget by gamma abundances $w_{sc}$ and report normalized proportions.
+
+\section{Inference strategy}
+
+\subsection{Recommended staged inference}
+
+A fully joint model is elegant but unnecessary at first. The recommended implementation is staged:
+
+\begin{enumerate}
+    \item \textbf{Reference training.} Estimate $\theta_{cp}$ and uncertainty from scATAC or multiome reference data.
+    \item \textbf{Peak detectability.} Estimate or precompute $b_p$ from peak covariates and reference pseudobulk accessibility.
+    \item \textbf{Initial peak roles.} Assign provisional $D/N/R$ roles using reference contrast and technical quality.
+    \item \textbf{Cell-type deconvolution.} Fit $w_{sc}$ or $n_{sc}$ using NB or Poisson likelihood on $D$ peaks.
+    \item \textbf{Residual discovery.} Fit residual modules to structured residuals on $R$ peaks.
+    \item \textbf{Role refinement.} Reassign peaks based on posterior residuals and refit.
+    \item \textbf{Spatial smoothing.} Add the spatial CAR prior or post-hoc graph smoothing with uncertainty propagation.
+\end{enumerate}
+
+This staged approach makes the method easier to debug and explain.
+
+\subsection{Variational inference}
+
+For a scalable Bayesian implementation, use variational inference. Let $\Theta$ denote all latent variables and parameters. Optimize the evidence lower bound
+\[
+\mathcal{L}(q)
+=
+\E_q[\log p(Y,X,\Theta)]-\E_q[\log q(\Theta)].
+\]
+A practical mean-field guide can use:
+\begin{itemize}
+    \item logistic-normal variational factors for $\boldsymbol{\eta}_s$;
+    \item log-normal or gamma variational factors for $w_{sc}$, $u_{sk}$, and $\rho_{kp}$;
+    \item categorical variational probabilities for $r_p$;
+    \item fixed or sampled posterior means for $\theta_{cp}$ in the first version.
+\end{itemize}
+
+Mini-batching over peaks is essential because spatial ATAC can contain more than $100,000$ peaks.
+
+\subsection{Optimization objective for a first prototype}
+
+The simplest prototype can minimize the negative log posterior:
+\[
+\mathcal{J}
+=
+-\sum_{s,p\in\mathcal{P}_D}\log p(Y_{sp}\mid \mu_{sp},\phi_p)
++\lambda_{\mathrm{spatial}}\sum_{(s,t)\in E}W_{st}\|a_s-a_t\|_2^2
++\lambda_{\mathrm{sparse}}\sum_{s,c}|w_{sc}|,
+\]
+where $\mathcal{P}_D$ is the set of deconvolution peaks. This is not fully Bayesian, but it is a practical bridge to the full model.
+
+\section{Algorithm}
+
+\begin{center}
+\begin{minipage}{0.95\linewidth}
+\hrule\vspace{0.5em}
+\textbf{Algorithm 1: OASIS-ATAC prototype}\\[0.3em]
+\textbf{Input:} spatial peak-count matrix $Y$, spot coordinates, scATAC/multiome reference $X$, cell-type labels, optional nuclei counts, peak covariates.\\
+\textbf{Output:} cell-type proportions, uncertainty intervals, peak roles, residual modules.\\[0.3em]
+\begin{enumerate}
+    \item Harmonize peaks between spatial data and reference.
+    \item Estimate $\theta_{cp}$ from the reference with beta-binomial or logistic-normal shrinkage.
+    \item Estimate peak detectability $b_p$ from peak width, GC, mappability, Tn5 bias, and reference pseudobulk.
+    \item Compute initial cell-type contrast score $\widehat{\tau}_p$ and technical quality score for each peak.
+    \item Assign high-contrast peaks to $D$, broad stable peaks to $N$, and suspicious high-residual peaks to $R$ after a first pass.
+    \item Fit spot-level abundances $w_{sc}$ or cell counts $n_{sc}$ by Poisson/NB MAP inference.
+    \item Add spatial smoothing only across close and chromatin-similar neighbors.
+    \item Compute residuals $Y_{sp}-\hat{\mu}_{sp}$ and fit sparse residual modules $u_{sk}\rho_{kp}$.
+    \item Refit abundances after removing or modeling residual-state peaks.
+    \item Report posterior means, credible intervals, calibration diagnostics, and peak-role summaries.
+\end{enumerate}
+\vspace{0.3em}\hrule
+\end{minipage}
+\end{center}
+
+\section{Outputs}
+
+OASIS-ATAC should return:
+
+\begin{enumerate}
+    \item \textbf{Cell-type abundance matrix}: $\hat{n}_{sc}$ or $\hat{a}_{sc}$.
+    \item \textbf{Uncertainty}: posterior credible intervals for each spot and cell type.
+    \item \textbf{Peak-role calls}: $P(r_p=D)$, $P(r_p=N)$, $P(r_p=R)$.
+    \item \textbf{Residual modules}: spatial maps $u_{sk}$ and peak loadings $\rho_{kp}$.
+    \item \textbf{Cell-type-specific reconstructed accessibility}: $\hat{Y}_{spc}\propto \hat{n}_{sc}\hat{\theta}_{cp}$.
+    \item \textbf{Quality diagnostics}: posterior predictive checks, residual spatial autocorrelation, calibration plots, and sensitivity to peak selection.
+\end{enumerate}
+
+\section{Why this should work}
+
+\subsection{It targets the known weakness of ATAC deconvolution}
+
+The deconvATAC benchmark suggests that transferred RNA methods are strong but imperfect, especially for rare cell types and ATAC-specific sparsity \cite{ouologuem2025deconvatac}. OASIS-ATAC directly targets this by:
+\begin{itemize}
+    \item using ATAC-specific peak detectability;
+    \item treating broad peaks differently from discriminative peaks;
+    \item propagating reference uncertainty for rare cell types;
+    \item protecting against reference-missing states.
+\end{itemize}
+
+\subsection{It uses more of the biology than a peak-count matrix alone}
+
+ATAC peaks are regulatory elements, not genes. Their counts are shaped by chromatin openness, Tn5 insertion, peak width, mappability, and nucleosome structure. Even if the first version only uses peak counts, the model has a natural place for ATAC-specific covariates.
+
+\subsection{It is interpretable}
+
+When a prediction is wrong, the failure mode can be diagnosed:
+\begin{itemize}
+    \item wrong $\theta_{cp}$: reference mismatch;
+    \item wrong $b_p$: technical peak bias;
+    \item wrong $r_p$: bad peak-role assignment;
+    \item high residual module: missing cell state or disease program;
+    \item high posterior uncertainty: insufficient evidence in the spot.
+\end{itemize}
+
+\section{Relationship to existing methods}
+
+\begin{longtable}{p{0.20\linewidth}p{0.34\linewidth}p{0.34\linewidth}}
+\toprule
+Method family & What it contributes & How OASIS-ATAC differs \\
+\midrule
+\endfirsthead
+\toprule
+Method family & What it contributes & How OASIS-ATAC differs \\
+\midrule
+\endhead
+RCTD & Poisson mixture model with platform-effect correction for spatial transcriptomics \cite{cable2022rctd}. & OASIS uses ATAC open-allele dosage, peak detectability, and peak roles rather than RNA expression signatures. \\
+Cell2location & Hierarchical Bayesian count model that maps fine-grained cell types in spatial transcriptomics \cite{kleshchevnikov2022cell2location}. & OASIS keeps Bayesian count strengths but replaces RNA rates with ATAC accessibility probabilities and peak-role gating. \\
+Stereoscope & NB probabilistic mixture using single-cell reference signatures \cite{andersson2020stereoscope}. & OASIS adds ATAC-specific peak bias, open-allele interpretation, and residual chromatin-state protection. \\
+SpatialDWLS & Fast marker/signature-based deconvolution for spatial transcriptomics \cite{dong2021spatialdwls}. & OASIS is a count likelihood with uncertainty, not least squares on normalized features. \\
+Tangram & Deep alignment of single-cell profiles to spatial data; can project multimodal chromatin information \cite{biancalani2021tangram}. & OASIS directly deconvolves measured spatial ATAC counts rather than mapping cells by expression-space alignment. \\
+DestVI & Models continuous within-cell-type states in spatial transcriptomics \cite{lopez2021destvi}. & OASIS models residual chromatin states with sparse ATAC modules, not continuous RNA expression states. \\
+SONAR & Spatially weighted Poisson-gamma regression with adaptive neighbor filtering for spatial transcriptomics \cite{liu2023sonar}. & OASIS can borrow the boundary-aware smoothing idea but uses ATAC-specific peak roles and open-allele dosage. \\
+Bulk ATAC deconvolution & Shows that chromatin accessibility mixtures can be deconvolved from ATAC references. & OASIS is spatial, uncertainty-aware, and designed for spot-level mixed spatial ATAC counts. \\
+Peak-weighted ATAC model & Learns which peaks matter for deconvolution. & OASIS turns this into an interpretable role assignment: deconvolution, normalization, or residual state. \\
+\bottomrule
+\end{longtable}
+
+\section{Experimental evaluation plan}
+
+\subsection{Datasets}
+
+Use three evaluation tiers.
+
+\paragraph{Tier 1: simulated pseudo-spots with exact ground truth.}
+Use the deconvATAC framework and multiome references such as human heart and developing human cortex. Simulate spot-level ATAC with known cell-type proportions, varying:
+\begin{itemize}
+    \item number of cells per spot;
+    \item number of cell types per spot;
+    \item rare-cell fraction;
+    \item spatial zonation;
+    \item sequencing depth;
+    \item reference mismatch.
+\end{itemize}
+
+\paragraph{Tier 2: targeted spatial multiome aggregation.}
+Use spatially mapped single-nucleus or near-single-nucleus datasets, aggregate neighboring cells into artificial spots, and compare inferred composition with known underlying cells.
+
+\paragraph{Tier 3: real spatial ATAC tissues.}
+Use mouse brain, embryo, tonsil, melanoma, and spatial multi-omics datasets. Ground truth may be indirect, so evaluate by anatomical consistency, marker accessibility, motif enrichment, and agreement with orthogonal spatial RNA or protein when available.
+
+\subsection{Baselines}
+
+Compare against:
+\begin{itemize}
+    \item Cell2location;
+    \item RCTD;
+    \item Tangram;
+    \item SpatialDWLS;
+    \item DestVI;
+    \item NNLS or nonnegative Poisson regression;
+    \item a majority-cell-type baseline;
+    \item your current ATAC count model, if available, as an internal baseline.
+\end{itemize}
+
+\subsection{Metrics}
+
+Use metrics already established by deconvATAC:
+\begin{itemize}
+    \item RMSE for cell-type proportions;
+    \item Jensen-Shannon divergence for composition distributions;
+    \item NMI for dominant cell-type assignment;
+    \item rare-cell F1 score.
+\end{itemize}
+
+Add ATAC-native metrics:
+\begin{itemize}
+    \item peak-level posterior predictive fit;
+    \item cell-type-specific accessibility reconstruction accuracy;
+    \item residual module interpretability by motif enrichment;
+    \item boundary leakage score across tissue domains;
+    \item uncertainty calibration: do 90\% credible intervals contain truth approximately 90\% of the time?
+\end{itemize}
+
+\section{Ablation experiments}
+
+A strong method paper should prove which components matter.
+
+\begin{center}
+\begin{tabular}{p{0.30\linewidth}p{0.56\linewidth}}
+\toprule
+Ablation & Question answered \\
+\midrule
+No peak detectability $b_p$ & Does modeling ATAC technical bias improve accuracy? \\
+No peak-role gate & Is role assignment better than treating all peaks equally? \\
+Weights instead of roles & Are interpretable roles better than scalar weights? \\
+No residual module & Does reference-missing protection reduce false positives? \\
+No spatial prior & Does local tissue information improve deconvolution? \\
+No boundary-aware weights & Does smoothing blur tissue boundaries? \\
+No reference uncertainty & Does uncertainty propagation help rare cell types? \\
+Poisson vs NB & Is overdispersion necessary for spatial ATAC counts? \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Minimum viable version}
+
+A publishable first version should be simpler than the full model.
+
+\subsection{Minimum model}
+
+Use:
+\[
+Y_{sp}\sim\NB\left(\ell_s b_p\left[\epsilon_p+\sum_c a_{sc}\hat{\theta}_{cp}\right],\phi_p\right),
+\]
+with:
+\begin{itemize}
+    \item $\hat{\theta}_{cp}$ estimated from reference scATAC or multiome;
+    \item $b_p$ fixed from peak covariates;
+    \item $a_{sc}=\softmax(\eta_{sc})$;
+    \item deterministic initial peak roles;
+    \item optional spatial prior added after the independent model works.
+\end{itemize}
+
+\subsection{Minimum novel contribution}
+
+The minimum publishable novelty should be:
+\begin{enumerate}
+    \item ATAC-specific detectability offsets;
+    \item open-allele interpretation of the reference signature;
+    \item peak-role gate separating deconvolution, normalization, and residual peaks;
+    \item uncertainty-aware outputs.
+\end{enumerate}
+
+Do not make the first paper depend on a large deep model.
+
+\section{Practical implementation details}
+
+\subsection{Recommended software stack}
+
+\begin{itemize}
+    \item Use \texttt{AnnData} or \texttt{MuData} for input data.
+    \item Use \texttt{PyTorch}, \texttt{Pyro}, or \texttt{NumPyro} for probabilistic inference.
+    \item Use sparse matrices for peak counts.
+    \item Use minibatches over peaks and possibly over spots.
+    \item Output results as an \texttt{AnnData} object with cell-type abundance, posterior uncertainty, peak roles, and residual modules.
+\end{itemize}
+
+\subsection{Initialization}
+
+Good initialization will matter.
+
+\begin{enumerate}
+    \item Normalize spatial and reference data with TF-IDF/LSI only for exploratory similarity and initial peak scoring, not as the likelihood input.
+    \item Initialize $a_{sc}$ using NNLS or RCTD-style Poisson regression.
+    \item Initialize $b_p$ by regressing pseudobulk counts on peak covariates.
+    \item Initialize $r_p=D$ for high-contrast peaks and $r_p=N$ for ubiquitous peaks.
+    \item Fit residual modules only after cell-type abundances are stable.
+\end{enumerate}
+
+\subsection{Computational complexity}
+
+The main likelihood cost is
+\[
+O(SPC)
+\]
+if computed naively. In practice, use:
+\begin{itemize}
+    \item 5,000--20,000 candidate deconvolution peaks for the first pass;
+    \item sparse count operations;
+    \item minibatching over peaks;
+    \item vectorized computation of $A\Theta$ where $A$ is the spot-by-cell-type abundance matrix and $\Theta$ is the cell-type-by-peak accessibility matrix.
+\end{itemize}
+
+\section{Expected results and paper claims}
+
+\subsection{Expected empirical improvements}
+
+OASIS-ATAC should improve over transferred RNA methods most clearly in:
+\begin{itemize}
+    \item rare cell-type recovery;
+    \item tissues with strong peak-specific technical variation;
+    \item datasets with reference-missing activation or tumor states;
+    \item highly zonated tissue where boundary-aware spatial priors help;
+    \item interpretation of which peaks actually drove deconvolution.
+\end{itemize}
+
+\subsection{Potential title}
+
+\begin{quote}
+\textit{Open-allele Bayesian deconvolution of spatial chromatin accessibility resolves cell composition and reference-missing regulatory states.}
+\end{quote}
+
+\subsection{Main claim}
+
+\begin{quote}
+\textit{OASIS-ATAC improves spatial ATAC deconvolution by modeling observed fragments as noisy counts from cell-type-specific open-allele dosage while learning whether each peak should serve as a cell-type marker, a normalization feature, or a residual chromatin-state feature.}
+\end{quote}
+
+\section{Risks and mitigations}
+
+\begin{longtable}{p{0.30\linewidth}p{0.56\linewidth}}
+\toprule
+Risk & Mitigation \\
+\midrule
+\endfirsthead
+\toprule
+Risk & Mitigation \\
+\midrule
+\endhead
+Identifiability between cell abundance and spot capture & Use library-size offsets, optional nuclei counts, and priors on $\kappa_s$. \\
+Reference mismatch & Add residual modules and uncertainty; test missing-cell-type simulations. \\
+Too many peaks & Use role gate and minibatching; start with 5,000--20,000 peaks. \\
+Over-smoothing spatial prior & Use boundary-aware graph weights; include no-spatial ablation. \\
+Residual modules absorb real cell types & Penalize residual modules and validate against held-out references. \\
+Peak detectability hard to estimate & Start with fixed covariates and add Bayesian learning later. \\
+Rare cell types unstable & Use hierarchical shrinkage in $\theta_{cp}$ and report uncertainty. \\
+Novelty perceived as just peak weighting & Emphasize role-gating, open-allele dosage, and reference-residual protection. \\
+\bottomrule
+\end{longtable}
+
+\section{How to write this as a method paper}
+
+\subsection{Abstract structure}
+
+\begin{enumerate}
+    \item Spatial ATAC needs deconvolution because spot-level profiles aggregate multiple nuclei.
+    \item Existing RNA-based methods transfer, but ATAC sparsity, peak bias, and rare-cell resolution remain limiting.
+    \item Introduce OASIS-ATAC, an open-allele Bayesian count model.
+    \item Explain peak-role gating.
+    \item Report improved rare-cell recovery, calibrated uncertainty, and residual regulatory-state discovery.
+\end{enumerate}
+
+\subsection{Results structure}
+
+\begin{enumerate}
+    \item OASIS-ATAC accurately recovers composition in controlled simulations.
+    \item Peak-role gating improves over highly variable peak selection and scalar peak weights.
+    \item ATAC detectability offsets improve cross-protocol robustness.
+    \item Residual modules prevent false assignment when reference states are missing.
+    \item OASIS-ATAC maps known spatial architecture in mouse brain, tonsil, or tumor tissue.
+\end{enumerate}
+
+\section{Conclusion}
+
+OASIS-ATAC is deliberately simple at its core: a spatial spot is a mixture of cell-type-specific accessibility profiles, and observed counts are noisy fragments from that mixture. The model becomes ATAC-native by replacing RNA expression rates with open-allele dosage, by explicitly correcting peak detectability, and by assigning each peak an interpretable role. This should be easier to explain than a deep network, more biologically faithful than a direct RNA-model transfer, and more novel than a plain learned-peak-weight count model.
+
+\newpage
+\begin{thebibliography}{99}
+
+\bibitem{deng2022spatialatac}
+Deng, Y., Bartosovic, M., Ma, S., Zhang, D., Kukanja, P., Xiao, Y., et al.
+Spatial profiling of chromatin accessibility in mouse and human tissues.
+\textit{Nature} 609, 375--383 (2022).
+\url{https://doi.org/10.1038/s41586-022-05094-1}
+
+\bibitem{ouologuem2025deconvatac}
+Ouologuem, S., Martens, L. D., Schaar, A. C., Shulman, M., Gagneur, J., and Theis, F. J.
+Spatial transcriptomics deconvolution methods generalize well to spatial chromatin accessibility data.
+\textit{Bioinformatics} 41(Supplement 1), i314--i322 (2025).
+\url{https://doi.org/10.1093/bioinformatics/btaf268}
+
+\bibitem{guo2025spatialmux}
+Guo, P., Mao, L., Chen, Y., Lee, C. N., Cardilla, A., Li, M., Bartosovic, M., and Deng, Y.
+Multiplexed spatial mapping of chromatin features, transcriptome, and proteins in tissues.
+\textit{Nature Methods} 22, 520--529 (2025).
+\url{https://doi.org/10.1038/s41592-024-02576-0}
+
+\bibitem{kleshchevnikov2022cell2location}
+Kleshchevnikov, V., Shmatko, A., Dann, E., Aivazidis, A., King, H. W., Li, T., et al.
+Cell2location maps fine-grained cell types in spatial transcriptomics.
+\textit{Nature Biotechnology} 40, 661--671 (2022).
+\url{https://doi.org/10.1038/s41587-021-01139-4}
+
+\bibitem{cable2022rctd}
+Cable, D. M., Murray, E., Zou, L. S., Goeva, A., Macosko, E. Z., Chen, F., and Irizarry, R. A.
+Robust decomposition of cell type mixtures in spatial transcriptomics.
+\textit{Nature Biotechnology} 40, 517--526 (2022).
+\url{https://doi.org/10.1038/s41587-021-00830-w}
+
+\bibitem{andersson2020stereoscope}
+Andersson, A., Bergenstrahle, J., Asp, M., Bergenstrahle, L., Jurek, A., Fernandez Navarro, J., and Lundeberg, J.
+Single-cell and spatial transcriptomics enables probabilistic inference of cell type topography.
+\textit{Communications Biology} 3, 565 (2020).
+\url{https://doi.org/10.1038/s42003-020-01247-y}
+
+\bibitem{dong2021spatialdwls}
+Dong, R. and Yuan, G.-C.
+SpatialDWLS: accurate deconvolution of spatial transcriptomic data.
+\textit{Genome Biology} 22, 145 (2021).
+\url{https://doi.org/10.1186/s13059-021-02362-7}
+
+\bibitem{biancalani2021tangram}
+Biancalani, T., Scalia, G., Buffoni, L., Avasthi, R., Lu, Z., Sanger, A., et al.
+Deep learning and alignment of spatially resolved single-cell transcriptomes with Tangram.
+\textit{Nature Methods} 18, 1352--1362 (2021).
+\url{https://doi.org/10.1038/s41592-021-01264-7}
+
+\bibitem{lopez2021destvi}
+Lopez, R., Li, B., Keren-Shaul, H., Boyeau, P., Kedmi, M., Pilzer, D., et al.
+Multi-resolution deconvolution of spatial transcriptomics data reveals continuous patterns of inflammation.
+\textit{bioRxiv} (2021).
+\url{https://doi.org/10.1101/2021.05.10.443517}
+
+\bibitem{liu2023sonar}
+Liu, Z., Wu, D., Zhai, W., and Ma, L.
+SONAR enables cell type deconvolution with spatially weighted Poisson-Gamma model for spatial transcriptomics.
+\textit{Nature Communications} 14, 4727 (2023).
+\url{https://doi.org/10.1038/s41467-023-40458-9}
+
+\end{thebibliography}
+
+\end{document}
