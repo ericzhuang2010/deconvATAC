@@ -132,14 +132,20 @@ The ordinary deconvolution question is:
 
 The ShapeMix-ATAC question is richer:
 \[
-\text{observed peak totals and parent-fragment length composition}
+\begin{gathered}
+\text{observed peak totals and}\\
+\text{parent-fragment length composition}
+\end{gathered}
 \quad \Longrightarrow \quad
-\text{cell-type amounts with uncertainty}.
+\begin{gathered}
+\text{effective abundances and}\\
+\text{normalized cell-type proportions}
+\end{gathered}.
 \]
 
 \subsection{Why ATAC needs a special model}
 
-Spatial transcriptomics mostly counts RNA molecules from genes.  Spatial ATAC counts DNA fragments from open chromatin peaks.  ATAC fragments also have physical features:
+Spatial transcriptomics mostly counts RNA molecules from genes.  Standard Cell Ranger ATAC peak matrices count Tn5 cut sites in open-chromatin peaks.  The parent fragments also have physical features:
 
 \begin{itemize}[leftmargin=2em]
     \item \textbf{Fragment length:} short fragments often come from nucleosome-free DNA; longer fragments can span nucleosomes.
@@ -208,10 +214,12 @@ Bayesian modeling means we write down a story for how the data could have been g
 \]
 In ShapeMix-ATAC:
 \[
- p(\text{hidden cell mixture} \given \text{observed ATAC cut-site tensor})
- \propto
- p(\text{observed ATAC cut-site tensor} \given \text{hidden cell mixture})
- p(\text{hidden cell mixture}).
+\begin{aligned}
+p(&\text{hidden cell mixture} \given \text{observed ATAC cut-site tensor})\\
+&\propto
+p(\text{observed ATAC cut-site tensor} \given \text{hidden cell mixture})\\
+&\qquad{}\times p(\text{hidden cell mixture}).
+\end{aligned}
 \]
 \end{mathbox}
 
@@ -236,333 +244,276 @@ Normal / CAR normal & real-valued latent spatial fields & Good for smooth spatia
 
 \section{Start with the ordinary peak-count model}
 
-Before adding shape, an ATAC peak-count model says:
-\[
-Y_{s,p} \sim \NB(\lambda_{s,p},\phi_p),
-\]
-where
-\[
-\lambda_{s,p}
-= \ell_s\left[\beta_p + \sum_{c=1}^C z_{s,c} q_c d_p \theta_{c,p}\right].
-\]
+The primary model fixes reference signatures and infers only spot abundances.  Let
+\(R_{i,p,b}\) be the training-reference cut-site count for cell \(i\), peak \(p\),
+and parent-length bin \(b\), and define \(T_{i,p}=\sum_bR_{i,p,b}\).  From these
+training cells we estimate \(A_{c,p}\), the mean total cut-site rate per reference
+cell of type \(c\), \(\omega_{c,p,b}\), its conditional parent-length-bin
+distribution, and one global per-reference-cell inverse-dispersion
+\(\phi_{\mathrm{ref}}\).
 
-Read this as a sentence:
-
-\begin{quote}
-The expected ATAC fragments at peak \(p\) in spot \(s\) equal spot depth \(\ell_s\), times background plus the summed contributions from each cell type.
-\end{quote}
-
-The problem is that \(Y_{s,p}\) ignores the shapes of fragments inside the peak.
+Let \(z_{s,c}>0\) be the unknown effective abundance and
+\(e_s=\sum_cz_{s,c}\).  The ordinary peak total and its expected value are
+\begin{align}
+N_{s,p} &= \sum_bY_{s,p,b},\\
+\mu_{s,p} &= \sum_c z_{s,c}A_{c,p}. \label{eq:mu}
+\end{align}
+The count-only model is
+\begin{mathbox}{Shared total-count model}
+\begin{align}
+N_{s,p} &\sim \NB\!\left(\text{mean}=\mu_{s,p},
+\text{dispersion}=\max(e_s,\epsilon)\phi_{\mathrm{ref}}\right). \label{eq:totalnb}
+\end{align}
+\end{mathbox}
+There is no observed spot-depth offset in the primary model.  Total captured depth
+is absorbed into \(z\).
 
 \section{The ShapeMix-ATAC likelihood}
 
-\subsection{The core equation}
+\subsection{The factorized core equation}
 
-ShapeMix adds the shape-bin index \(b\):
+ShapeMix preserves Equation~\eqref{eq:totalnb} and adds a conditional allocation of
+the same total among parent-length bins.  Define
+\begin{align}
+v_{s,p,b} &= \sum_c z_{s,c}A_{c,p}\omega_{c,p,b}, \label{eq:v}\\
+\mu_{s,p} &= \sum_bv_{s,p,b}=\sum_cz_{s,c}A_{c,p},\\
+\rho_{s,p,b} &= \frac{v_{s,p,b}}{\mu_{s,p}}. \label{eq:rho}
+\end{align}
+The primary same-dataset simulation has zero background.  Its complete likelihood is:
 
 \begin{mathbox}{Core ShapeMix likelihood}
 \begin{align}
-Y_{s,p,b} &\sim \NB(\lambda_{s,p,b},\phi_p), \label{eq:likelihood}\\[0.3em]
-\lambda_{s,p,b}
-&= \ell_s\left[\beta_{p,b} + \sum_{c=1}^{C} z_{s,c}\,q_c\,d_p\,\theta_{c,p}\,\omega_{c,p,b}\right]. \label{eq:lambda}
+N_{s,p} &\sim \NB\!\left(\text{mean}=\mu_{s,p},
+\text{dispersion}=\max(e_s,\epsilon)\phi_{\mathrm{ref}}\right),\\
+\boldsymbol{Y}_{s,p,\cdot}\mid N_{s,p}
+&\sim \Mult\!\left(N_{s,p},\boldsymbol{\rho}_{s,p,\cdot}\right). \label{eq:shapeconditional}
 \end{align}
 \end{mathbox}
 
-This is the central model.  The new ShapeMix term is
-\[
-\boxed{\omega_{c,p,b}},
-\]
-which means:
+The first line asks how many cut sites occur in the peak.  The second asks how that
+fixed total is distributed among the three parent-fragment length bins.  The new
+ShapeMix information is \(\omega_{c,p,b}\), the reference conditional shape.
 
-\begin{quote}
-Among fragments from cell type \(c\) at peak \(p\), what fraction should fall into shape bin \(b\)?
-\end{quote}
-
-\subsection{Meaning of each factor in \texorpdfstring{\(\lambda_{s,p,b}\)}{lambda}}
-
-\begin{center}
-\begin{tabularx}{\linewidth}{L{0.18\linewidth}X}
-\toprule
-Term & Meaning \\
-\midrule
-\(\ell_s\) & sequencing-depth offset for spot \(s\).  A deeper spot produces more fragments overall. \\
-\(\beta_{p,b}\) & background fragments for peak \(p\), shape bin \(b\), not explained by known cell types. \\
-\(z_{s,c}\) & effective number of cells/nuclei of type \(c\) in spot \(s\).  This is the main hidden quantity. \\
-\(q_c\) & per-cell ATAC yield for cell type \(c\).  Some cell types produce more accessible fragments per nucleus. \\
-\(d_p\) & peak detectability.  Some peaks are easier to observe because of width, GC content, mappability, or Tn5 bias. \\
-\(\theta_{c,p}\) & accessibility of peak \(p\) in cell type \(c\). \\
-\(\omega_{c,p,b}\) & shape distribution: fraction of fragments from cell type \(c\), peak \(p\), assigned to bin \(b\). \\
-\(\phi_p\) & negative-binomial dispersion for peak \(p\).  Smaller \(\phi_p\) means noisier counts. \\
-\bottomrule
-\end{tabularx}
-\end{center}
+\begin{warningbox}
+Independent negative-binomial likelihoods for \(Y_{s,p,b}\) are not the primary
+model.  Their sum is generally not the same negative-binomial total as the
+count-only arm.  They remain only as a clearly named future sensitivity model.
+\end{warningbox}
 
 \subsection{Negative-binomial parameterization}
 
-This document uses a negative binomial with mean \(\lambda\) and dispersion \(\phi\):
+This document uses a negative binomial with mean \(\mu\) and inverse-dispersion \(\phi\):
 \[
-Y \sim \NB(\lambda,\phi)
+X \sim \NB(\text{mean}=\mu,\text{dispersion}=\phi)
 \]
 means
 \[
-\E[Y]=\lambda,
+\E[X]=\mu,
 \qquad
-\Var(Y)=\lambda+\frac{\lambda^2}{\phi}.
+\Var(X)=\mu+\frac{\mu^2}{\phi}.
 \]
 
-A large \(\phi\) makes the model close to Poisson.  A small \(\phi\) allows extra sequencing noise.
+A spot uses \(\phi=\max(e_s,\epsilon)\phi_{\mathrm{ref}}\).  Scaling by effective
+abundance approximates aggregation of independent reference-depth cells.  The
+conditional log likelihood is evaluated stably as
+\[
+\log p(\boldsymbol{Y}\mid N,\boldsymbol{\rho})=
+\log\Gamma(N+1)-\sum_b\log\Gamma(Y_b+1)
++\sum_{b:Y_b>0}Y_b\log\rho_b.
+\]
+Rows with \(N=0\) contribute exactly zero.  In the Poisson-total special case, this
+factorization is algebraically equivalent to independent Poisson bin counts; that
+identity is an implementation test.
+
+\subsection{The exact count-only ablation}
+
+The two objectives are
+\begin{align*}
+\mathcal{L}_{\mathrm{count}}(z)
+&=\log p(N\mid z,A,\phi_{\mathrm{ref}})+\log p(z),\\
+\mathcal{L}_{\mathrm{shape}}(z)
+&=\mathcal{L}_{\mathrm{count}}(z)
++\log p(Y\mid N,z,A,\omega).
+\end{align*}
+Everything except the final conditional shape term is identical: outer split,
+inner mixture, peaks, \(N\), \(A\), \(\phi_{\mathrm{ref}}\), abundance prior,
+parameters, initialization, optimizer, stopping rule, seed, and compute budget.
+If all cell types have identical \(\omega_{c,p,\cdot}\), the shape term contains no
+information about \(z\), so both arms should agree within numerical tolerance.
 
 \section{The generative story}
 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[node distance=1.2cm,>=Latex]
-    \node[draw,rounded corners,fill=softgreen,align=center,minimum width=3.5cm] (ref) {single-cell ATAC\\reference};
-    \node[draw,rounded corners,fill=softgreen,align=center,minimum width=3.5cm,right=1.6cm of ref] (sig) {cell-type\\signatures\\\(\theta_{c,p},\omega_{c,p,b}\)};
-    \node[draw,rounded corners,fill=softblue,align=center,minimum width=3.5cm,right=1.6cm of sig] (mix) {hidden spot\\abundances\\\(z_{s,c}\)};
-    \node[draw,rounded corners,fill=softyellow,align=center,minimum width=3.5cm,below=1.2cm of sig] (lambda) {expected counts\\\(\lambda_{s,p,b}\)};
-    \node[draw,rounded corners,fill=white,align=center,minimum width=3.5cm,right=1.6cm of lambda] (obs) {observed counts\\\(Y_{s,p,b}\)};
+    \node[draw,rounded corners,fill=softgreen,align=center,minimum width=3.5cm] (ref) {training scATAC\\reference};
+    \node[draw,rounded corners,fill=softgreen,align=center,minimum width=3.5cm,right=1.6cm of ref] (sig) {fixed signatures\\\(A_{c,p},\omega_{c,p,b}\)\\\(\phi_{\mathrm{ref}}\)};
+    \node[draw,rounded corners,fill=softblue,align=center,minimum width=3.5cm,right=1.6cm of sig] (mix) {hidden effective\\abundances\\\(z_{s,c}\)};
+    \node[draw,rounded corners,fill=softyellow,align=center,minimum width=3.5cm,below=1.2cm of sig] (lambda) {total mean \(\mu_{s,p}\)\\bin probabilities \(\rho_{s,p,b}\)};
+    \node[draw,rounded corners,fill=white,align=center,minimum width=3.5cm,right=1.6cm of lambda] (obs) {peak totals \(N_{s,p}\)\\bin counts \(Y_{s,p,b}\)};
 
     \draw[->,thick] (ref) -- (sig);
     \draw[->,thick] (sig) -- (lambda);
     \draw[->,thick] (mix) -- (lambda);
-    \draw[->,thick] (lambda) -- node[above]{NB noise} (obs);
+    \draw[->,thick] (lambda) -- node[above]{NB + conditional Multinomial} (obs);
 \end{tikzpicture}
-\caption{ShapeMix writes down how reference fingerprints and hidden cell abundances generate the observed shape-count tensor.}
+\caption{The primary ShapeMix model keeps signatures and dispersion fixed and infers only positive abundances.}
 \end{figure}
 
 The model can be taught as a recipe:
 
 \begin{enumerate}[leftmargin=2em]
-    \item Learn each cell type's peak accessibility \(\theta_{c,p}\) from a scATAC or multiome reference.
-    \item Learn each cell type's fragment-shape pattern \(\omega_{c,p,b}\) from the same reference.
-    \item Guess a possible hidden cell mixture \(z_{s,c}\) for each spot.
-    \item Use Equation~\eqref{eq:lambda} to predict expected counts \(\lambda_{s,p,b}\).
-    \item Compare predicted counts with observed counts \(Y_{s,p,b}\).
-    \item Update the hidden mixture and other uncertain parameters until the posterior is high.
+    \item Use only training-reference cells to select peaks and estimate \(A\), \(\omega\), and \(\phi_{\mathrm{ref}}\).
+    \item Form pseudo-spots only from held-out test cells.
+    \item Infer positive \(z_{s,c}\) from the shared total-count likelihood.
+    \item For ShapeMix only, add the conditional parent-length composition likelihood.
+    \item Normalize \(z\) to obtain cell-type proportions and evaluate paired runs.
 \end{enumerate}
 
 \section{Reference signatures}
 
-The model needs a reference containing cells with known cell-type labels.  A single-cell multiome reference is especially useful because RNA can help label cell types while ATAC provides chromatin signatures.
+The primary model treats signatures as empirical inputs, not inferred latent
+variables.  This avoids trying to decompose the same scale simultaneously among
+abundance, cell-type yield, peak detectability, and accessibility.
 
-\subsection{Peak accessibility prior}
-
-Let \(R_{c,p}^{\mathrm{open}}\) and \(R_{c,p}^{\mathrm{closed}}\) be reference pseudo-counts for how often peak \(p\) appears open or closed in cell type \(c\).  Then:
-
-\begin{mathbox}{Accessibility prior}
+Let \(\mathcal{I}_c\) be training-reference cells of type \(c\), \(g_p\) a pooled
+peak-rate target, \(u_{p,b}\) the pooled training-reference parent-length
+distribution for peak \(p\), and \(h_i=1\) for the primary same-protocol
+experiment.  Define a dataset-global distribution and use the same frozen
+\(\alpha_\omega=1\) to smooth the pooled peak distribution toward it:
 \begin{align}
-\theta_{c,p} &\sim \Betadist\left(a_{\theta}+R_{c,p}^{\mathrm{open}},\; b_{\theta}+R_{c,p}^{\mathrm{closed}}\right).
+u_b^{\mathrm{global}}
+&=\frac{\sum_{i,p}R_{i,p,b}}{\sum_{i,p,b'}R_{i,p,b'}},\\
+u_{p,b}
+&=\frac{\sum_i R_{i,p,b}+\alpha_\omega u_b^{\mathrm{global}}}
+{\sum_{i,b'}R_{i,p,b'}+\alpha_\omega}.
 \end{align}
-\end{mathbox}
-
-Here \(\theta_{c,p}\in[0,1]\).  Large \(\theta_{c,p}\) means peak \(p\) is often accessible in cell type \(c\).
-
-\subsection{Shape prior}
-
-For each cell type \(c\) and peak \(p\), the shape probabilities must sum to 1:
-\[
-\sum_{b=1}^{B}\omega_{c,p,b}=1,
-\qquad
-\omega_{c,p,b}\ge 0.
-\]
-
-A Dirichlet prior is natural:
-
-\begin{mathbox}{Shape prior}
+Every global bin must have positive training-reference support.  Cell-type
+signatures then use
 \begin{align}
-\boldsymbol{\omega}_{c,p,\cdot}
-&= (\omega_{c,p,1},\ldots,\omega_{c,p,B}),\\
-\boldsymbol{\omega}_{c,p,\cdot}
-&\sim \Dir\left(a_{\omega}\,\boldsymbol{u}_{\omega}+\boldsymbol{R}^{\mathrm{shape}}_{c,p,\cdot}\right).
+A_{c,p}
+&=\frac{\sum_{i\in\mathcal{I}_c}T_{i,p}+\alpha_Ag_p}
+{\sum_{i\in\mathcal{I}_c}h_i+\alpha_A}, \label{eq:A}\\
+\omega_{c,p,b}
+&=\frac{\sum_{i\in\mathcal{I}_c}R_{i,p,b}+\alpha_\omega u_{p,b}}
+{\sum_{i\in\mathcal{I}_c}T_{i,p}+\alpha_\omega}. \label{eq:omega}
 \end{align}
-\end{mathbox}
-
-\(\boldsymbol{R}^{\mathrm{shape}}_{c,p,\cdot}\) is the vector of reference shape-bin counts.  \(\boldsymbol{u}_{\omega}\) is a default shape vector, such as uniform \((1/B,\ldots,1/B)\).
+Sparse peaks shrink first toward their pooled peak distribution and then toward the
+dataset-global distribution.  The concentration is frozen by the benchmark
+protocol and is not tuned on held-out mixtures.
 
 \begin{bio}
-If a T cell reference says that fragments at peak \(p\) are usually short, then \(\omega_{T,p,\mathrm{short}}\) should be high.  If a B cell reference says the same peak mostly has mononucleosomal fragments, then \(\omega_{B,p,\mathrm{mono}}\) should be high.  ShapeMix uses this difference as extra evidence.
+If T-cell cut sites at peak \(p\) usually have short parent fragments, then
+\(\omega_{T,p,\mathrm{short}}\) is high.  If B-cell cut sites at the same peak
+mostly have mononucleosomal-length parents, ShapeMix can use that conditional
+difference even when \(A_{T,p}\) and \(A_{B,p}\) are similar.
 \end{bio}
 
-\section{Priors for hidden cell abundance}
+\subsection{Cross-fitted global dispersion}
 
-The main hidden quantity is \(z_{s,c}\), the effective amount of cell type \(c\) in spot \(s\).  It is positive:
-\[
-z_{s,c} > 0.
-\]
-
-A useful prior is a Gamma distribution:
-
-\begin{mathbox}{Abundance prior}
+Inside the training-reference pool, make a deterministic, cell-type-stratified
+two-fold split.  For each cell \(i\), estimate its held-out mean \(m_{i,p}\) from
+the opposite fold's cell-type signature.  Then compute
 \begin{align}
-\log \mu_{s,c} &= \eta_c + u_{s,c}, \label{eq:meanabundance}\\
-z_{s,c} &\sim \Gam\left(r_z,\; \frac{r_z}{\mu_{s,c}}\right). \label{eq:zprior}
+\alpha_{\mathrm{ref}}^{\mathrm{raw}}
+&=\frac{\sum_{i,p}\left[(T_{i,p}-m_{i,p})^2-m_{i,p}\right]}
+{\sum_{i,p}m_{i,p}^2},\\
+\alpha_{\mathrm{ref}}&=\max\!\left(\alpha_{\mathrm{ref}}^{\mathrm{raw}},10^{-8}\right),\\
+\phi_{\mathrm{ref}}&=1/\alpha_{\mathrm{ref}}. \label{eq:dispersion}
 \end{align}
-\end{mathbox}
+The fold seed, numerator, denominator, and resulting values are recorded.  A
+non-finite or zero denominator is an error.  After cross-fitting, \(A\) is
+re-estimated from all training-reference cells.  Peak-specific or learned
+dispersion is a future sensitivity analysis.
 
-This Gamma parameterization uses shape \(r_z\) and rate \(r_z/\mu_{s,c}\), so
-\[
-\E[z_{s,c}]=\mu_{s,c}.
-\]
+\section{Prior and semantics for hidden abundance}
 
-\subsection{What are \texorpdfstring{\(\eta_c\)}{eta} and \texorpdfstring{\(u_{s,c}\)}{u}?}
-
-\begin{itemize}[leftmargin=2em]
-    \item \(\eta_c\) is the global baseline abundance of cell type \(c\).  Common cell types can have larger \(\eta_c\).
-    \item \(u_{s,c}\) is a spatial effect.  It lets a cell type be enriched in some tissue regions and depleted in others.
-\end{itemize}
-
-A simple prior for \(\eta_c\) is:
-\[
-\eta_c \sim \Normal(m_{\eta,c},\sigma_{\eta}^{2}).
-\]
-
-\subsection{Optional spatial prior}
-
-Neighboring spots often have related cell mixtures.  To encode this, use a conditional autoregressive-like prior:
-
-\begin{mathbox}{Spatial smoothing prior}
+The only inferred biological quantity in the primary MAP model is \(z_{s,c}>0\).
+A simple fixed Gamma prior is
 \begin{align}
-\boldsymbol{u}_{\cdot,c}
-&\sim \Normal\left(\boldsymbol{0},\; \tau_c^{-1}(D-\varphi_c W+\epsilon I)^{-1}\right). \label{eq:car}
+z_{s,c}&\sim\Gam\left(r_z,\frac{r_z}{m_c}\right),
+&\E[z_{s,c}]&=m_c. \label{eq:zprior}
 \end{align}
-\end{mathbox}
+The implementation uses \(z=\operatorname{softplus}(z^{\mathrm{raw}})+\epsilon\)
+and adds the corresponding log prior to the objective.
 
-Here:
-
-\begin{itemize}[leftmargin=2em]
-    \item \(W\) is a spot-neighbor graph.  \(W_{s,t}\) is large if spots \(s\) and \(t\) are neighbors that should be smoothed together.
-    \item \(D\) is diagonal with \(D_{s,s}=\sum_t W_{s,t}\).
-    \item \(\tau_c\) controls how strongly the spatial effect is shrunk toward smoothness.
-    \item \(\varphi_c\) controls spatial dependence.  If \(\varphi_c=0\), there is little spatial sharing.  If \(\varphi_c\) is large, nearby spots tend to be similar.
-    \item \(\epsilon I\) is a tiny stabilizer that makes the matrix invertible.
-\end{itemize}
-
-For a first prototype, this spatial prior can be removed.  Then set \(u_{s,c}=0\), and let each spot be deconvolved independently.
+\begin{warningbox}
+The primary model has no observed library-size offset \(\ell_s\).  Because total
+captured depth is absorbed into \(z\), \(z_{s,c}\) is an effective
+reference-cell-equivalent, depth-scaled abundance.  It is not guaranteed to be an
+integer or a calibrated nucleus count.  The standardized scientific output is
+\[
+\pi_{s,c}=\frac{z_{s,c}}{\sum_{c'}z_{s,c'}}.
+\]
+\end{warningbox}
 
 \section{Complete core model}
 
-Putting the pieces together:
+Putting the primary pieces together:
 
 \begin{mathbox}{Complete core ShapeMix-ATAC model}
 \begin{align}
-Y_{s,p,b} &\sim \NB(\lambda_{s,p,b},\phi_p), \\
-\lambda_{s,p,b}
-&= \ell_s\left[\beta_{p,b} + \sum_{c=1}^{C} z_{s,c}\,q_c\,d_p\,\theta_{c,p}\,\omega_{c,p,b}\right], \\
-z_{s,c} &\sim \Gam\left(r_z, \frac{r_z}{\exp(\eta_c+u_{s,c})}\right), \\
-\eta_c &\sim \Normal(m_{\eta,c},\sigma_{\eta}^{2}), \\
-\boldsymbol{u}_{\cdot,c} &\sim \Normal\left(\boldsymbol{0},\tau_c^{-1}(D-\varphi_c W+\epsilon I)^{-1}\right), \\
-\tau_c &\sim \Gam(a_{\tau},b_{\tau}), \\
-\varphi_c &\sim \Betadist(a_{\varphi},b_{\varphi}) \quad \text{truncated to } [0,1), \\
-q_c &\sim \LogNormal(m_q,\sigma_q^2), \\
-d_p &\sim \LogNormal(m_d+\gamma_w \log \mathrm{width}_p+\gamma_{GC}\mathrm{GC}_p,\sigma_d^2), \\
-\theta_{c,p} &\sim \Betadist(a_{\theta}+R_{c,p}^{\mathrm{open}},\;b_{\theta}+R_{c,p}^{\mathrm{closed}}), \\
-\boldsymbol{\omega}_{c,p,\cdot} &\sim \Dir(a_{\omega}\boldsymbol{u}_{\omega}+\boldsymbol{R}^{\mathrm{shape}}_{c,p,\cdot}), \\
-\beta_{p,b} &\sim \Gam(a_{\beta},b_{\beta}), \\
-\phi_p &\sim \Gam(a_{\phi},b_{\phi}).
+v_{s,p,b}&=\sum_cz_{s,c}A_{c,p}\omega_{c,p,b},\\
+\mu_{s,p}&=\sum_bv_{s,p,b},\qquad
+\rho_{s,p,b}=v_{s,p,b}/\mu_{s,p},\\
+N_{s,p}&\sim\NB\!\left(\mu_{s,p},\max(e_s,\epsilon)\phi_{\mathrm{ref}}\right),\\
+\boldsymbol{Y}_{s,p,\cdot}\mid N_{s,p}
+&\sim\Mult\!\left(N_{s,p},\boldsymbol{\rho}_{s,p,\cdot}\right),\\
+z_{s,c}&\sim\Gam\left(r_z,r_z/m_c\right),\qquad e_s=\sum_cz_{s,c}.
 \end{align}
 \end{mathbox}
 
-The output cell-type proportion is not a new random variable.  It is computed from the inferred abundances:
+The fixed quantities \(A\), \(\omega\), and \(\phi_{\mathrm{ref}}\) come only from
+training-reference cells.  The output cell-type proportion is computed from MAP
+abundances:
 \[
 \pi_{s,c}=\frac{z_{s,c}}{\sum_{c'=1}^{C} z_{s,c'}}.
 \]
 
-\section{Parameter guide: what is a hyperparameter?}
+\section{Primary parameter guide}
 
-\begin{plainbox}{Rule used in this document}
-A \textbf{hyperparameter} is fixed before inference, chosen by the user, cross-validation, weak default settings, or reference-based pseudo-counts.  A \textbf{model parameter} or \textbf{latent variable} is inferred from the data and has a prior distribution.
-\end{plainbox}
-
-\subsection{Observed data and fixed inputs}
-
-These are not inferred.  They are measured or precomputed.
-
-\begin{longtable}{L{0.14\linewidth}L{0.36\linewidth}C{0.16\linewidth}L{0.25\linewidth}}
-\caption{Observed data and fixed inputs.}\label{tab:data}\\
+\begin{longtable}{L{0.16\linewidth}L{0.43\linewidth}L{0.31\linewidth}}
+\caption{Quantities in the executable MVP.}\label{tab:primary-parameters}\\
 \toprule
-Symbol & Meaning & Hyper? & Distribution / status \\
+Symbol & Meaning & Status \\
 \midrule
 \endfirsthead
 \toprule
-Symbol & Meaning & Hyper? & Distribution / status \\
+Symbol & Meaning & Status \\
 \midrule
 \endhead
-\(Y_{s,p,b}\) & observed spatial ATAC count for spot \(s\), peak \(p\), bin \(b\) & No; observed data & Modeled by \(\NB(\lambda_{s,p,b},\phi_p)\). \\
-\(\ell_s\) & spot sequencing-depth offset & No; fixed offset & Usually computed from total fragments, e.g. total fragments divided by median total fragments. Optional version: put a LogNormal or Gamma prior on it. \\
-\(R_{c,p}^{\mathrm{open}}\) & reference accessibility pseudo-counts & No; reference data & Used inside the Beta prior for \(\theta_{c,p}\). \\
-\(R_{c,p}^{\mathrm{closed}}\) & reference closed pseudo-counts & No; reference data & Used inside the Beta prior for \(\theta_{c,p}\). \\
-\(\boldsymbol{R}^{\mathrm{shape}}_{c,p,\cdot}\) & reference shape-bin counts & No; reference data & Used inside the Dirichlet prior for \(\boldsymbol{\omega}_{c,p,\cdot}\). \\
-\(\mathrm{width}_p\) & width of peak \(p\) & No; fixed covariate & Used to predict peak detectability \(d_p\). \\
-\(\mathrm{GC}_p\) & GC content of peak \(p\) & No; fixed covariate & Used to predict peak detectability \(d_p\). \\
-\(W_{s,t}\) & neighbor weight between spots \(s\) and \(t\) & No; fixed graph & Usually built from spatial coordinates and optional chromatin similarity. \\
-\(D\) & diagonal graph-degree matrix & No; fixed matrix & \(D_{s,s}=\sum_t W_{s,t}\). \\
-\(I\) & identity matrix & No; fixed matrix & Used only for numerical stabilization. \\
+\(Y_{s,p,b}\) & deduplicated cut-site count annotated by parent-length bin & observed sparse layer \\
+\(N_{s,p}\) & \(\sum_bY_{s,p,b}\), the ordinary peak total & observed; identical in both arms \\
+\(A_{c,p}\) & mean total cut-site rate per training-reference cell & fixed smoothed estimate \\
+\(\omega_{c,p,b}\) & conditional parent-length-bin probability & fixed smoothed estimate \\
+\(\phi_{\mathrm{ref}}\) & global per-reference-cell NB inverse-dispersion & fixed cross-fitted estimate \\
+\(z_{s,c}\) & effective reference-cell-equivalent, depth-scaled abundance & inferred by MAP \\
+\(e_s\) & \(\sum_cz_{s,c}\), effective abundance scale & deterministic \\
+\(\mu_{s,p}\) & expected total cut-site count & deterministic \\
+\(\rho_{s,p,b}\) & expected conditional bin probability & deterministic \\
+\(\pi_{s,c}\) & row-normalized cell-type proportion & reported output \\
+\(r_z,m_c,\alpha_A,\alpha_\omega,\epsilon\) & prior, smoothing, and numerical settings & fixed before final evaluation \\
 \bottomrule
 \end{longtable}
 
-\subsection{Inferred model parameters and latent variables}
+\section{Richer Bayesian components are future extensions}
 
-These are not hyperparameters.  They are inferred and each follows a prior distribution or a deterministic rule.
+The earlier model draft included a learned background \(\beta_{p,b}\), cell-type
+yield \(q_c\), peak detectability \(d_p\), latent accessibility
+\(\theta_{c,p}\), inferred \(\omega\), spatial effects \(u_{s,c}\), peak-specific
+dispersion \(\phi_p\), and variational uncertainty.  These remain useful research
+directions, but none belongs to the primary ablation.  Estimating all of them with
+\(z\) would create scale and attribution ambiguities and could let background or
+spatial smoothing absorb the shape signal.
 
-\begin{longtable}{L{0.14\linewidth}L{0.31\linewidth}C{0.12\linewidth}L{0.34\linewidth}}
-\caption{Inferred quantities and their distributions.}\label{tab:parameters}\\
-\toprule
-Symbol & Meaning & Hyper? & Distribution / rule \\
-\midrule
-\endfirsthead
-\toprule
-Symbol & Meaning & Hyper? & Distribution / rule \\
-\midrule
-\endhead
-\(\lambda_{s,p,b}\) & expected count for spot \(s\), peak \(p\), bin \(b\) & No & Deterministic function of Equation~\eqref{eq:lambda}. It does not need its own prior. \\
-\(z_{s,c}\) & effective amount of cell type \(c\) in spot \(s\) & No & \(z_{s,c}\sim\Gam\left(r_z,r_z/\exp(\eta_c+u_{s,c})\right)\). \\
-\(\pi_{s,c}\) & cell-type proportion in spot \(s\) & No & Deterministic: \(\pi_{s,c}=z_{s,c}/\sum_{c'}z_{s,c'}\). \\
-\(\eta_c\) & global baseline abundance for cell type \(c\) & No & \(\eta_c\sim\Normal(m_{\eta,c},\sigma_{\eta}^{2})\). \\
-\(u_{s,c}\) & spatial abundance effect for spot \(s\), cell type \(c\) & No & \(\boldsymbol{u}_{\cdot,c}\sim\Normal(0,\tau_c^{-1}(D-\varphi_c W+\epsilon I)^{-1})\). \\
-\(\tau_c\) & spatial precision for cell type \(c\) & No & \(\tau_c\sim\Gam(a_{\tau},b_{\tau})\). \\
-\(\varphi_c\) & spatial dependence strength for cell type \(c\) & No & \(\varphi_c\sim\Betadist(a_{\varphi},b_{\varphi})\), truncated to \([0,1)\). \\
-\(q_c\) & per-cell ATAC yield for cell type \(c\) & No & \(q_c\sim\LogNormal(m_q,\sigma_q^2)\). \\
-\(d_p\) & peak detectability / technical capture factor & No & \(d_p\sim\LogNormal(m_d+\gamma_w\log\mathrm{width}_p+\gamma_{GC}\mathrm{GC}_p,\sigma_d^2)\). \\
-\(\gamma_w\) & coefficient for peak width effect on detectability & No & \(\gamma_w\sim\Normal(0,\sigma_{\gamma}^{2})\), or fixed to 0 in the simplest version. \\
-\(\gamma_{GC}\) & coefficient for GC effect on detectability & No & \(\gamma_{GC}\sim\Normal(0,\sigma_{\gamma}^{2})\), or fixed to 0 in the simplest version. \\
-\(\theta_{c,p}\) & accessibility probability/intensity of peak \(p\) in cell type \(c\) & No & \(\theta_{c,p}\sim\Betadist(a_{\theta}+R_{c,p}^{\mathrm{open}},b_{\theta}+R_{c,p}^{\mathrm{closed}})\). \\
-\(\omega_{c,p,b}\) & probability that fragments from \((c,p)\) fall in shape bin \(b\) & No & \(\boldsymbol{\omega}_{c,p,\cdot}\sim\Dir(a_{\omega}\boldsymbol{u}_{\omega}+\boldsymbol{R}^{\mathrm{shape}}_{c,p,\cdot})\). \\
-\(\beta_{p,b}\) & background rate for peak \(p\), bin \(b\) & No & \(\beta_{p,b}\sim\Gam(a_{\beta},b_{\beta})\). \\
-\(\phi_p\) & negative-binomial dispersion for peak \(p\) & No & \(\phi_p\sim\Gam(a_{\phi},b_{\phi})\). \\
-\bottomrule
-\end{longtable}
-
-\subsection{Hyperparameters}
-
-These are fixed before inference.  They do not have distributions inside this model unless you decide to build a deeper hierarchical model.
-
-\begin{longtable}{L{0.16\linewidth}L{0.42\linewidth}C{0.12\linewidth}L{0.22\linewidth}}
-\caption{Hyperparameters and how to choose them.}\label{tab:hyperparameters}\\
-\toprule
-Symbol & Meaning & Hyper? & Typical choice \\
-\midrule
-\endfirsthead
-\toprule
-Symbol & Meaning & Hyper? & Typical choice \\
-\midrule
-\endhead
-\(r_z\) & concentration of Gamma prior on cell abundance & Yes & Start with 2 to 10. Larger means less variability around \(\mu_{s,c}\). \\
-\(m_{\eta,c}\) & prior mean for global abundance of cell type \(c\) & Yes & Based on expected cell prevalence, or 0 for weak default. \\
-\(\sigma_\eta\) & prior standard deviation for \(\eta_c\) & Yes & 1 to 2 on log scale. \\
-\(a_{\tau},b_{\tau}\) & Gamma prior parameters for spatial precision \(\tau_c\) & Yes & Weak positive values, e.g. \(a_{\tau}=2,b_{\tau}=1\). \\
-\(a_{\varphi},b_{\varphi}\) & Beta prior parameters for spatial dependence \(\varphi_c\) & Yes & Use \((2,2)\) for neutral or \((3,1.5)\) if expecting smooth tissue zones. \\
-\(m_q,\sigma_q\) & prior mean and SD for cell-type ATAC yield \(q_c\) & Yes & Set \(m_q=0\), \(\sigma_q=0.5\) or 1 on log scale. \\
-\(m_d,\sigma_d\) & prior mean and SD for peak detectability \(d_p\) & Yes & Set \(m_d=0\), \(\sigma_d=0.5\) or learn from reference QC. \\
-\(\sigma_\gamma\) & prior SD for detectability covariate coefficients & Yes & 0.5 to 1 on log scale. \\
-\(a_{\theta},b_{\theta}\) & pseudo-counts for accessibility prior & Yes & Small values, e.g. \(0.5,0.5\), or stronger if reference labels are trusted. \\
-\(a_{\omega}\) & strength of default shape prior & Yes & 0.5 to 5. Smaller lets reference shape counts dominate. \\
-\(\boldsymbol{u}_{\omega}\) & default shape vector & Yes & Uniform vector \((1/B,\ldots,1/B)\), or global ATAC shape distribution. \\
-\(a_{\beta},b_{\beta}\) & Gamma prior parameters for background & Yes & Choose to prefer small background, e.g. mean \(a_{\beta}/b_{\beta}\) near 0.001 to 0.01. \\
-\(a_{\phi},b_{\phi}\) & Gamma prior parameters for NB dispersion & Yes & Weak positive values, or empirical from peak-level variance. \\
-\(\epsilon\) & numerical stabilizer in spatial covariance & Yes & Very small, e.g. \(10^{-5}\). \\
-\bottomrule
-\end{longtable}
+Extensions must be introduced one at a time after the three-bin MAP model passes
+its recovery, conservation, and negative-control tests.  A fixed small background
+is the first robustness check; a Dirichlet--multinomial conditional shape model is
+the first shape-overdispersion check.  Learned background, cross-protocol scaling,
+spatial smoothing, richer position or motif axes, learned signatures, and
+variational inference follow only when residual diagnostics justify them.  The
+independent-bin negative-binomial formulation is a sensitivity model, never the
+count-only control for the primary scientific claim.
 
 \section{Worked example: why shape helps}
 
@@ -571,7 +522,7 @@ Suppose there are only two cell types: T cells and B cells.  At one peak, both c
 \begin{center}
 \begin{tabular}{L{0.28\linewidth}C{0.2\linewidth}C{0.2\linewidth}C{0.2\linewidth}}
 \toprule
-Cell type / spot & Total count at peak & Short fragments & Mono fragments \\
+Cell type / spot & Total cut sites at peak & Short-parent cut sites & Mono-parent cut sites \\
 \midrule
 T-cell reference & 100 & 80\% & 20\% \\
 B-cell reference & 100 & 20\% & 80\% \\
@@ -611,7 +562,7 @@ So the observed spot looks like roughly:
     width=0.75\linewidth,
     height=6cm,
     ymin=0,ymax=100,
-    ylabel={percent of fragments},
+    ylabel={percent of cut sites},
     symbolic x coords={T ref,B ref,Observed},
     xtick=data,
     legend style={at={(0.5,-0.18)},anchor=north,legend columns=2},
@@ -626,54 +577,45 @@ So the observed spot looks like roughly:
 \caption{The total peak count is identical, but the shape distribution reveals a mixture.}
 \end{figure}
 
-\section{What the posterior means}
+\section{What the primary MAP estimate means}
 
-The posterior is the full probability distribution over all unknown quantities after seeing the data:
-
-\begin{align}
-&p(\{z,\eta,u,\tau,\varphi,q,d,\gamma,\theta,\omega,\beta,\phi\}\given Y) \\
-&\quad \propto
-\prod_{s,p,b} p(Y_{s,p,b}\given \lambda_{s,p,b},\phi_p)
-\prod_{s,c} p(z_{s,c}\given \eta_c,u_{s,c})
-\prod_c p(\eta_c)p(\boldsymbol{u}_{\cdot,c}\given \tau_c,\varphi_c)p(\tau_c)p(\varphi_c) \\
-&\qquad \times
-\prod_c p(q_c)
-\prod_p p(d_p)
-\prod_{c,p} p(\theta_{c,p})p(\boldsymbol{\omega}_{c,p,\cdot})
-\prod_{p,b} p(\beta_{p,b})
-\prod_p p(\phi_p).
-\end{align}
-
-The model output should report not only one best estimate, but also uncertainty:
+For fixed \(A\), \(\omega\), and \(\phi_{\mathrm{ref}}\), the primary model finds
 \[
-\widehat{\pi}_{s,c}=\E[\pi_{s,c}\given Y],
-\qquad
-95\%\;\text{credible interval for }\pi_{s,c}.
+\widehat z=\arg\max_{z>0}
+\left\{\log p(N\mid z,A,\phi_{\mathrm{ref}})
++\mathbb{1}_{\mathrm{shape}}\log p(Y\mid N,z,A,\omega)
++\log p(z)\right\}.
 \]
+The reported estimate is
+\(\widehat\pi_{s,c}=\widehat z_{s,c}/\sum_{c'}\widehat z_{s,c'}\).
+It is a point estimate.  The MAP MVP does not produce credible intervals, and its
+outputs must not be described as posterior means or calibrated uncertainty.
 
-\begin{plainbox}{Why uncertainty matters}
-If a rare cell type is predicted at 2\%, but the 95\% credible interval is 0\% to 12\%, the model is not confident.  This is better than pretending the 2\% estimate is exact.
+\begin{plainbox}{Future uncertainty model}
+Uncertainty remains scientifically valuable, especially for rare cell types.
+Variational inference may be added after the MAP likelihood, gradients, recovery,
+and negative controls are validated.  That extension must be reported as a new
+model version rather than attributed to the MVP.
 \end{plainbox}
 
 \section{Fitting the model}
 
-There are two practical inference choices.
-
-\subsection{Option 1: MAP estimation}
+\subsection{Primary: MAP estimation}
 
 MAP means maximum a posteriori.  It finds the single parameter setting that maximizes:
 \[
-\log p(Y\given \Theta)+\log p(\Theta),
+\log p(N\given z)+\mathbb{1}_{\mathrm{shape}}\log p(Y\given N,z)+\log p(z),
 \]
-where \(\Theta\) means all unknown quantities.
+with only \(z\) inferred.  Initialize from collapsed-count NNLS with a uniform
+fallback, use deterministic restarts, optimize with Adam, and fail on non-finite
+losses, gradients, abundances, or proportions.  Process peaks and spots in chunks
+rather than materializing a dense \(S\times P\times B\) expected tensor.
 
-This is easier to implement and debug.  It is a good first prototype.
-
-\subsection{Option 2: variational inference}
+\subsection{Future: variational inference}
 
 Variational inference approximates the posterior with a simpler distribution:
 \[
-q(\Theta) \approx p(\Theta\given Y).
+q(z) \approx p(z\given Y),
 \]
 
 Then it optimizes an evidence lower bound, usually called the ELBO:
@@ -682,58 +624,37 @@ Then it optimizes an evidence lower bound, usually called the ELBO:
 = \E_q[\log p(Y,\Theta)] - \E_q[\log q(\Theta)].
 \]
 
-This gives uncertainty estimates and scales better than MCMC for many spots and peaks.
+This can provide approximate uncertainty, but it is not part of the primary
+experiment and should not be implemented until MAP behavior is credible.
 
-\begin{plainbox}{Recommended development path}
-Start with MAP for the minimal model.  Once it works, implement variational inference for uncertainty and scalability.
-\end{plainbox}
+\section{Leakage-free experimental structure}
 
-\section{Minimal prototype}
+The available PBMC input contains one donor.  Therefore the primary experiment
+uses deterministic, cell-type-stratified 70/30 cell splits rather than claiming a
+donor split.  Each \emph{outer split seed} defines one reference/test partition.
+Peak selection, smoothing, signatures, and dispersion use only the 70\% reference
+pool.  Each \emph{inner mixture seed} samples pseudo-spots only from that outer
+split's held-out 30\% pool.
 
-The full model is useful for a paper, but the first code version should be simpler.
-
-\subsection{Minimal model equations}
-
-Fix \(\theta_{c,p}\), \(\omega_{c,p,b}\), \(d_p\), \(q_c\), and \(\phi_p\) from reference or empirical estimates.  Infer only \(z_{s,c}\) and maybe \(\beta_{p,b}\):
-
-\begin{align}
-Y_{s,p,b} &\sim \NB(\lambda_{s,p,b},\phi_p),\\
-\lambda_{s,p,b} &= \ell_s\left[\beta_{p,b}+\sum_c z_{s,c} q_c d_p\theta_{c,p}\omega_{c,p,b}\right],\\
-z_{s,c} &\sim \Gam(r_z,r_z/m_c),\\
-\beta_{p,b} &\sim \Gam(a_\beta,b_\beta).
-\end{align}
-
-\subsection{Minimal parameter table}
-
-\begin{center}
-\begin{tabularx}{\linewidth}{L{0.16\linewidth}C{0.17\linewidth}X}
-\toprule
-Symbol & Hyper? & Distribution / status \\
-\midrule
-\(Y_{s,p,b}\) & No; observed & \(Y_{s,p,b}\sim\NB(\lambda_{s,p,b},\phi_p)\). \\
-\(z_{s,c}\) & No & \(z_{s,c}\sim\Gam(r_z,r_z/m_c)\). \\
-\(\beta_{p,b}\) & No & \(\beta_{p,b}\sim\Gam(a_\beta,b_\beta)\). \\
-\(\theta_{c,p}\) & No; fixed estimate & Estimated from reference and treated as fixed in first prototype. \\
-\(\omega_{c,p,b}\) & No; fixed estimate & Estimated from reference and treated as fixed in first prototype. \\
-\(q_c,d_p,\phi_p,\ell_s\) & No; fixed estimates/offsets & Empirical estimates. \\
-\(r_z,m_c,a_\beta,b_\beta\) & Yes & Fixed hyperparameters. \\
-\bottomrule
-\end{tabularx}
-\end{center}
-
-This minimal model is already ShapeMix because it uses \(\omega_{c,p,b}\).
+Both arms run on the exact same pseudo-spots for every
+\((\text{outer seed},\text{inner seed},\text{condition})\) tuple.  Inner-mixture
+effects are first averaged within each outer split before describing variability
+across outer splits.  Neither spots nor inner mixtures are independent biological
+replicates.  Intervals from this design quantify conditional resampling variability
+within one donor and do not establish donor-level generalization.
 
 \section{How to build the shape-count tensor}
 
 \subsection{Step-by-step preprocessing}
 
 \begin{enumerate}[leftmargin=2em]
-    \item Start with an ATAC fragment file containing chromosome, start, end, and spatial barcode.
-    \item Intersect each fragment with a chosen peak set.
-    \item Assign each fragment to a shape bin.
-    \item Count fragments by spot, peak, and shape bin.
-    \item Keep informative peaks or peak groups.
-    \item Build the tensor \(Y_{s,p,b}\).
+    \item Start with the BGZF/tabix-indexed five-column 10x fragments file: chromosome, start, end, barcode, and \texttt{readSupport}.
+    \item Treat each row as one deduplicated fragment and ignore \texttt{readSupport} in the primary analysis.
+    \item Compute parent length \(L=\texttt{chromEnd}-\texttt{chromStart}\) and assign both of its Tn5 cut sites to one fixed length bin.
+    \item Assign each cut site to the unique selected, non-overlapping Cell Ranger peak that contains it.  Validate the right-cut coordinate against the vendor peak matrix first.
+    \item Select 5,000 peaks by a deterministic accessibility-variance rank computed from reference cells only; never use held-out cells or shape counts for selection.
+    \item Accumulate sparse cell/spot-by-peak matrices for each bin and set \(N_{s,p}=\sum_bY_{s,p,b}\).
+    \item Require the layer sum to equal the ordinary peak-count matrix exactly and record source, feature, and split hashes.
 \end{enumerate}
 
 \subsection{Fragment-length bin example}
@@ -748,7 +669,8 @@ For fragment length \(L\):
  \end{cases}
 \]
 
-The exact cutoffs should be tuned to the assay and species.
+These half-open cutoffs are fixed for the primary experiment.  Alternative cutoffs
+are versioned sensitivity analyses, not tuning on final mixtures.
 
 \section{Diagnostics and ablation tests}
 
@@ -757,11 +679,13 @@ The exact cutoffs should be tuned to the assay and species.
 After fitting, check:
 
 \begin{itemize}[leftmargin=2em]
-    \item \textbf{Posterior predictive checks:} simulate \(Y^{\mathrm{rep}}\) from the fitted model and compare with observed \(Y\).
+    \item \textbf{Conservation:} bin layers sum exactly to \(N\), and selected columns reconstruct or explain the official vendor matrix.
+    \item \textbf{Count reconstruction:} compare fitted \(\mu\) with \(N\) by peak and spot.
     \item \textbf{Shape-bin reconstruction:} does the model reproduce short/mono/long ratios?
-    \item \textbf{Rare-cell uncertainty:} rare cell types should have wider intervals unless evidence is strong.
-    \item \textbf{Reference mismatch:} large background \(\beta_{p,b}\) or systematic residuals suggest missing cell states.
-    \item \textbf{Spatial smoothness:} if using the spatial prior, check that it smooths within tissue domains but does not erase boundaries.
+    \item \textbf{Optimization:} all losses, gradients, abundances, and proportions are finite; restarts agree or their disagreement is reported.
+    \item \textbf{Homogenized shape:} identical \(\omega\) across cell types makes ShapeMix agree with count-only within tolerance.
+    \item \textbf{Permuted shape:} permuting cell-type shape labels must not create a credible improvement.
+    \item \textbf{Poisson identity:} factorized Poisson total plus conditional multinomial equals independent Poisson bin counts.
 \end{itemize}
 
 \subsection{Ablation tests}
@@ -773,28 +697,30 @@ Ablation means removing one ingredient at a time to test whether it matters.
 \toprule
 Model version & Question answered \\
 \midrule
-Peak-count only & Does shape add value beyond total accessibility? \\
-ShapeMix with length bins & Does fragment length improve deconvolution? \\
-ShapeMix with position bins & Does within-peak position improve deconvolution? \\
-No spatial prior & Does spatial smoothing help? \\
-No peak detectability \(d_p\) & Are peak-specific technical effects important? \\
-No background \(\beta_{p,b}\) & Is unexplained signal being forced into wrong cell types? \\
-Fixed signatures vs Bayesian signatures & Does uncertainty in the reference matter? \\
+Shared NB total only & Primary count-only arm. \\
+Shared NB total + conditional length composition & Primary ShapeMix arm; only the conditional term differs. \\
+Cell-type-homogenized \(\omega\) & Negative control: does shape become non-informative as required? \\
+Cell-type-permuted \(\omega\) & Negative control: can arbitrary shape labels appear beneficial? \\
+Poisson versus NB total & Sensitivity to total-count overdispersion. \\
+Zero versus fixed small background & Robustness to unexplained signal. \\
+One/three bins and alternative cutoffs & Sensitivity to binning, using versioned datasets. \\
+5,000/10,000/20,000 peaks & Sensitivity to reference-only feature count. \\
 \bottomrule
 \end{tabularx}
 \end{center}
 
 \section{What makes ShapeMix-ATAC new and testable?}
 
-The standard transferred deconvolution methods use spot-by-feature count matrices.  For ATAC, the feature is usually a peak.  ShapeMix changes the data object from a matrix to a tensor:
+The standard transferred deconvolution methods use spot-by-feature count matrices.  For ATAC, the feature is usually a peak.  ShapeMix augments that matrix with a tensor whose entries use the same count unit:
 \[
-\text{ordinary ATAC deconvolution: } Y_{s,p}
+\text{ordinary ATAC deconvolution: } N_{s,p}
 \qquad\Longrightarrow\qquad
 \text{ShapeMix-ATAC: }Y_{s,p,b}.
 \]
 
 \begin{idea}
-ShapeMix-ATAC tests the hypothesis that fragment-shape information helps distinguish cell types whose total accessibility profiles are too similar.
+The narrow scientific claim is: \emph{does the parent-fragment length composition
+of observed insertions improve deconvolution beyond their peak totals?}
 \end{idea}
 
 This is especially useful for:
@@ -804,7 +730,7 @@ This is especially useful for:
     \item nearby developmental states,
     \item tumor and stromal mixtures,
     \item rare cell types with subtle peak-count differences,
-    \item cell types that share open peaks but differ in nucleosome or footprint patterns.
+    \item cell types that share open peaks but differ in parent-fragment length patterns.
 \end{itemize}
 
 \section{Implementation pseudocode}
@@ -812,148 +738,148 @@ This is especially useful for:
 \begin{plainbox}{Pseudocode}
 \begin{verbatim}
 Input:
-    spatial ATAC fragments
-    peaks or peak groups
+    BGZF fragments file plus tabix index
+    non-overlapping Cell Ranger peaks
     scATAC/multiome reference with cell type labels
-    spatial coordinates
 
 Preprocess:
-    assign each spatial fragment to a peak p
-    assign each fragment to a shape bin b
-    build tensor Y[s,p,b]
-    build reference signatures theta[c,p] and omega[c,p,b]
+    make deterministic stratified 70/30 outer cell split
+    choose 5,000 peaks from reference cells only
+    ignore readSupport; bin each deduplicated parent fragment
+    assign its two cut sites to containing peaks
+    build sparse layers Y[s,p,b] and totals N[s,p]
+    estimate fixed A[c,p], omega[c,p,b], phi_ref from reference
 
-Fit minimal model:
-    initialize z[s,c] using peak-count deconvolution or NNLS
+For each nested mixture seed and each arm:
+    form the same pseudo-spots from held-out cells
+    initialize z[s,c] from collapsed-count NNLS
     repeat until convergence:
-        compute lambda[s,p,b]
-        update z[s,c] to improve NB likelihood plus prior
-        optionally update beta[p,b]
-
-Fit full model:
-    add priors for theta, omega, q, d, phi
-    add spatial prior for u[s,c]
-    use variational inference or MAP optimization
+        compute mu[s,p] and abundance-scaled NB total loss
+        if shape arm: add conditional multinomial loss
+        update only positive z[s,c] plus its fixed prior
 
 Output:
     pi[s,c] = z[s,c] / sum_c z[s,c]
-    uncertainty intervals
-    posterior predictive checks
+    effective depth-scaled abundance z[s,c]
+    convergence and restart diagnostics
     residual peaks and residual shape patterns
 \end{verbatim}
 \end{plainbox}
 
 \section{Common questions}
 
-\subsection{Is \texorpdfstring{\(\omega_{c,p,b}\)}{omega} a hyperparameter?}
+\subsection{Is \texorpdfstring{\(\omega_{c,p,b}\)}{omega} inferred from each spot?}
 
-No.  In the full Bayesian model, \(\omega_{c,p,b}\) is an inferred model parameter with a Dirichlet prior.  In the minimal prototype, it can be fixed from the reference.  If fixed, it is not a hyperparameter in the usual Bayesian sense; it is an empirical input.
+No.  In the primary model, \(\omega\) is a fixed, smoothed empirical input
+estimated only from training-reference cells.  Inferring it jointly with abundance
+is a future model version.
 
-\subsection{Is \texorpdfstring{\(\theta_{c,p}\)}{theta} a hyperparameter?}
+\subsection{Why is there no \texorpdfstring{\(\theta_{c,p}\)}{theta}, yield, or detectability term?}
 
-No.  In the full model, \(\theta_{c,p}\) is an inferred model parameter with a Beta prior.  The hyperparameters are \(a_\theta\), \(b_\theta\), and the reference pseudo-count construction.
+Their product is absorbed into the fixed total-rate signature \(A_{c,p}\).  This
+keeps the MVP identifiable enough to test shape without asking the model to divide
+one scale among \(z\), yield, detectability, and accessibility.
 
 \subsection{Is \texorpdfstring{\(z_{s,c}\)}{z} a cell count?}
 
-It is an \emph{effective} cell count.  It behaves like a positive abundance.  It may not be an exact integer because spatial ATAC counts depend on capture efficiency, chromatin openness, and sequencing depth.  If image-derived nuclei counts are available, the model can constrain \(\sum_c z_{s,c}\) to match them.
+No.  It is an effective reference-cell-equivalent, depth-scaled abundance.  It may
+track cell number in a same-protocol simulation, but without an observed depth
+offset or external calibration it is neither an exact integer nor a nucleus count.
+The primary biological output is the normalized proportion \(\pi\).
 
 \subsection{Can we use Poisson instead of negative binomial?}
 
-Yes.  The Poisson version is:
-\[
-Y_{s,p,b}\sim\Pois(\lambda_{s,p,b}).
-\]
-It is simpler and may work well for some ATAC peak counts.  The negative binomial is safer when the data are overdispersed.
+Yes.  Replace only the shared total model with
+\(N_{s,p}\sim\Pois(\mu_{s,p})\) and retain the same conditional multinomial.
+This is also a golden test because the resulting joint distribution equals
+independent Poisson bin counts with means \(v_{s,p,b}\).
 
 \subsection{Do we need all peaks?}
 
-No.  Use selected peaks or peak groups.  ShapeMix is most useful when the selected peaks have informative shape differences between cell types.  A practical first version might use 5,000 to 30,000 peaks or groups, depending on depth.
+No.  The primary run uses 5,000 peaks selected by a frozen reference-only
+accessibility-variance ranking.  Runs with 10,000 and 20,000 peaks are sensitivity
+analyses.  Selecting peaks from held-out mixtures or from shape differences would
+leak test information into the model.
 
-\section{Optional extension: image-based cell budget}
+\section{Fixed evaluation contract}
 
-If nuclei segmentation gives an approximate number of nuclei \(N_s^{\mathrm{img}}\) in spot \(s\), add:
-\[
-N_s^{\mathrm{img}} \sim \Normal_+\left(\sum_c z_{s,c},\sigma_N^2\right),
-\]
-where \(\Normal_+\) means a Normal distribution truncated to positive values.
+The dataset declares one ordered cell-type universe, which must equal the truth
+columns and reference-label universe.  Prediction rows must contain the exact truth
+spot set.  A missing declared prediction type is inserted as zero so omission is
+penalized; an unknown extra type is an error.  Duplicate labels, non-numeric,
+non-finite, negative, or all-zero rows fail evaluation.  Truth and prediction rows
+must already sum to one within the frozen tolerance; they are not silently
+renormalized and invalid rows are never dropped.
 
-Parameter status:
+The primary metrics are:
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{RMSE:} root mean squared error across all
+    \(S\times C\) entries in the fixed universe.
+    \item \textbf{\texttt{jsd\_v2}:} mean per-spot base-2 Jensen--Shannon
+    \emph{divergence},
+    \[
+    \frac{1}{S}\sum_s
+    \operatorname{JSD}_{2}(\boldsymbol{\pi}^{\mathrm{true}}_s,
+    \widehat{\boldsymbol{\pi}}_s),
+    \]
+    operationally
+    \texttt{mean(jensenshannon(truth, prediction, base=2)$^2$)}.  Its range is
+    \([0,1]\).  The square is required because the library function returns
+    Jensen--Shannon distance; the historical unsquared value is a different metric.
+\end{itemize}
 
-\begin{center}
-\begin{tabularx}{\linewidth}{L{0.18\linewidth}C{0.15\linewidth}X}
-\toprule
-Symbol & Hyper? & Distribution / status \\
-\midrule
-\(N_s^{\mathrm{img}}\) & No; observed & Image-derived nuclei count. \\
-\(\sigma_N\) & Yes & Fixed measurement-error scale for image-derived nuclei counts. \\
-\(\sum_c z_{s,c}\) & No & Deterministic total effective cell count in spot \(s\). \\
-\bottomrule
-\end{tabularx}
-\end{center}
+Secondary metrics include per-type MAE and RMSE, correlation, frozen rare-cell
+precision, recall, F1, and AUPRC, plus runtime and memory.  The metric version and
+declared universe are saved with every comparison.
 
-\section{Optional extension: peak reliability weights}
+\section{Optional extensions after the primary test}
 
-Some peaks are noisy, poorly mappable, or not useful for deconvolution.  Add a reliability weight \(r_p\):
-\[
-r_p \sim \Betadist(a_r,b_r),
-\qquad 0<r_p<1.
-\]
-
-Then use a weighted log-likelihood:
-\[
-\mathcal{L}_{\mathrm{weighted}}
-=\sum_{s,p,b} r_p\log p(Y_{s,p,b}\given\lambda_{s,p,b},\phi_p).
-\]
-
-Parameter status:
-
-\begin{center}
-\begin{tabularx}{\linewidth}{L{0.18\linewidth}C{0.15\linewidth}X}
-\toprule
-Symbol & Hyper? & Distribution / status \\
-\midrule
-\(r_p\) & No & \(r_p\sim\Betadist(a_r,b_r)\). \\
-\(a_r,b_r\) & Yes & Fixed Beta prior parameters. \\
-\bottomrule
-\end{tabularx}
-\end{center}
-
-This extension is useful, but it is not required for the first ShapeMix paper.  The core novelty is already the shape-count likelihood.
+Image-derived nuclei budgets, peak reliability weights, a fixed background,
+cross-protocol scaling, a Dirichlet--multinomial shape term, spatial smoothing,
+position or motif axes, Bayesian signatures, and variational uncertainty may all be
+valuable.  Each changes the model or claim and therefore requires a versioned
+dataset/configuration, its own negative control, and an identifiability check.  None
+is part of the first ShapeMix-versus-count-only comparison.
 
 \section{Recommended first experiment}
 
 \begin{enumerate}[leftmargin=2em]
-    \item Build a peak-count baseline using \(Y_{s,p}=\sum_b Y_{s,p,b}\).
-    \item Build ShapeMix with two or three fragment-length bins.
-    \item Simulate pseudo-spots from a scATAC or multiome reference.
-    \item Compare true and estimated \(\pi_{s,c}\).
-    \item Stress-test related cell types and rare cell types.
-    \item Report whether shape improves RMSE, Jensen-Shannon divergence, rare-cell F1, and calibration.
+    \item Make frozen, stratified 70/30 outer splits and document the one-donor limitation.
+    \item From each reference pool only, choose 5,000 peaks and estimate \(A\), \(\omega\), and cross-fitted \(\phi_{\mathrm{ref}}\).
+    \item Build matched pseudo-spots from held-out cells with mixture seeds nested inside each split seed.
+    \item Fit the shared negative-binomial total model to both arms; add only the conditional three-bin term for ShapeMix.
+    \item Pair results within every outer-seed, inner-seed, and condition tuple.  Average inner effects within outer splits before summarizing across splits.
+    \item Report RMSE and \texttt{jsd\_v2}, plus frozen secondary metrics, runtime, convergence, and negative controls, even if shape does not help.
 \end{enumerate}
 
 \begin{warningbox}
-Do not begin with too many shape bins.  If \(P\) peaks and \(B\) bins are both large, the tensor becomes sparse.  Start simple, prove shape helps, then add richer shape features.
+Do not treat spots, inner mixtures, or repeated partitions of one donor as
+independent biological replicates.  The primary result is evidence conditional on
+this dataset; cross-donor validation requires additional donors.
 \end{warningbox}
 
 \section{Summary in one page}
 
-\begin{mathbox}{The whole model in one line}
-\[
-Y_{s,p,b}\sim\NB\left(
-\ell_s\left[\beta_{p,b}+\sum_c z_{s,c}q_c d_p\theta_{c,p}\omega_{c,p,b}\right],\phi_p
-\right).
-\]
+\begin{mathbox}{The whole primary model in two lines}
+\begin{align*}
+N_{s,p}&\sim\NB\!\left(
+\mu_{s,p}=\sum_cz_{s,c}A_{c,p},
+\max\!\left(\sum_cz_{s,c},\epsilon\right)\phi_{\mathrm{ref}}
+\right),\\
+\boldsymbol{Y}_{s,p,\cdot}\mid N_{s,p}
+&\sim\Mult\!\left(N_{s,p},
+\frac{\sum_cz_{s,c}A_{c,p}\boldsymbol{\omega}_{c,p,\cdot}}
+{\sum_cz_{s,c}A_{c,p}}\right).
+\end{align*}
 \end{mathbox}
 
 \begin{itemize}[leftmargin=2em]
-    \item \(Y_{s,p,b}\): observed shape-count tensor.
-    \item \(z_{s,c}\): hidden amount of cell type \(c\) in spot \(s\).
-    \item \(\theta_{c,p}\): how open peak \(p\) is in cell type \(c\).
-    \item \(\omega_{c,p,b}\): what shape fragments from cell type \(c\) have at peak \(p\).
-    \item \(d_p\): peak detectability.
-    \item \(q_c\): cell-type ATAC yield.
-    \item \(\beta_{p,b}\): background.
-    \item \(\phi_p\): overdispersion.
+    \item \(Y_{s,p,b}\): deduplicated cut sites in a peak, grouped by their parent fragment's fixed length bin.
+    \item \(N_{s,p}=\sum_bY_{s,p,b}\): the identical peak total used by both arms.
+    \item \(A_{c,p}\): fixed reference total-rate signature.
+    \item \(\omega_{c,p,b}\): fixed conditional parent-length signature.
+    \item \(\phi_{\mathrm{ref}}\): fixed, cross-fitted global reference inverse-dispersion.
+    \item \(z_{s,c}\): inferred effective reference-cell-equivalent, depth-scaled abundance.
 \end{itemize}
 
 The final cell-type composition is:
@@ -962,7 +888,10 @@ The final cell-type composition is:
 \]
 
 \begin{idea}
-ShapeMix-ATAC is easy to explain because it says: \emph{use the pattern of fragments, not only the number of fragments}.  It is intuitive because ATAC fragments physically reflect chromatin structure.  It is testable because you can compare the same model with and without the shape-bin index \(b\).
+ShapeMix-ATAC asks one controlled question: \emph{does parent-fragment length
+composition improve deconvolution beyond peak totals?}  The count-only arm uses the
+exact same total likelihood and optimization; ShapeMix adds only the conditional
+length-composition term.
 \end{idea}
 
 \section*{References and positioning notes}

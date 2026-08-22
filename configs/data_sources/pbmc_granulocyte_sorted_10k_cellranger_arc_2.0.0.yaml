@@ -1,0 +1,86 @@
+schema_version: 1
+source_dataset_id: pbmc_granulocyte_sorted_10k
+source_name: PBMC from a Healthy Donor - Granulocytes Removed Through Cell Sorting (10k)
+provider: 10x Genomics
+assay: Epi Multiome
+organism: human
+tissue: peripheral blood mononuclear cells
+cellranger_arc_version: 2.0.0
+license: CC BY 4.0
+source_page: https://www.10xgenomics.com/datasets/pbmc-from-a-healthy-donor-granulocytes-removed-through-cell-sorting-10-k-1-standard-2-0-0
+raw_directory: data/raw/sources/10x_genomics/pbmc_granulocyte_sorted_10k/cellranger_arc_2.0.0
+manifest_updated_at: 2026-08-22
+
+fragment_format:
+  compression: BGZF
+  index: tabix with BED preset
+  coordinate_system: zero-based, half-open
+  record_semantics: one deduplicated fragment per data row
+  header_prefix: "#"
+  columns:
+    - name: chrom
+      type: string
+    - name: chromStart
+      type: integer
+    - name: chromEnd
+      type: integer
+      semantics: exclusive
+    - name: barcode
+      type: string
+    - name: readSupport
+      type: positive_integer
+      semantics: read pairs supporting the deduplicated fragment
+  strand_column: false
+  shapemix_read_support_policy: ignore
+  shapemix_length_definition: chromEnd - chromStart
+
+files:
+  - filename: pbmc_granulocyte_sorted_10k_filtered_feature_bc_matrix.h5
+    role: filtered_feature_barcode_matrix
+    url: https://cf.10xgenomics.com/samples/cell-arc/2.0.0/pbmc_granulocyte_sorted_10k/pbmc_granulocyte_sorted_10k_filtered_feature_bc_matrix.h5
+    bytes: 192125528
+    sha256: f6824171378787baab244f559b8b438f79db2eb39f78d17b2196f7ecd2c03549
+  - filename: pbmc_granulocyte_sorted_10k_atac_peaks.bed
+    role: cellranger_arc_atac_peaks
+    url: https://cf.10xgenomics.com/samples/cell-arc/2.0.0/pbmc_granulocyte_sorted_10k/pbmc_granulocyte_sorted_10k_atac_peaks.bed
+    bytes: 3439145
+    sha256: 3975a4057f9caa3fb69ddaecc6ae9e530e77551717a1464c2d93ac9d73cb60ab
+  - filename: pbmc_granulocyte_sorted_10k_per_barcode_metrics.csv
+    role: per_barcode_qc_metrics
+    url: https://cf.10xgenomics.com/samples/cell-arc/2.0.0/pbmc_granulocyte_sorted_10k/pbmc_granulocyte_sorted_10k_per_barcode_metrics.csv
+    bytes: 88822764
+    sha256: fd3e069b83e152145af234667b419c982968aca0df322a92adb71284d0d902cd
+  - filename: pbmc_granulocyte_sorted_10k_web_summary.html
+    role: cellranger_arc_web_summary
+    url: https://cf.10xgenomics.com/samples/cell-arc/2.0.0/pbmc_granulocyte_sorted_10k/pbmc_granulocyte_sorted_10k_web_summary.html
+    bytes: 6227259
+    sha256: 4f443bc6908c3345326cac73e11d7b16e0adc279f8023de2867e3f5d85f86ec5
+  - filename: pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz
+    role: cellranger_arc_atac_fragments
+    url: https://cf.10xgenomics.com/samples/cell-arc/2.0.0/pbmc_granulocyte_sorted_10k/pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz
+    downloaded_at: 2026-08-22
+    bytes: 2403785496
+    sha256: 5075e32a0e9c6dded35b060bf90d6144375b150e131ffb0be121a93e3b5e1e38
+  - filename: pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz.tbi
+    role: tabix_index_for_atac_fragments
+    url: https://cf.10xgenomics.com/samples/cell-arc/2.0.0/pbmc_granulocyte_sorted_10k/pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz.tbi
+    downloaded_at: 2026-08-22
+    bytes: 1089534
+    sha256: 3a516291d0e6e5ddf9f651f470b6312b83eeb26f153ea12cfa9d082760a5e7f5
+
+validation:
+  gzip_integrity: passed on 2026-08-22
+  pysam_version: 0.24.0
+  tabix_contigs: 39
+  first_contig: chr1
+  last_contig: KI270713.1
+  sampled_rows: 3000
+  sampled_contigs:
+    - chr1
+    - chrX
+    - KI270713.1
+
+notes:
+  - The fragments and index are required raw inputs for ShapeMix preprocessing.
+  - ShapeMix ignores readSupport and counts deduplicated Tn5 cut sites grouped by parent-fragment length.
+  - The right cut-site coordinate convention remains gated on reconstruction against the official peak matrix in preprocessing Step 2.

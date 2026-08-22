@@ -1,6 +1,6 @@
 # ShapeMix-ATAC implementation plan
 
-Status: proposed implementation roadmap, 2026-08-22
+Status: active implementation roadmap; Steps 0 and 1 completed 2026-08-22
 
 This document turns the ShapeMix concept into a repository-specific engineering and research plan. It does not implement the method. The implementation should preserve all current datasets and methods, create new ShapeMix-specific data products, and make the shape-aware versus peak-only comparison a controlled, reproducible ablation.
 
@@ -40,14 +40,14 @@ The latest proposal and TeX source agree on a three-bin, reference-guided, non-s
 3. This implementation plan resolves computational and statistical ambiguities required to make the experiment valid.
 4. Older tutorials remain useful background but are not the executable specification.
 
-The source documents currently describe `Y` as a fragment count. This plan intentionally changes the primary count unit to **deduplicated Tn5 cut sites, each annotated with its parent fragment's length bin**, so that summing the bins reconstructs the same kind of peak count used by Cell Ranger and the count-only baselines. The scientific claim is therefore: *does the parent-fragment length composition of observed insertions improve deconvolution beyond their peak totals?* Step 0 must update the proposal and tutorial terminology before implementation. A unique-fragment-count formulation would be a separately versioned sensitivity analysis with a matched fragment-count baseline, not an interchangeable input.
+Before Step 0, the source documents described `Y` as a fragment count. Step 0 reconciled them on 2026-08-22 around the primary count unit: **deduplicated Tn5 cut sites, each annotated with its parent fragment's length bin**. Summing the bins therefore reconstructs the same kind of peak count used by Cell Ranger and the count-only baselines. The scientific claim is: *does the parent-fragment length composition of observed insertions improve deconvolution beyond their peak totals?* A unique-fragment-count formulation would be a separately versioned sensitivity analysis with a matched fragment-count baseline, not an interchangeable input.
 
 ## 3. Current repository gaps
 
 ShapeMix cannot be added only as another method adapter. The missing pieces are upstream of the model:
 
 - `DeconvolutionInput` currently supplies aligned two-dimensional reference and spatial `AnnData` matrices. The PBMC objects contain peak counts but no fragment-length layers.
-- The required 10x fragments file, approximately 2.4 GB compressed, and its `.tbi` index are explicitly deferred in the current source manifest.
+- Before Step 1, the required 10x fragments file, approximately 2.4 GB compressed, and its `.tbi` index were deferred. They are now downloaded, checksum-pinned, and tabix-validated; the derived fragment-shape layers remain to be produced in Step 2.
 - The current PBMC simulator samples cells from the same full object later used as the reference. That is acceptable for the existing benchmark's provenance, but it leaks cell-level information in the proposed ShapeMix experiment.
 - Heart and Russell data contain only collapsed peak matrices. Fragment length cannot be recovered from them, so they cannot test ShapeMix's core claim.
 - The experiment runner supports one configuration per method name. It cannot currently run `shapemix` twice under distinct shape-aware and peak-only configurations in one run group.
@@ -185,7 +185,7 @@ omega[c,p,b]
       / (sum_{i in c} T[i,p] + alpha_omega)
 ```
 
-Here `g[p]` is a pooled peak-rate target, `u[p,b]` is the pooled training-reference shape distribution for the peak, and `h[i]` is an exposure factor. Use `h[i] = 1` for the primary same-protocol pseudo-spot benchmark so `A` is an average per reference cell; evaluate library-size-adjusted exposures as a sensitivity analysis.
+Here `g[p]` is a pooled peak-rate target, `u[p,b]` is the pooled training-reference shape distribution for the peak after smoothing it toward the dataset-global bin distribution with the same `alpha_omega`, and `h[i]` is an exposure factor. Require every global bin to have positive training-reference support. Use `h[i] = 1` for the primary same-protocol pseudo-spot benchmark so `A` is an average per reference cell; evaluate library-size-adjusted exposures as a sensitivity analysis.
 
 When a peak is too sparse to estimate a cell-type-specific `omega`, shrink toward the pooled peak distribution, then toward the dataset-global distribution. Do not use unscaled raw reference counts as a later Dirichlet concentration: abundant cell types would become artificially overconfident. Record effective smoothing concentrations explicitly.
 
@@ -219,7 +219,7 @@ Do not supply observed spatial library size as an offset in the primary model. `
 - Fail on non-finite loss, gradient, abundance, or proportions rather than allowing normalization to turn failures into zeros.
 - Return `pi[s,c] = z[s,c] / sum_c z[s,c]` as the standardized proportion estimate.
 
-The current `requirements.txt` environment snapshot already contains PyTorch and Pyro, but neither is declared as a ShapeMix dependency in `pyproject.toml`, and `pysam` is absent. Add a tested PyTorch/pysam optional extra for the MVP. Pyro may remain recorded in a complete environment snapshot, but it is not an MVP ShapeMix dependency; add it to the ShapeMix extra only when variational inference is implemented. Pyro provides automatic guides for that later stage: [Pyro automatic guides](https://docs.pyro.ai/en/stable/infer.autoguide.html).
+Step 1 added a tested ShapeMix optional extra in `pyproject.toml` and validated PyTorch 2.11 and pysam 0.24 in the project environment. Pyro may remain recorded in the complete `requirements.txt` environment snapshot, but it is not an MVP ShapeMix dependency; add it to the ShapeMix extra only when variational inference is implemented. Pyro provides automatic guides for that later stage: [Pyro automatic guides](https://docs.pyro.ai/en/stable/infer.autoguide.html).
 
 ## 6. Data and file flow
 
@@ -304,6 +304,8 @@ Sparse H5AD layers are appropriate because AnnData stores CSR/CSC matrices on di
 
 Goal: create one executable specification before model code or canonical data are produced.
 
+Execution status: **completed 2026-08-22**. The canonical README, model specification, and benchmark protocol were created; the proposal and Bayesian TeX were reconciled; and the 18-page PDF was regenerated successfully from the updated TeX.
+
 | Action | File | Planned change |
 |---|---|---|
 | Add | `docs/ShapeMix/README.md` | Point readers to the canonical specification and implementation plan; explicitly label the high-level DOCX and beginner/deprecated tutorials as historical, non-normative context. |
@@ -324,6 +326,8 @@ Acceptance criteria:
 ### Step 1 — Acquire and pin raw fragment inputs
 
 Goal: make fragment-level data reproducible on any machine.
+
+Execution status: **completed 2026-08-22**. The 2,403,785,496-byte fragments file (`SHA-256 5075e32a...e3b5e1e38`) and 1,089,534-byte tabix index (`SHA-256 3a516291...60a5e7f5`) were downloaded from the versioned 10x URLs. Full gzip integrity passed; pysam 0.24.0 opened all 39 indexed contigs and validated records from the first, primary sex-chromosome, and terminal contigs. Exact hashes are stored in the tracked and local manifests.
 
 | Action | File | Planned change |
 |---|---|---|

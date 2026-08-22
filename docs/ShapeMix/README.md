@@ -1,0 +1,62 @@
+# ShapeMix-ATAC
+
+ShapeMix-ATAC is a reference-guided method for deconvolving spatial ATAC mixtures. Its narrow primary question is:
+
+> Does the parent-fragment length composition of ATAC cut sites improve cell-type proportion estimates beyond the same cut sites collapsed to peak totals?
+
+The MVP is a non-spatial, fixed-reference-signature, maximum-a-posteriori model. It is intentionally smaller than the broader models discussed in the early tutorials so that the contribution of fragment shape can be tested in an exactly matched ablation.
+
+## Canonical documents
+
+Use these files in this order:
+
+1. [Model specification](model_specification.md) — normative data semantics and statistical model.
+2. [Benchmark protocol](benchmark_protocol.md) — normative data split, peak selection, seeds, metrics, and comparison rules.
+3. [Current Bayesian tutorial source](tutorials/ShapeMix_ATAC_Bayesian_Model_Tutorial.tex) and [generated PDF](tutorials/ShapeMix_ATAC_Bayesian_Model_Tutorial.pdf) — canonical explanatory derivation of the MVP and labeled extensions.
+4. [Implementation plan](implementation_plan.md) — file-level engineering roadmap and acceptance gates.
+5. [Research proposal](../research_class/ShapeMix_ATAC_proposal_draft.md) — current motivation, research question, and broader study design.
+
+If two documents disagree about the executable MVP, `model_specification.md` governs the model and `benchmark_protocol.md` governs the experiment. The implementation plan governs sequencing and repository integration. The proposal governs the scientific motivation and was reconciled with the canonical count unit and likelihood on 2026-08-22; the two normative specifications still take precedence over any future proposal drift.
+
+## Frozen MVP contract
+
+- Input rows follow the Cell Ranger ARC 2.0 five-column fragments schema: chromosome, start, end, barcode, and `readSupport`. There is no strand field.
+- Each row represents a deduplicated fragment. The primary pipeline ignores `readSupport`, emits its two Tn5 cut sites, and tags both cut sites with the parent fragment's length.
+- Parent-fragment length is `end - start` and uses bins `[0,100)`, `[100,250)`, and `[250,∞)` bp.
+- Each cut site is assigned independently to the unique non-overlapping Cell Ranger peak that contains it. Unassigned cut sites are not counted.
+- Three sparse `AnnData` layers hold cut-site counts by length bin, and `.X` is their exact elementwise sum.
+- Reference and held-out mixture cells are disjoint. Peaks and fixed signatures are learned from the reference split only.
+- Total peak counts use a negative-binomial likelihood. Conditional bin composition uses a multinomial likelihood.
+- The peak-only arm uses the same total-count likelihood, signatures, abundance prior, initialization, optimizer, seeds, and compute budget; only the conditional shape term is disabled.
+- No observed spot-depth offset is used. Inferred abundance is an effective reference-cell-equivalent, depth-scaled quantity; normalized abundance is the reported cell-type proportion.
+- The primary benchmark has no learned background, spatial smoothing, or uncertainty interval.
+- Metrics use the dataset-declared ordered cell-type universe. The primary Jensen–Shannon metric is `jsd_v2`, the mean base-2 divergence, not the repository's historical unsquared distance.
+
+## Document status
+
+The following binary documents are historical, non-normative context. Retain them for provenance, but do not implement directly from them:
+
+- `ShapeMix_high_level.docx`
+- `tutorials/ShapeMix_ATAC_Tutorial.docx`
+- `tutorials/ShapeMix_ATAC_Tutorial.pdf`
+- `tutorials/ShapeMix_ATAC_Bayesian_Model_Tutorial_deprecated.docx`
+
+`tutorials/ShapeMix_ATAC_Bayesian_Model_Tutorial.tex` is the editable source of the detailed Bayesian tutorial and has been reconciled with the frozen MVP; its PDF is the generated explanatory artifact rebuilt from that source on 2026-08-22. The tutorial labels independent-bin likelihoods, latent signatures, a depth offset, background, and a spatial prior as future extensions rather than executable MVP requirements. When the tutorial and normative specification differ, follow the normative specification. Never edit a generated PDF manually.
+
+## Scope boundaries
+
+The MVP does not claim donor-level or cross-dataset generalization: the first PBMC data source contains one donor. Its repeated splits quantify conditional resampling variability within that donor. The following are gated extensions, not reasons to change the primary model in place:
+
+- Dirichlet-multinomial shape overdispersion;
+- variational uncertainty;
+- learned background or cross-protocol scaling;
+- peak-specific dispersion;
+- cut-position, TSS, or motif-footprint features;
+- spatial smoothing;
+- external-donor and real-spatial validation.
+
+Any such extension requires a new configuration, explicit negative controls, and a versioned data schema when the observation axis changes.
+
+## Implementation status
+
+Steps 0 and 1 of the implementation plan were completed in this workspace on 2026-08-22: the scientific contract is frozen, and the raw ARC 2.0 fragments/index are downloaded, checksum-pinned, and tabix-validated. Because `data/` is ignored, another clone must fetch them using the [recreation guide](<../recreate_data_directory (important).md>) and [tracked source manifest](../../configs/data_sources/pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml). Processed shape layers, model code, and benchmark results do not yet exist. Check the source manifest and the implementation plan's acceptance criteria before treating later steps as complete.

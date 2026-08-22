@@ -58,10 +58,12 @@ python -m pip install -e . --no-deps
 Install the lightweight ShapeMix file reader in the data-only fallback before validating the fragments file:
 
 ```bash
-python -m pip install "pysam>=0.22,<0.24"
+python -m pip install "pysam>=0.24,<0.25"
 ```
 
 This fallback is sufficient for the downloads, reference preparation, simulations, and raw-fragment validation below. It does not install PyTorch for ShapeMix inference and does not support the optional legacy RCTD regeneration in section 12.
+
+The `shapemix` project extra is bounded to the tested Python 3.11 environment's PyTorch 2.11 and pysam 0.24 minor-version lines. PyTorch 2.11 requires Python 3.10 or newer, so use the Python 3.11 setup above for ShapeMix even though the base project still supports Python 3.9. Pyro is intentionally not an MVP dependency.
 
 The current files were produced with these important versions:
 
@@ -77,6 +79,8 @@ h5py        3.16.0
 igraph      1.0.0
 leidenalg   0.12.0
 PyYAML      6.0.3
+PyTorch     2.11.0
+pysam       0.24.0
 ```
 
 Use those versions if byte-level agreement of regenerated HDF5 files is important. Later compatible versions should still produce equivalent scientific inputs, but PCA, Leiden clustering, tied feature rankings, YAML dates, or HDF5 serialization can differ.
@@ -330,13 +334,22 @@ index_path = Path(f"{path}.tbi")
 if not index_path.is_file():
     raise SystemExit(f"missing tabix index: {index_path}")
 
-expected_primary = {f"chr{i}" for i in range(1, 23)} | {"chrX", "chrY"}
+expected_contigs = (
+    "chr1", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15",
+    "chr16", "chr17", "chr18", "chr19", "chr2", "chr20", "chr21",
+    "chr22", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9",
+    "chrX", "chrY", "KI270728.1", "KI270727.1", "GL000009.2",
+    "GL000194.1", "GL000205.2", "GL000195.1", "GL000219.1",
+    "KI270734.1", "GL000213.1", "GL000218.1", "KI270731.1",
+    "KI270721.1", "KI270726.1", "KI270711.1", "KI270713.1",
+)
 checked = 0
 with pysam.TabixFile(str(path), index=str(index_path)) as fragments:
-    observed_contigs = set(fragments.contigs)
-    missing = sorted(expected_primary - observed_contigs)
-    if missing:
-        raise SystemExit(f"tabix index is missing primary contigs: {missing}")
+    observed_contigs = tuple(fragments.contigs)
+    if observed_contigs != expected_contigs:
+        raise SystemExit(
+            f"unexpected tabix contigs:\n{observed_contigs!r}\n!=\n{expected_contigs!r}"
+        )
 
     for contig in ("chr1", "chrX"):
         for line in fragments.fetch(contig):
@@ -850,5 +863,6 @@ After successful extraction and validation, the two staged Zenodo ZIP files are 
 - Heart Cell Atlas v2 files: <https://cellgeni.cog.sanger.ac.uk/heartcellatlas/v2/>
 - deconvATAC publication archive: <https://zenodo.org/records/15089738>
 - 10x PBMC Multiome dataset: <https://www.10xgenomics.com/datasets/pbmc-from-a-healthy-donor-granulocytes-removed-through-cell-sorting-10-k-1-standard-2-0-0>
+- Cell Ranger ARC 2.0 ATAC fragments format: <https://www.10xgenomics.com/support/software/cell-ranger-arc/2.0/analysis/fragments-file>
 - SnapATAC2 PBMC helper documentation: <https://scverse.org/SnapATAC2/version/2.9/api/_autosummary/snapatac2.datasets.pbmc10k_multiome.html>
 - GET Foundation PBMC preparation notebook: <https://github.com/GET-Foundation/get_model/blob/master/tutorials/prepare_pbmc.ipynb>
