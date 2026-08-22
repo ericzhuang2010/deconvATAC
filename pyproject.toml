@@ -65,6 +65,11 @@ pbmc = [
     "celltypist==1.7.1"
 ]
 
+shapemix = [
+    "torch>=2.2,<3",
+    "pysam>=0.22,<0.24",
+]
+
 
 
 dev = [

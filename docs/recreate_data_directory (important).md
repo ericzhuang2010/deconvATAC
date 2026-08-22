@@ -2,7 +2,9 @@
 
 This guide rebuilds the current operational `data/` tree from public downloads and repository scripts. It was verified on **2026-08-22**. Run every command from the repository root.
 
-The completed directory is about **29.4 GiB**. Budget at least **40 GiB of free disk space** for the final files plus staged ZIP archives. The downloads themselves total about 18.5 GB; the Zenodo notebook archive expands from 1.85 GB to about 7.7 GiB.
+The peak-matrix directory reconstructed by the original workflow is about **29.4 GiB**. ShapeMix additionally requires a 2,403,785,496-byte fragments file and its 1,089,534-byte index: **2,404,875,030 bytes (2.240 GiB)** in total. The directory is therefore about **31.6 GiB before any derived ShapeMix datasets are generated**, and direct downloads total about 20.9 GB rather than 18.5 GB. The Zenodo notebook archive expands from 1.85 GB to about 7.7 GiB.
+
+Budget at least **50 GiB of free disk space** for the reconstructed tree, staged ZIP archives, the required raw ShapeMix inputs, and a provisional 5 GiB working allowance for sparse ShapeMix H5ADs and preprocessing shards. That 5 GiB allowance is a planning estimate, not a measured final size: the Step 2/3 generators do not exist yet, and the actual derived footprint will depend on the frozen split/mixture seed count and retained peaks. Measure and record it with `du` after the first canonical build; increase the allowance before running a larger seed or sensitivity grid.
 
 ## Recovery status
 
@@ -32,7 +34,7 @@ cd /path/to/deconvATAC
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ".[simulation]"
+python -m pip install -e ".[simulation,shapemix]"
 
 export PYTHONPATH="$PWD/src"
 export MPLCONFIGDIR="${TMPDIR:-/tmp}/deconvatac-mpl"
@@ -53,7 +55,13 @@ python -m pip install \
 python -m pip install -e . --no-deps
 ```
 
-This fallback is sufficient for the downloads, reference preparation, simulations, and validation below. It does not support the optional legacy RCTD regeneration in section 12.
+Install the lightweight ShapeMix file reader in the data-only fallback before validating the fragments file:
+
+```bash
+python -m pip install "pysam>=0.22,<0.24"
+```
+
+This fallback is sufficient for the downloads, reference preparation, simulations, and raw-fragment validation below. It does not install PyTorch for ShapeMix inference and does not support the optional legacy RCTD regeneration in section 12.
 
 The current files were produced with these important versions:
 
@@ -222,9 +230,18 @@ fetch_data \
 fetch_data \
   "$PBMC_10X_DIR/pbmc_granulocyte_sorted_10k_web_summary.html" \
   "$PBMC_10X_BASE/pbmc_granulocyte_sorted_10k_web_summary.html"
+
+# Required ShapeMix inputs. The same helper resumes interrupted transfers.
+fetch_data \
+  "$PBMC_10X_DIR/pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz" \
+  "$PBMC_10X_BASE/pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz"
+
+fetch_data \
+  "$PBMC_10X_DIR/pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz.tbi" \
+  "$PBMC_10X_BASE/pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz.tbi"
 ```
 
-The large fragments file is intentionally not part of the current directory and is not required for these peak-matrix benchmarks.
+The first four files remain sufficient for the historical peak-matrix benchmarks. The fragments file and adjacent tabix index are mandatory inputs for ShapeMix; do not skip them when reconstructing a ShapeMix-capable data tree. The expected HTTP `Content-Length` values recorded by the existing local source manifest are exactly 2,403,785,496 bytes for the BGZF fragments file and 1,089,534 bytes for the index.
 
 Expected checksums:
 
@@ -234,6 +251,117 @@ Expected checksums:
 | `atac_peaks.bed` | 3,439,145 | `3975a4057f9caa3fb69ddaecc6ae9e530e77551717a1464c2d93ac9d73cb60ab` |
 | `per_barcode_metrics.csv` | 88,822,764 | `fd3e069b83e152145af234667b419c982968aca0df322a92adb71284d0d902cd` |
 | `web_summary.html` | 6,227,259 | `4f443bc6908c3345326cac73e11d7b16e0adc279f8023de2867e3f5d85f86ec5` |
+| `atac_fragments.tsv.gz` | 2,403,785,496 | Read from the [tracked source manifest](../configs/data_sources/pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml) |
+| `atac_fragments.tsv.gz.tbi` | 1,089,534 | Read from the [tracked source manifest](../configs/data_sources/pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml) |
+
+Verify the two large ShapeMix inputs against the Git-tracked manifest. Do not copy a checksum from the ignored local `data/` manifest or accept size alone as proof of an intact transfer:
+
+```bash
+.venv/bin/python - <<'PY'
+import hashlib
+from pathlib import Path
+
+import yaml
+
+source_manifest = Path(
+    "configs/data_sources/"
+    "pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml"
+)
+raw_dir = Path(
+    "data/raw/sources/10x_genomics/pbmc_granulocyte_sorted_10k/"
+    "cellranger_arc_2.0.0"
+)
+required_names = (
+    "pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz",
+    "pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz.tbi",
+)
+
+manifest = yaml.safe_load(source_manifest.read_text())
+records = {record["filename"]: record for record in manifest.get("files", [])}
+
+for filename in required_names:
+    if filename not in records:
+        raise SystemExit(f"missing {filename!r} from {source_manifest}")
+    record = records[filename]
+    path = raw_dir / filename
+    expected_bytes = int(record["bytes"])
+    expected_sha256 = str(record["sha256"]).lower()
+    if len(expected_sha256) != 64:
+        raise SystemExit(f"invalid SHA-256 in {source_manifest}: {filename}")
+    observed_bytes = path.stat().st_size
+    with path.open("rb") as handle:
+        observed_sha256 = hashlib.file_digest(handle, "sha256").hexdigest()
+    if observed_bytes != expected_bytes:
+        raise SystemExit(
+            f"size mismatch for {path}: {observed_bytes} != {expected_bytes}"
+        )
+    if observed_sha256 != expected_sha256:
+        raise SystemExit(
+            f"SHA-256 mismatch for {path}: {observed_sha256} != {expected_sha256}"
+        )
+    print(f"OK  {observed_bytes:>10d}  {observed_sha256}  {path}")
+PY
+```
+
+The ARC 2.0 fragments input is a coordinate-sorted, BGZF-compressed, tabix-indexed TSV. Every data row has exactly five columns, with no strand column:
+
+| Column | Meaning |
+|---:|---|
+| 1 | Chromosome/contig name |
+| 2 | Zero-based start of the adjusted, half-open fragment interval |
+| 3 | End of the adjusted, half-open fragment interval |
+| 4 | Cell barcode |
+| 5 | Positive integer `readSupport` after duplicate collapsing |
+
+Each row represents one deduplicated fragment. ShapeMix uses the fragment interval length and, for its primary count unit, ignores `readSupport` rather than reintroducing PCR support. Validate that pysam can open the downloaded index, that the expected primary human contigs are present, and that sampled rows satisfy the five-column schema:
+
+```bash
+.venv/bin/python - <<'PY'
+from pathlib import Path
+
+import pysam
+
+path = Path(
+    "data/raw/sources/10x_genomics/pbmc_granulocyte_sorted_10k/"
+    "cellranger_arc_2.0.0/"
+    "pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz"
+)
+index_path = Path(f"{path}.tbi")
+if not index_path.is_file():
+    raise SystemExit(f"missing tabix index: {index_path}")
+
+expected_primary = {f"chr{i}" for i in range(1, 23)} | {"chrX", "chrY"}
+checked = 0
+with pysam.TabixFile(str(path), index=str(index_path)) as fragments:
+    observed_contigs = set(fragments.contigs)
+    missing = sorted(expected_primary - observed_contigs)
+    if missing:
+        raise SystemExit(f"tabix index is missing primary contigs: {missing}")
+
+    for contig in ("chr1", "chrX"):
+        for line in fragments.fetch(contig):
+            fields = line.rstrip("\n").split("\t")
+            if len(fields) != 5:
+                raise SystemExit(f"expected five columns, got {len(fields)}: {line!r}")
+            chrom, start_text, end_text, barcode, support_text = fields
+            start, end, read_support = map(
+                int, (start_text, end_text, support_text)
+            )
+            if chrom != contig or start < 0 or end <= start:
+                raise SystemExit(f"invalid fragment coordinates: {line!r}")
+            if not barcode or read_support < 1:
+                raise SystemExit(f"invalid barcode/readSupport: {line!r}")
+            checked += 1
+            if checked >= 1_000:
+                break
+        if checked >= 1_000:
+            break
+
+if checked < 1_000:
+    raise SystemExit(f"only {checked} fragment rows were available for validation")
+print(f"OK  {len(observed_contigs)} indexed contigs; validated {checked} rows")
+PY
+```
 
 ## 5. Download the SnapATAC2 PBMC label source
 

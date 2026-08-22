@@ -22,15 +22,15 @@ Simply transferring RNA methods may leave useful information unused because RNA 
 
 The existing methods also provide useful comparisons for model design. Cell2location and RCTD use probabilistic count-mixture models, while SpatialDWLS estimates cell-type proportions with a weighted least-squares strategy [5, 6, 8]. ShapeMix-ATAC will retain the useful idea of a reference-guided mixture while changing the data representation to include ATAC fragment length.
 
-**General research question:** Can cell-type-specific ATAC fragment-length patterns improve the accuracy of cell-type deconvolution compared with using total peak counts alone?
+**General research question:** Does the parent-fragment length composition of observed, deduplicated Tn5 cut sites improve cell-type deconvolution beyond the total cut-site count in each peak?
 
 ## Specific Goal and Hypothesis
 
-**Specific goal:** I will develop and evaluate **ShapeMix-ATAC**, a reference-based computational method that estimates the proportion of each cell type in a mixed spatial ATAC spot using both (1) which chromatin peaks contain fragments and (2) the length distribution of those fragments within each peak.
+**Specific goal:** I will develop and evaluate **ShapeMix-ATAC**, a reference-based computational method that estimates the proportion of each cell type in a mixed spatial ATAC spot using both (1) the total number of deduplicated Tn5 cut sites in each chromatin peak and (2) the distribution of those cut sites among bins defined by their parent fragments' lengths.
 
-**Hypothesis:** If fragment-length distributions contain reproducible cell-type information, then ShapeMix-ATAC will estimate known cell-type proportions more accurately than an otherwise matched peak-count-only model. I expect the largest improvement for rare cell types and closely related immune-cell subtypes that have similar total accessibility profiles.
+**Hypothesis:** If parent-fragment length distributions contain reproducible cell-type information, then ShapeMix-ATAC will estimate known cell-type proportions more accurately than an otherwise matched peak-count-only model. I expect the largest improvement for rare cell types and closely related immune-cell subtypes that have similar total accessibility profiles.
 
-The central test will be an ablation experiment: I will run the same model on the same simulated spots twice, once retaining fragment-length bins and once collapsing those bins into total peak counts. This design isolates the contribution of fragment-shape information.
+The central test will be an exactly nested ablation experiment. Both arms use the same total-count likelihood, fixed reference signature, abundance prior, parameters, initialization, optimizer, stopping rule, random seed, and compute budget. ShapeMix adds only the conditional likelihood for allocating each peak total among parent-fragment length bins. This design isolates the contribution of parent-fragment length composition.
 
 ## Proposed Methods
 
@@ -38,19 +38,21 @@ The central test will be an ablation experiment: I will run the same model on th
 
 I will begin with a public, annotated single-cell multiome dataset containing both RNA and ATAC measurements from human peripheral blood mononuclear cells (PBMCs). RNA measurements can support cell-type labels, while raw ATAC fragment files provide chromosome, start position, end position, and cell barcode. This dataset contains related T-cell, B-cell, monocyte, dendritic-cell, and natural-killer-cell populations, making it useful for testing fine-subtype and rare-cell recovery.
 
-To avoid evaluating the method on the same cells used to build its reference, I will divide cells into separate reference and test pools, stratified by cell type. A donor-level split will be used when donor labels allow it. The reference pool will be used only to learn cell-type fingerprints. Cells from the test pool will be combined into simulated spatial spots, so the exact cell-type proportions in every spot are known. Simulated mixtures are an established strategy for evaluating spatial ATAC deconvolution when experimental ground truth is unavailable [3].
+To avoid evaluating the method on the same cells used to build its reference, I will use deterministic, cell-type-stratified 70/30 reference/test splits. The available PBMC input contains one donor, so donor-level separation and donor-level generalization claims are not possible in the primary experiment. Each outer split seed defines a new 70/30 partition; mixture-generation seeds are nested within that split and never change reference construction. The reference pool will be used only to select peaks and estimate fingerprints and dispersion. Cells from the held-out test pool will be combined into simulated spatial spots, so the exact cell-type proportions in every spot are known. Simulated mixtures are an established strategy for evaluating spatial ATAC deconvolution when experimental ground truth is unavailable [3].
 
 ### 2. Building Cell-Type Fragment Fingerprints
 
-I will select approximately 5,000–20,000 reproducible, variable peaks shared by the reference and test data. Highly variable peaks will be prioritized because they performed better than simply choosing the most accessible peaks in the deconvATAC benchmark [3].
+For the primary experiment, I will select 5,000 peaks using a deterministic accessibility-variance ranking computed from the reference pool only; held-out cells, shape-bin counts, and simulated mixtures will not influence selection. Experiments with 10,000 and 20,000 peaks will be sensitivity analyses. Highly variable peaks are prioritized because they performed better than simply choosing the most accessible peaks in the deconvATAC benchmark [3].
 
-For each fragment, I will calculate its length and initially assign it to one of three bins:
+Each row of the 10x fragments file represents one deduplicated fragment. I will calculate its parent-fragment length as `chromEnd - chromStart` from the adjusted, zero-based half-open interval and assign both Tn5 cut sites from that row to the same one of three bins:
 
 - Short: less than 100 base pairs
 - Mononucleosome-like: 100–249 base pairs
 - Long: 250 base pairs or longer
 
-The exact cutoffs will be checked in a sensitivity analysis because fragment-size distributions can differ by dataset and protocol. For each cell type, I will then estimate a peak-accessibility and fragment-length fingerprint from the reference cells. Starting with only three bins will limit sparsity and keep the first model feasible. Fragment counts will be retained rather than binarized because count modeling preserves quantitative ATAC information [4].
+Thus, the exact intervals are `[0,100)`, `[100,250)`, and `[250,infinity)` base pairs. Each cut site is assigned to the unique selected, non-overlapping Cell Ranger peak that contains it. The exact right-cut coordinate convention will be frozen only after selected columns of the official peak matrix have been reconstructed. The fragments-file `readSupport` field will be ignored in the primary analysis because it reports read-pair support for an already deduplicated fragment; weighting by it would reintroduce PCR support. It may be studied later as an explicitly separate sensitivity analysis.
+
+For each cell type, I will estimate a total cut-site signature and a conditional parent-length-bin distribution from reference cells only. Starting with three bins will limit sparsity and keep the first model feasible. The primary tensor therefore counts **deduplicated Tn5 cut sites annotated by their parent fragment's length**, not unique fragments. A unique-fragment analysis would require its own versioned dataset and a matched fragment-count baseline; it is not interchangeable with the primary input.
 
 ### 3. Creating Pseudo-Spatial Spots
 
@@ -58,19 +60,35 @@ I will construct simulated spatial spots by sampling and summing labeled test ce
 
 ### 4. Count-Only Baseline and ShapeMix-ATAC Model
 
-The count-only baseline will use one value for every spot and peak: the total number of fragments in that peak. ShapeMix-ATAC will instead use a three-dimensional count tensor:
+Let `Y[s,p,b]` be the cut-site count for spot `s`, peak `p`, and parent-fragment length bin `b`, and let `N[s,p] = sum_b Y[s,p,b]` be the ordinary peak total. Let fixed reference estimates `A[c,p]` and `omega[c,p,b]` denote, respectively, the mean total cut-site rate per reference cell and the conditional length-bin probabilities for cell type `c`. The model infers positive effective abundances `z[s,c]` and defines:
 
-> **observed data = spot × peak × fragment-length bin**
+```text
+v[s,p,b]   = sum_c z[s,c] * A[c,p] * omega[c,p,b]
+mu[s,p]    = sum_b v[s,p,b] = sum_c z[s,c] * A[c,p]
+rho[s,p,b] = v[s,p,b] / mu[s,p]
+```
 
-For each spot, the model will estimate the nonnegative abundance of each cell type whose reference fingerprint best reconstructs the observed counts. A negative-binomial likelihood will be used to represent noisy sequencing counts, following the general count-mixture strategy used by Bayesian deconvolution methods such as Cell2location [5]. RCTD's Poisson mixture model and correction for differences between reference and spatial technologies provide an additional design comparison [6]. The ShapeMix-ATAC model will include a sequencing-depth offset, a background component for fragments not explained by the reference, and—if cross-protocol bias is detected—a simple reference-to-target scaling term. Estimated abundances will be normalized to produce cell-type proportions that sum to one.
+The primary same-dataset simulation uses zero background and the factorized likelihood:
 
-I will first fit a minimal version by maximum a posteriori optimization because it is easier to implement and debug. If time and computational resources permit, I will add variational inference to estimate uncertainty intervals. The same peaks, data splits, simulated spots, likelihood family, optimization budget, and evaluation code will be used for the shape-aware and count-only versions. The only intended difference will be whether the fragment-length bins are retained or collapsed.
+```text
+N[s,p] ~ NegativeBinomial(
+    mean=mu[s,p],
+    dispersion=max(sum_c z[s,c], epsilon) * phi_ref
+)
+Y[s,p,1:B] | N[s,p] ~ Multinomial(N[s,p], rho[s,p,1:B])
+```
+
+Here `phi_ref` is one global inverse-dispersion estimated by a deterministic, cell-type-stratified two-fold cross-fit within the training-reference pool. Scaling it by `sum_c z[s,c]` approximates the aggregation of independent reference-depth cells. The count-only arm uses the negative-binomial term and the same prior on `z`; ShapeMix uses those exact terms plus the conditional multinomial. Independent negative-binomial likelihoods for the bins are not the primary model because their sum is generally not the same negative-binomial total and would prevent an exactly nested ablation. They may be evaluated later as a clearly labeled sensitivity model.
+
+The primary model has no observed spot-depth offset: total depth is absorbed into `z`. Therefore `z` is an **effective reference-cell-equivalent, depth-scaled abundance**, not a calibrated nucleus count. The reported cell-type proportions are `pi[s,c] = z[s,c] / sum_c z[s,c]`. Background, cross-protocol scaling, learned signatures, spatial smoothing, and peak-specific dispersion are future extensions rather than components of the primary test.
+
+I will fit the fixed-signature model by maximum a posteriori optimization, inferring only `z`, because this version is easier to identify, implement, and debug. Variational inference and credible intervals are future extensions after the MAP model is validated. The two primary arms will differ only by inclusion of the conditional shape likelihood.
 
 ### 5. Evaluation and Statistical Analysis
 
-The primary dependent variable will be the error between the true and estimated cell-type proportions. I will measure this using root mean squared error (RMSE) and Jensen–Shannon divergence (JSD), which were also used in the deconvATAC benchmark [3]. Secondary outcomes will include rare-cell detection F1 score, correlation between true and estimated proportions, runtime, and—if uncertainty is implemented—credible-interval coverage.
+The primary dependent variable will be the error between the true and estimated cell-type proportions. The fixed primary metrics are RMSE over every spot-by-declared-cell-type entry and `jsd_v2`, the mean per-spot base-2 Jensen--Shannon **divergence**. Operationally, `jsd_v2 = mean(jensenshannon(truth, prediction, base=2)^2)`, with range `[0,1]`; it must not be confused with unsquared Jensen--Shannon distance. The dataset-declared ordered cell-type universe and exact spot set are fixed for every method. Missing declared prediction columns are filled with zero and penalized; extra cell types, non-finite values, negative values, all-zero rows, or mismatched spot sets fail evaluation rather than being dropped or silently normalized. Secondary outcomes will include rare-cell detection F1 score, correlation between true and estimated proportions, and runtime. Credible-interval coverage will be reported only if a later uncertainty model is implemented.
 
-I will repeat simulations with multiple random seeds and report means, variability, paired differences between models, and bootstrap confidence intervals. I will also examine results separately for common cell types, rare cell types, and related immune subtypes. A successful result would be a consistent reduction in RMSE or JSD for ShapeMix-ATAC without an unacceptable increase in false-positive rare-cell calls. If the two models perform similarly, that will also be informative because it would show that fragment length does not add enough signal under the tested conditions.
+I will repeat the experiment across frozen outer split seeds and nested mixture seeds and report paired differences between models. Inner-mixture effects will first be averaged within each outer split; spots and inner mixtures will not be treated as independent biological replicates. Any resampling interval therefore quantifies conditional variability for this one donor, not donor-level uncertainty or biological generalization. I will also examine results separately for common cell types, rare cell types, and related immune subtypes. A successful result would be a consistent reduction in RMSE or `jsd_v2` for ShapeMix-ATAC without an unacceptable increase in false-positive rare-cell calls. If the two models perform similarly, that will also be informative because it would show that parent-fragment length composition does not add enough signal under the tested conditions.
 
 The matched shape-versus-count ablation will remain the primary test. As a secondary benchmark, I will also compare ShapeMix-ATAC with established count-only implementations available in the project, including nonnegative least squares, Cell2location, RCTD, and SpatialDWLS [3, 5, 6, 8]. This will show whether any gain is meaningful relative to existing methods rather than only relative to a weak baseline.
 
@@ -84,11 +102,11 @@ Spatial smoothing will be considered only after the fragment-length model works 
 
 | Category | Definition |
 | --- | --- |
-| **Primary independent variable** | Input representation: peak-count only versus peak count plus fragment-length bins |
+| **Primary independent variable** | Likelihood: shared total peak-count model alone versus that exact model plus the conditional parent-fragment-length composition term |
 | **Secondary independent variables** | Sequencing depth, number of cells per spot, peak set, fragment-length cutoffs, cell-type similarity, and rare-cell abundance |
-| **Primary dependent variables** | RMSE and JSD between estimated and true cell-type proportions |
+| **Primary dependent variables** | RMSE and `jsd_v2` between estimated and true cell-type proportions |
 | **Secondary dependent variables** | Rare-cell F1 score, proportion correlation, runtime, and uncertainty calibration/coverage |
-| **Controlled factors** | Reference/test split, simulated spots, selected peaks, model likelihood, optimizer settings, random seeds, and evaluation code |
+| **Controlled factors** | Outer reference/test split, nested simulated spots, selected peaks, total-count likelihood, signatures, dispersion, abundance prior, initialization, optimizer/stopping settings, random seeds, compute budget, metric universe, and evaluation code |
 
 ## Novelty, Feasibility, and Limitations
 
@@ -108,7 +126,7 @@ The project is feasible within seven months because it is computational, uses pu
 
 ### Limitations and Risk Management
 
-The main risks are sparse per-peak shape counts, technical differences between reference and spatial assays, and increased computation. I will address these by starting with only three fragment-length bins, selecting well-covered peaks, using shrinkage or peak grouping if necessary, comparing matched and mismatched data conditions, and treating motif footprints or spatial smoothing as optional extensions rather than requirements for the first experiment.
+The main risks are sparse per-peak shape counts, technical differences between reference and spatial assays, the one-donor design, and increased computation. I will address these by starting with only three fragment-length bins, selecting well-covered peaks, using shrinkage or peak grouping if necessary, comparing matched and mismatched data conditions, and treating background, cross-protocol scaling, learned signatures, independent-bin likelihoods, motif footprints, spatial smoothing, and uncertainty inference as optional extensions rather than requirements for the first experiment. The deterministic 70/30 partitions prevent cell-level leakage but cannot establish cross-donor generalization.
 
 ## Seven-Month Work Plan
 

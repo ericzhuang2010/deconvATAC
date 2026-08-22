@@ -89,24 +89,24 @@
     \draw[->,thick] (2.5,0) -- (4.3,0) node[midway,above] {Tn5};
     \node[draw,rounded corners,fill=white,minimum width=4.8cm,minimum height=3.0cm,align=center] (table) at (7.0,0) {
         \textbf{Observed clues}\\[0.2em]
-        peak 1: short 34, mono 18\\
-        peak 2: short 6, mono 15\\
+        peak 1 cut sites: short 34, mono 18\\
+        peak 2 cut sites: short 6, mono 15\\
         promoter A: center-sharp\\[0.2em]
         \textit{one barcode for the whole spot}
     };
     \draw[->,thick] (9.7,0) -- (11.1,0) node[midway,above] {Bayes};
     \node[draw,rounded corners,fill=softblue,minimum width=4.4cm,minimum height=3.0cm,align=center] at (13.6,0) {
         \textbf{Hidden mixture}\\[0.2em]
-        T cells: 2.1 effective nuclei\\
-        B cells: 1.7 effective nuclei\\
-        fibroblasts: 0.6 effective nuclei\\[0.2em]
-        uncertainty intervals
+        T cells: 2.1 effective units\\
+        B cells: 1.7 effective units\\
+        fibroblasts: 0.6 effective units\\[0.2em]
+        normalized proportions
     };
 \end{tikzpicture}
 
 \vfill
 \begin{idea}
-A spatial ATAC spot is treated as a mixture of cell-type chromatin fingerprints.  A fingerprint includes not only \emph{which peaks are open}, but also \emph{what the ATAC fragments look like inside those peaks}.
+A spatial ATAC spot is treated as a mixture of cell-type chromatin fingerprints.  The primary experiment asks whether the parent-fragment length composition of deduplicated Tn5 cut sites improves deconvolution beyond their total counts in peaks.
 \end{idea}
 
 \vfill
@@ -119,10 +119,10 @@ A spatial ATAC spot is treated as a mixture of cell-type chromatin fingerprints.
 
 \section{What problem is ShapeMix-ATAC solving?}
 
-Spatial ATAC-seq measures open chromatin in a tissue section.  The sequencer gives a count of DNA fragments assigned to each spatial spot.  A spot may contain more than one nucleus.  Therefore, the observed signal is a mixture.
+Spatial ATAC-seq measures open chromatin in a tissue section.  Its fragments file records deduplicated DNA fragments assigned to spatial barcodes.  Each fragment provides two Tn5 cut sites, and a spot may contain more than one nucleus.  Therefore, the observed signal is a mixture.
 
 \begin{bio}
-Think of a spot as a small square drawn on top of tissue.  Inside that square, there may be T cells, B cells, fibroblasts, tumor cells, neurons, or other cell types.  ATAC-seq does not directly say which nucleus produced each fragment.  ShapeMix-ATAC tries to infer the hidden cell mixture from the fragments.
+Think of a spot as a small square drawn on top of tissue.  Inside that square, there may be T cells, B cells, fibroblasts, tumor cells, neurons, or other cell types.  ATAC-seq does not directly say which nucleus produced each fragment or cut site.  ShapeMix-ATAC tries to infer the hidden cell mixture from the cut-site counts and their parent fragments' lengths.
 \end{bio}
 
 The ordinary deconvolution question is:
@@ -132,7 +132,7 @@ The ordinary deconvolution question is:
 
 The ShapeMix-ATAC question is richer:
 \[
-\text{observed mixed ATAC fragment counts and fragment shapes}
+\text{observed peak totals and parent-fragment length composition}
 \quad \Longrightarrow \quad
 \text{cell-type amounts with uncertainty}.
 \]
@@ -148,11 +148,11 @@ Spatial transcriptomics mostly counts RNA molecules from genes.  Spatial ATAC co
 \end{itemize}
 
 \begin{idea}
-The novelty of ShapeMix-ATAC is to use a three-dimensional count table:
+The primary ShapeMix data object is a three-dimensional count table:
 \[
-\boxed{Y_{s,p,b} = \text{number of fragments in spot } s,\text{ peak } p,\text{ shape bin } b.}
+\boxed{Y_{s,p,b} = \text{deduplicated Tn5 cut sites in spot }s,\text{ peak }p,\text{ parent-length bin }b.}
 \]
-A usual peak-count model uses only \(Y_{s,p}=\sum_b Y_{s,p,b}\).  ShapeMix keeps the extra index \(b\).
+Each cut site inherits the length bin of its parent fragment.  A usual Cell Ranger-compatible peak-count model uses only \(N_{s,p}=\sum_b Y_{s,p,b}\).  ShapeMix keeps the extra index \(b\).  A unique-fragment-count analysis would be a separately versioned sensitivity analysis with its own matched baseline.
 \end{idea}
 
 \section{The data table: from peak counts to shape counts}
@@ -166,7 +166,7 @@ Symbol & Meaning \\
 \midrule
 \(s=1,\ldots,S\) & spatial spots or pixels \\
 \(p=1,\ldots,P\) & ATAC peaks or peak groups \\
-\(b=1,\ldots,B\) & shape bins, such as short/mono/long fragments \\
+\(b=1,\ldots,B\) & bins of parent-fragment length for observed cut sites \\
 \(c=1,\ldots,C\) & cell types in the reference, such as T cell, B cell, fibroblast \\
 \bottomrule
 \end{tabular}
@@ -186,16 +186,17 @@ A first implementation should use only a few bins.  This keeps the method explai
     \node[draw,rounded corners,fill=softyellow,minimum width=4.0cm,minimum height=2.6cm,align=center] (motif) at (10.0,0) {\textbf{3. Motif footprint}\\[0.4em]
     left flank\\ motif center\\ right flank};
     \node[below=0.35cm of len,align=center] {easy first prototype};
-    \node[below=0.35cm of pos,align=center] {captures peak shape};
-    \node[below=0.35cm of motif,align=center] {more biological, harder};
+    \node[below=0.35cm of pos,align=center] {future extension};
+    \node[below=0.35cm of motif,align=center] {future extension};
 \end{tikzpicture}
 \caption{Three possible choices for the shape-bin index \(b\).  A first prototype should usually start with fragment-length bins.}
 \end{figure}
 
-For example, with three fragment-length bins:
+The primary implementation uses exactly three parent-fragment length bins:
 \[
- b=1: \text{short}, \qquad b=2: \text{mono-nucleosomal}, \qquad b=3: \text{long}.
+ b=1: [0,100), \qquad b=2: [100,250), \qquad b=3: [250,\infty)\ \text{bp}.
 \]
+Length is \(\texttt{chromEnd}-\texttt{chromStart}\) from the adjusted, zero-based half-open 10x fragment interval.  Each fragments-file row is already a deduplicated fragment; the \texttt{readSupport} field is ignored in the primary analysis so PCR read-pair support is not counted again.  Both cut sites inherit the same parent-length bin and are assigned independently to the unique selected, non-overlapping peak containing them.  The right-cut coordinate convention must be validated by reconstructing selected columns of the official peak matrix before canonical data are frozen.
 
 \section{A short Bayesian warm-up}
 
@@ -207,9 +208,9 @@ Bayesian modeling means we write down a story for how the data could have been g
 \]
 In ShapeMix-ATAC:
 \[
- p(\text{hidden cell mixture} \given \text{observed ATAC fragments})
+ p(\text{hidden cell mixture} \given \text{observed ATAC cut-site tensor})
  \propto
- p(\text{observed ATAC fragments} \given \text{hidden cell mixture})
+ p(\text{observed ATAC cut-site tensor} \given \text{hidden cell mixture})
  p(\text{hidden cell mixture}).
 \]
 \end{mathbox}
@@ -227,7 +228,7 @@ Gamma & positive amounts & Good for abundances, background, dispersion, and rate
 Log-normal & positive multiplicative effects & Good for depth/yield/bias factors. \\
 Beta & probabilities between 0 and 1 & Good for peak accessibility probabilities. \\
 Dirichlet & vectors that sum to 1 & Good for proportions, such as shape-bin probabilities. \\
-Multinomial & splitting a total count into categories & Good when total nuclei are known and split among cell types. \\
+Multinomial & splitting a fixed peak total among bins & Primary conditional likelihood for parent-length composition. \\
 Normal / CAR normal & real-valued latent spatial fields & Good for smooth spatial variation. \\
 \bottomrule
 \end{tabularx}
