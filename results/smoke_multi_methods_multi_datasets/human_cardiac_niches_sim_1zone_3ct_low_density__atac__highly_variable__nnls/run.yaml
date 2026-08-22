@@ -1,0 +1,20 @@
+method: nnls
+dataset_id: human_cardiac_niches_sim_1zone_3ct_low_density
+modality: atac
+feature_set: highly_variable
+results:
+  proportions: results/proportions.csv
+  abundance: results/abundance.csv
+  diagnostics: results/diagnostics.json
+run_id: human_cardiac_niches_sim_1zone_3ct_low_density__atac__highly_variable__nnls
+method_config:
+  method: nnls
+  params:
+    layer_ref: null
+    layer_spatial: null
+    zero_policy: zeros
+inputs:
+  dataset_id: human_cardiac_niches_sim_1zone_3ct_low_density
+  modality: atac
+  feature_set: highly_variable
+  registry: /Users/rzhuang/Documents/VscodeProjects/deconvATAC/data/registry/datasets.yaml

@@ -1,0 +1,23 @@
+method: tangram
+dataset_id: russell_250
+modality: atac
+feature_set: highly_variable
+results:
+  proportions: results/proportions.csv
+  abundance: results/abundance.csv
+  diagnostics: results/diagnostics.json
+run_id: russell_250__atac__highly_variable__tangram
+method_config:
+  method: tangram
+  params:
+    run_rank_genes: false
+    layer_rank_genes: null
+    num_epochs: 5
+    device: cpu
+    zero_policy: zeros
+    map_kwargs: {}
+inputs:
+  dataset_id: russell_250
+  modality: atac
+  feature_set: highly_variable
+  registry: /Users/rzhuang/Documents/VscodeProjects/deconvATAC/data/registry/datasets.yaml

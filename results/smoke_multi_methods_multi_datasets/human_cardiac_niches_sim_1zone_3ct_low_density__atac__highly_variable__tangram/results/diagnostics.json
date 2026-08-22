@@ -1,0 +1,16 @@
+{
+  "method": "tangram",
+  "native_files": {
+    "cell_type_predictions": "/Users/rzhuang/Documents/VscodeProjects/deconvATAC/results/smoke_multi_methods_multi_datasets/human_cardiac_niches_sim_1zone_3ct_low_density__atac__highly_variable__tangram/results/raw_method_output/tangram_ct_pred.csv"
+  },
+  "native_output_dir": "/Users/rzhuang/Documents/VscodeProjects/deconvATAC/results/smoke_multi_methods_multi_datasets/human_cardiac_niches_sim_1zone_3ct_low_density__atac__highly_variable__tangram/results/raw_method_output",
+  "params": {
+    "device": "cpu",
+    "labels_key": "cell_type",
+    "layer_rank_genes": null,
+    "num_epochs": 5,
+    "return_adatas": false,
+    "run_rank_genes": false
+  },
+  "proportion_source": "row-normalized tangram_ct_pred.csv"
+}

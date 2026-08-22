@@ -1,0 +1,57 @@
+dataset_id: human_cardiac_niches_sim_1zone_3ct_low_density
+modality: atac
+feature_set: highly_variable
+registry: /Users/rzhuang/Documents/VscodeProjects/deconvATAC/data/registry/datasets.yaml
+dataset_config:
+  dataset_id: human_cardiac_niches_sim_1zone_3ct_low_density
+  source: regenerated_heart_simulation
+  description: 'Regenerated Human cardiac niches simulation: human_cardiac_niches_sim_1zone_3ct_low_density.'
+  reference_id: human_cardiac_niches
+  labels_key: cell_type
+  spatial_key: spatial
+  simulation:
+    parameters:
+      n_regions: 1
+      cell_type_number:
+      - 3
+      cell_number_nu:
+      - 20
+      cell_number_mean:
+      - 5
+      region_type: stripes
+      num_spots: 1000
+      balance: balanced
+    source_cells_by_spot: data/processed/datasets/human_cardiac_niches_sim_1zone_3ct_low_density/simulation/source_cells_by_spot.jsonl
+  modalities:
+    atac:
+      reference:
+        path: data/raw/references/human_cardiac_niches/atac/reference.h5ad
+      spatial:
+        path: data/processed/datasets/human_cardiac_niches_sim_1zone_3ct_low_density/atac/spatial.h5ad
+      labels_key: cell_type
+      spatial_key: spatial
+      truth:
+        path: data/processed/datasets/human_cardiac_niches_sim_1zone_3ct_low_density/truth/proportions.csv
+      feature_sets:
+        all:
+          mode: all
+        highly_variable:
+          path: data/processed/datasets/human_cardiac_niches_sim_1zone_3ct_low_density/atac/features/highly_variable.txt
+        highly_accessible:
+          path: data/processed/datasets/human_cardiac_niches_sim_1zone_3ct_low_density/atac/features/highly_accessible.txt
+    rna:
+      reference:
+        path: data/raw/references/human_cardiac_niches/rna/reference.h5ad
+      spatial:
+        path: data/processed/datasets/human_cardiac_niches_sim_1zone_3ct_low_density/rna/spatial.h5ad
+      labels_key: cell_type
+      spatial_key: spatial
+      truth:
+        path: data/processed/datasets/human_cardiac_niches_sim_1zone_3ct_low_density/truth/proportions.csv
+      feature_sets:
+        all:
+          mode: all
+        highly_variable:
+          path: data/processed/datasets/human_cardiac_niches_sim_1zone_3ct_low_density/rna/features/highly_variable.txt
+  config_path: /Users/rzhuang/Documents/VscodeProjects/deconvATAC/data/processed/datasets/human_cardiac_niches_sim_1zone_3ct_low_density/dataset.yaml
+truth: results/truth.csv
