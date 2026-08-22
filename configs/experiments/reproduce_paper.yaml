@@ -1,0 +1,32 @@
+description: Placeholder experiment spec for reproducing the paper benchmark after all canonical inputs are registered.
+datasets:
+  - russell_250
+  - human_cardiac_niches_sim_1zone_3ct_low_density
+  - human_cardiac_niches_sim_4zone_circles
+modalities:
+  - atac
+  - rna
+feature_sets:
+  atac:
+    - highly_variable
+    - highly_accessible
+  rna:
+    - highly_variable
+methods:
+  - cell2location
+  - rctd
+  - tangram
+  - destvi
+  - spatialdwls
+method_configs:
+  cell2location: configs/methods/cell2location.yaml
+  rctd: configs/methods/rctd_local.yaml
+  tangram: configs/methods/tangram.yaml
+  destvi: configs/methods/destvi.yaml
+  spatialdwls: configs/methods/spatialdwls.yaml
+metrics:
+  - rmse
+  - jsd
+output_root: results
+skip_missing: true
+continue_on_error: true

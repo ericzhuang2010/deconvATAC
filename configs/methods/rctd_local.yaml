@@ -1,0 +1,11 @@
+method: rctd
+params:
+  doublet_mode: full
+  r_lib_path: .r-lib
+  create_rctd_kwargs:
+    CELL_MIN_INSTANCE: 0
+    gene_cutoff: 0
+    fc_cutoff: 0
+    gene_cutoff_reg: 0
+    fc_cutoff_reg: 0
+    UMI_min: 0

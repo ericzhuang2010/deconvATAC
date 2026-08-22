@@ -1,0 +1,13 @@
+method: cell2location
+params:
+  N_cells_per_location: 8
+  detection_alpha: 20
+  use_gpu: true
+  max_epochs_spatial: 30000
+  max_epochs_ref: null
+  plots: false
+  zero_policy: zeros
+  setup_ref_kwargs: {}
+  train_ref_kwargs: {}
+  setup_spatial_kwargs: {}
+  train_spatial_kwargs: {}

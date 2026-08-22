@@ -1,0 +1,19 @@
+description: Compare Cell2location and RCTD on a standardized input dataset.
+datasets:
+  - russell_250
+modalities:
+  - atac
+feature_sets:
+  - highly_variable
+methods:
+  - cell2location
+  - rctd
+method_configs:
+  cell2location: configs/methods/cell2location.yaml
+  rctd: configs/methods/rctd_local.yaml
+metrics:
+  - rmse
+  - jsd
+output_root: results
+skip_missing: true
+continue_on_error: false

@@ -1,0 +1,13 @@
+method: destvi
+params:
+  layer_ref: null
+  layer_spatial: null
+  use_gpu: true
+  max_epochs_ref: 300
+  max_epochs_spatial: 2000
+  plots: false
+  zero_policy: zeros
+  model_ref_kwargs: {}
+  train_ref_kwargs: {}
+  model_spatial_kwargs: {}
+  train_spatial_kwargs: {}

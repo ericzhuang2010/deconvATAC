@@ -1,0 +1,22 @@
+description: Small multi-method, multi-dataset smoke run for inspecting batch outputs.
+run_group: smoke_multi_methods_multi_datasets
+datasets:
+  - russell_250
+  - human_cardiac_niches_sim_1zone_3ct_low_density
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - highly_variable
+methods:
+  - nnls
+  - tangram
+method_configs:
+  nnls: configs/methods/nnls.yaml
+  tangram: configs/methods/tangram_smoke.yaml
+metrics:
+  - rmse
+  - jsd
+output_root: results
+skip_missing: true
+continue_on_error: true

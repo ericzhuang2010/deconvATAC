@@ -1,0 +1,21 @@
+description: Smoke-test baseline methods while developing a future spatial ATAC method.
+datasets:
+  - russell_250
+modalities:
+  - atac
+feature_sets:
+  - highly_variable
+methods:
+  - nnls
+  - rctd
+  - cell2location
+method_configs:
+  nnls: configs/methods/nnls.yaml
+  rctd: configs/methods/rctd_local.yaml
+  cell2location: configs/methods/cell2location.yaml
+metrics:
+  - rmse
+  - jsd
+output_root: results
+skip_missing: true
+continue_on_error: false

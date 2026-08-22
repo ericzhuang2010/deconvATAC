@@ -1,3 +1,5 @@
 # Ignore every top-level directory except documentation.
 /*/
 !/docs/
+!/configs/
+

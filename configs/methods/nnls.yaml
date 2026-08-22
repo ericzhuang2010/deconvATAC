@@ -1,0 +1,5 @@
+method: nnls
+params:
+  layer_ref: null
+  layer_spatial: null
+  zero_policy: zeros

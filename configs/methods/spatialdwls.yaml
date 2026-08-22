@@ -1,0 +1,7 @@
+method: spatialdwls
+params:
+  cluster_key: null
+  n_cell: 50
+  tfidf: null
+  r_lib_path: null
+  zero_policy: zeros

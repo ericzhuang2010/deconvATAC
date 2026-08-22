@@ -1,0 +1,23 @@
+dataset_id: russell_250
+source: processed_feature_annotations
+description: Russell ATAC simulation example with computed feature-selection annotations.
+labels_key: cell_type
+spatial_key: spatial
+
+modalities:
+  atac:
+    reference:
+      path: data/raw/references/russell_250/atac/reference.h5ad
+    spatial:
+      path: data/processed/datasets/russell_250/atac/spatial.h5ad
+    labels_key: cell_type
+    spatial_key: spatial
+    truth:
+      path: data/processed/datasets/russell_250/truth/proportions.csv
+    feature_sets:
+      all:
+        mode: all
+      highly_variable:
+        var_column: highly_variable
+      highly_accessible:
+        var_column: highly_accessible

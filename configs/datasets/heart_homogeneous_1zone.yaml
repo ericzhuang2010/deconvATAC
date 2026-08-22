@@ -1,0 +1,40 @@
+dataset_id: heart_homogeneous_1zone
+source: local_example_notebooks
+description: Human cardiac niches homogeneous one-zone simulation.
+labels_key: cell_type
+spatial_key: spatial
+
+modalities:
+  atac:
+    reference:
+      path: data/raw/references/human_cardiac_niches/atac/reference.h5ad
+    spatial:
+      path: data/example_notebooks/simulation/Heart_homogeneous_1zone.h5mu
+      modality: atac
+    labels_key: cell_type
+    spatial_key: spatial
+    truth:
+      obsm_key: proportions
+    feature_sets:
+      all:
+        mode: all
+      highly_variable:
+        path: data/processed/datasets/human_cardiac_niches_sim_4zone_circles/atac/features/highly_variable.txt
+      highly_accessible:
+        path: data/processed/datasets/human_cardiac_niches_sim_4zone_circles/atac/features/highly_accessible.txt
+
+  rna:
+    reference:
+      path: data/raw/references/human_cardiac_niches/rna/reference.h5ad
+    spatial:
+      path: data/example_notebooks/simulation/Heart_homogeneous_1zone.h5mu
+      modality: rna
+    labels_key: cell_type
+    spatial_key: spatial
+    truth:
+      obsm_key: proportions
+    feature_sets:
+      all:
+        mode: all
+      highly_variable:
+        path: data/processed/datasets/human_cardiac_niches_sim_4zone_circles/rna/features/highly_variable.txt

@@ -1,0 +1,8 @@
+method: tangram
+params:
+  run_rank_genes: false
+  layer_rank_genes: null
+  num_epochs: 5
+  device: cpu
+  zero_policy: zeros
+  map_kwargs: {}

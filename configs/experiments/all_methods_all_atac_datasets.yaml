@@ -1,0 +1,34 @@
+description: Run every registered ATAC dataset through every available method and evaluate one comparison table.
+datasets:
+  - russell_250
+  - human_cardiac_niches_sim_1zone_3ct_low_density
+  - human_cardiac_niches_sim_1zone_10ct
+  - human_cardiac_niches_sim_4zone_stripes
+  - human_cardiac_niches_sim_4zone_circles
+  - pbmc_granulocyte_sorted_10k_sim_equal_celltype
+  - pbmc_granulocyte_sorted_10k_sim_observed_abundance
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - highly_variable
+methods:
+  - nnls
+  - rctd
+  - cell2location
+  - tangram
+  - destvi
+  - spatialdwls
+method_configs:
+  nnls: configs/methods/nnls.yaml
+  rctd: configs/methods/rctd_local.yaml
+  cell2location: configs/methods/cell2location.yaml
+  tangram: configs/methods/tangram.yaml
+  destvi: configs/methods/destvi.yaml
+  spatialdwls: configs/methods/spatialdwls.yaml
+metrics:
+  - rmse
+  - jsd
+output_root: results
+skip_missing: true
+continue_on_error: true
