@@ -1,0 +1,30 @@
+schema_version: 1
+protocol_id: shapemix_negative_controls_v1
+description: >-
+  Frozen dataset-level negative controls for ShapeMix protocol version 1. The
+  development run uses only the registered split-0, mixture-0 smoke dataset;
+  primary dataset IDs may be supplied explicitly to the control CLI only after
+  the preregistered primary direction is positive.
+benchmark_scope: development_negative_controls
+datasets:
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke
+modality: atac
+feature_set: highly_variable
+shape_aware_config: configs/methods/shapemix.yaml
+count_only_config: configs/methods/shapemix_count_only.yaml
+controls:
+  - homogenized_omega
+  - permuted_omega
+  - one_bin
+  - poisson_factorization
+permutation:
+  bit_generator: PCG64
+  seed_namespace: 20260822
+  stream_id: 23
+  seed_sequence: "[20260822, outer_split_seed, 23]"
+  identity_policy: first_nonidentity_draw
+tolerances:
+  proportion_max_abs: 1.0e-6
+  one_bin_shape_log_likelihood_abs: 0.0
+  poisson_log_likelihood_abs: 1.0e-10
+output_root: results/development/shapemix_negative_controls_v1

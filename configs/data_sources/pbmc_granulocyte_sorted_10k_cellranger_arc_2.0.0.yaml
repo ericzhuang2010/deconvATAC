@@ -79,8 +79,55 @@ validation:
     - chr1
     - chrX
     - KI270713.1
+  cut_site_coordinate_reconstruction:
+    status: passed on 2026-08-22
+    peak_membership: peakStart <= cut < peakEnd
+    left_cut: chromStart
+    left_cut_offset: 0
+    right_cut: chromEnd
+    right_cut_offset: 0
+    read_support_policy: ignore
+    peak_bed_h5_order_matches: 143887
+    primary_sample:
+      selection: 2048 smallest SHA-256 peak IDs and 512 smallest SHA-256 filtered barcodes, restored to vendor order
+      peaks: 2048
+      barcodes: 512
+      barcode_peak_entries: 1048576
+      contigs: 24
+      official_nonzero_entries: 60989
+      official_total: 158472
+      right_end_mismatched_entries: 0
+      right_end_absolute_error: 0
+      right_end_minus_one_mismatched_entries: 58
+      right_end_minus_one_absolute_error: 59
+      read_support_weighted_mismatched_entries: 33359
+      read_support_weighted_total: 285432
+      read_support_weighted_absolute_error: 126960
+    independent_chr21_check:
+      peaks: 1838
+      barcodes: 512
+      barcode_peak_entries: 941056
+      official_total: 130603
+      right_end_mismatched_entries: 0
+      right_end_absolute_error: 0
+      right_end_minus_one_mismatched_entries: 38
+      right_end_minus_one_absolute_error: 39
+    tabix_query_note: Peak-wise queries must begin at max(0, peakStart - 1) so fragments ending exactly at peakStart are returned.
+  fragment_counter_integration:
+    status: passed on 2026-08-22
+    selection: first 200 vendor-order ATAC peaks and first 200 vendor-order filtered barcodes
+    barcode_peak_entries: 40000
+    fetched_fragment_rows: 608088
+    official_total: 14415
+    reconstructed_total: 14415
+    mismatched_entries: 0
+    absolute_error: 0
+    layer_totals:
+      fragment_length_lt_100: 7569
+      fragment_length_100_249: 4809
+      fragment_length_ge_250: 2037
 
 notes:
   - The fragments and index are required raw inputs for ShapeMix preprocessing.
   - ShapeMix ignores readSupport and counts deduplicated Tn5 cut sites grouped by parent-fragment length.
-  - The right cut-site coordinate convention remains gated on reconstruction against the official peak matrix in preprocessing Step 2.
+  - Step 2 reconstruction against the official peak matrix selected chromEnd (right_cut_offset 0) unambiguously.

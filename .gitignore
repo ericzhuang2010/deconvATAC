@@ -7,3 +7,8 @@
 !/src/
 !/tests/
 !/results/
+
+# Large Step 6 ShapeMix campaign artifacts are reproducible from tracked
+# configs and remain local rather than entering version control.
+/results/primary/
+/results/sensitivity/

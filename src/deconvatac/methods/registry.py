@@ -15,6 +15,7 @@ _BUILTIN_METHODS = {
     "spatialdwls": "deconvatac.methods.spatialdwls:SpatialDWLSDeconvolver",
     "tangram": "deconvatac.methods.tangram:TangramDeconvolver",
     "nnls": "deconvatac.methods.nnls:NNLSDeconvolver",
+    "shapemix": "deconvatac.methods.shapemix:ShapeMixDeconvolver",
 }
 
 

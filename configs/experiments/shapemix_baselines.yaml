@@ -1,0 +1,89 @@
+description: >-
+  Protocol-v1 collapsed-count baselines on the exact primary ShapeMix spots,
+  training references, and selected peak axes. Only NNLS is activated here;
+  optional baselines remain explicitly gated below until their dependency and
+  resource requirements are satisfied and frozen.
+benchmark_scope: primary_baselines_one_donor
+protocol:
+  name: shapemix_atac_benchmark
+  version: 1
+  frozen_date: "2026-08-22"
+  input_matrix: X
+  input_contract: exact_layer_sum_on_the_primary_selected_peak_axis
+run_group: shapemix_primary_baselines_protocol_v1
+datasets:
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_1103_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_1103_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_1103_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_1103_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_2203_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_2203_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_2203_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_2203_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_3301_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_3301_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_3301_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_3301_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_4409_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_4409_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_4409_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_4409_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_5501_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_5501_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_5501_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_5501_mix_211
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - highly_variable
+# Only entries in method_runs are executable by the maintained runner.
+method_runs:
+  - id: nnls
+    method: nnls
+    config: configs/methods/nnls.yaml
+gated_baselines:
+  policy: >-
+    Entries below are declarations, not runner jobs and not benchmark evidence.
+    Move one into method_runs only after all activation requirements are met and
+    the resulting configuration is frozen before its primary outputs are read.
+  resource_or_dependency_gates:
+    - id: cell2location
+      method: cell2location
+      config: configs/methods/cell2location.yaml
+      status: gated_resource_validation_required
+      observed_environment: Python packages cell2location and scvi are installed.
+      reason: >-
+        The current method config requests GPU execution and 30000 spatial
+        epochs; neither a valid device nor a full-matrix time/memory budget has
+        been established for the 20 primary datasets.
+      activation_requirements:
+        - Freeze a valid device-specific configuration.
+        - Complete and record a representative full-size time/memory pilot.
+        - Run all primary datasets without post-result tuning.
+    - id: rctd
+      method: rctd
+      config: configs/methods/rctd.yaml
+      status: gated_missing_dependency
+      observed_environment: R is present but the spacexr package is absent.
+      reason: The maintained RCTD adapter requires the R package spacexr.
+      activation_requirements:
+        - Install and record a pinned spacexr environment.
+        - Validate raw-count X and all 16 output cell types on a development dataset.
+    - id: spatialdwls
+      method: spatialdwls
+      config: configs/methods/spatialdwls.yaml
+      status: gated_missing_dependency
+      observed_environment: R is present but the Giotto package is absent.
+      reason: The maintained SpatialDWLS adapter requires the R package Giotto.
+      activation_requirements:
+        - Install and record pinned Giotto and data.table dependencies.
+        - Validate the ATAC TF-IDF setting and all 16 output cell types on development data.
+metrics:
+  - rmse_v1
+  - jsd_v2
+output_root: results/primary
+run_id_template: "{dataset}__{modality}__{feature_set}__{method_run_id}"
+skip_missing: false
+continue_on_error: true
+overwrite: false

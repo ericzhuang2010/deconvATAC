@@ -1,0 +1,13 @@
+schema_version: 1
+protocol_id: shapemix_negative_controls_v1
+dataset_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke
+complete: true
+all_acceptance_checks_passed: true
+algorithm: sha256
+outputs:
+  control_proportions.csv:
+    bytes: 13682
+    sha256: 55eb1755078e548a62e0b16989d31d0b57300373def9f3433f4ec99569a68fb4
+  control_evidence.yaml:
+    bytes: 8210
+    sha256: 1907a9c1c11ce9267d2199b547707fa28795b9123bdff9cce7364489f3f40db3

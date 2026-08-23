@@ -1,0 +1,26 @@
+method: shapemix
+params:
+  use_shape: true
+  total_likelihood: negative_binomial
+  conditional_shape_likelihood: multinomial
+  signature_rate_pseudocount: 0.5
+  signature_shape_concentration: 1.0
+  exposure_mode: absorbed_in_abundance
+  dispersion_mode: reference_crossfit_global_scaled_by_abundance
+  dispersion_crossfit_folds: 2
+  dispersion_alpha_floor: 1.0e-8
+  background_mode: none
+  abundance_prior: gamma
+  abundance_prior_shape: 2.0
+  abundance_prior_rate: 1.0
+  optimizer: adam
+  learning_rate: 0.03
+  max_steps: 2000
+  patience: 100
+  tolerance: 1.0e-5
+  restarts: 3
+  spot_batch_size: 64
+  peak_chunk_size: 512
+  seed: 0
+  device: cpu
+  dtype: float32

@@ -1,0 +1,70 @@
+description: >-
+  Protocol-v1 primary paired ShapeMix ablation on one PBMC Multiome donor. The
+  reported uncertainty is conditional resampling variability and is not
+  donor-level or population-level uncertainty.
+benchmark_scope: primary_one_donor_conditional_resampling
+protocol:
+  name: shapemix_atac_benchmark
+  version: 1
+  frozen_date: "2026-08-22"
+  outer_split_seeds:
+    - 1103
+    - 2203
+    - 3301
+    - 4409
+    - 5501
+  inner_mixture_seeds:
+    - 101
+    - 211
+  conditions:
+    - observed_abundance
+    - equal_celltype
+  pairing_unit:
+    - outer_split_seed
+    - inner_mixture_seed
+    - condition
+  resampling_unit: outer_split_seed
+run_group: shapemix_primary_ablation_protocol_v1
+datasets:
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_1103_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_1103_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_1103_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_1103_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_2203_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_2203_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_2203_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_2203_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_3301_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_3301_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_3301_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_3301_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_4409_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_4409_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_4409_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_4409_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_5501_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_5501_mix_101
+  - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_5501_mix_211
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_5501_mix_211
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - highly_variable
+method_runs:
+  - id: shapemix_length
+    method: shapemix
+    config: configs/methods/shapemix.yaml
+  - id: shapemix_count_only
+    method: shapemix
+    config: configs/methods/shapemix_count_only.yaml
+metrics:
+  - rmse_v1
+  - jsd_v2
+output_root: results/primary
+run_id_template: "{dataset}__{modality}__{feature_set}__{method_run_id}"
+skip_missing: false
+# Continue so every failed arm remains in the manifest and no successful
+# unpaired run is silently substituted for it in the benchmark summary.
+continue_on_error: true
+overwrite: false

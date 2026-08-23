@@ -1,3 +1,39 @@
-from .proportions import align_proportions, jsd, rmse
+from .proportions import (
+    PROPORTION_CONTRACT_VERSION,
+    PROPORTION_METRIC_ALIASES,
+    PROPORTION_METRICS,
+    PROPORTION_ROW_SUM_ATOL,
+    MetricEvaluation,
+    ProportionMetric,
+    align_proportions,
+    available_proportion_metrics,
+    declared_cell_types_from_metadata,
+    evaluate_proportion_metric,
+    js_distance_v1,
+    jsd,
+    jsd_v2,
+    resolve_proportion_metric,
+    rmse,
+    rmse_v1,
+    validate_cell_type_universe,
+)
 
-__all__ = ["align_proportions", "jsd", "rmse"]
+__all__ = [
+    "PROPORTION_CONTRACT_VERSION",
+    "PROPORTION_METRIC_ALIASES",
+    "PROPORTION_METRICS",
+    "PROPORTION_ROW_SUM_ATOL",
+    "MetricEvaluation",
+    "ProportionMetric",
+    "align_proportions",
+    "available_proportion_metrics",
+    "declared_cell_types_from_metadata",
+    "evaluate_proportion_metric",
+    "js_distance_v1",
+    "jsd",
+    "jsd_v2",
+    "resolve_proportion_metric",
+    "rmse",
+    "rmse_v1",
+    "validate_cell_type_universe",
+]

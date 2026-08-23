@@ -1,0 +1,68 @@
+description: >-
+  Gate declaration for ShapeMix stress and sensitivity experiments. No
+  versioned stress datasets are registered yet, so this file intentionally
+  produces no runner jobs and cannot be treated as completed evidence.
+benchmark_scope: gated_secondary_sensitivity
+protocol:
+  name: shapemix_atac_benchmark
+  version: 1
+  frozen_date: "2026-08-22"
+execution_gate:
+  executable: false
+  status: gated_no_versioned_stress_datasets
+  reason: >-
+    The registry currently contains the development smoke dataset and the 20
+    primary datasets only; it contains no separately versioned stress datasets.
+  activation_requirements:
+    - Prepare each sensitivity without modifying a primary dataset in place.
+    - Register every new dataset ID and validate the fragment-shape contract.
+    - Freeze the selected condition values before inspecting stress results.
+run_group: shapemix_stress_tests_protocol_v1_gated
+# An empty list is deliberate. It makes accidental runner invocation fail
+# during preflight before an output directory or misleading result is created.
+datasets: []
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - highly_variable
+method_runs:
+  - id: shapemix_length
+    method: shapemix
+    config: configs/methods/shapemix.yaml
+  - id: shapemix_count_only
+    method: shapemix
+    config: configs/methods/shapemix_count_only.yaml
+stress_conditions:
+  - id: depth_thinning
+    status: gated_dataset_not_built
+    dataset_ids: []
+    required_variation: Frozen fragment-retention probabilities.
+  - id: cells_per_spot
+    status: gated_dataset_not_built
+    dataset_ids: []
+    required_variation: Frozen cells-per-spot distributions.
+  - id: rare_cell_enrichment_depletion
+    status: gated_dataset_not_built
+    dataset_ids: []
+    required_variation: Frozen rare-type sampling probabilities.
+  - id: subtype_challenge
+    status: gated_dataset_not_built
+    dataset_ids: []
+    required_variation: Frozen closely related subtype mixtures.
+  - id: feature_count
+    status: gated_dataset_not_built
+    dataset_ids: []
+    required_variation: Reference-only selections of 5000, 10000, and 20000 peaks.
+  - id: fragment_length_cutoffs
+    status: gated_dataset_not_built
+    dataset_ids: []
+    required_variation: Separately versioned two-bin, three-bin, and five-bin axes.
+metrics:
+  - rmse_v1
+  - jsd_v2
+output_root: results/sensitivity
+run_id_template: "{dataset}__{modality}__{feature_set}__{method_run_id}"
+skip_missing: false
+continue_on_error: true
+overwrite: false

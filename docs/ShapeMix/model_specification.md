@@ -58,7 +58,9 @@ Each fragment emits a left and right Tn5 cut-site observation. Both observations
 - one count if only one end is in a selected peak; or
 - zero counts if neither end is in a selected peak.
 
-The right-end coordinate convention is a data-validation decision, not a free model option. The preprocessing implementation must compare the two plausible mappings (`chromEnd` and `chromEnd - 1`) by reconstructing columns of the official Cell Ranger peak matrix. Canonical output is blocked until one convention is selected, the discrepancy is quantified, and the chosen mapping is stored as `right_cut_offset` in the manifest and `.uns["fragment_shape"]`. All datasets in one benchmark must use the same validated mapping.
+The right-end coordinate convention is a data-validation decision, not a free model option. Step 2 compared the two plausible mappings (`chromEnd` and `chromEnd - 1`) by reconstructing the official Cell Ranger peak matrix. On a deterministic sample of 2,048 peaks and 512 barcodes (1,048,576 entries across 24 contigs), `chromEnd` reproduced all 158,472 official counts with zero mismatches. `chromEnd - 1` produced 58 mismatched entries and total absolute error 59. An independent all-peak chr21 audit also matched exactly only with `chromEnd`. Therefore the canonical mapping is `left_cut = chromStart`, `right_cut = chromEnd`, and `right_cut_offset = 0`, with half-open peak membership `peakStart <= cut < peakEnd`. The full audit statistics are pinned in the [source manifest](../../configs/data_sources/pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml). All datasets in one benchmark must use this validated mapping.
+
+When querying tabix peak by peak, begin the query at `max(0, peakStart - 1)`. Otherwise, a fragment ending exactly at `peakStart` is not returned even though its `chromEnd` cut site belongs to that peak. Contig-streaming implementations do not require this query extension.
 
 This gives the primary count unit:
 
@@ -104,7 +106,7 @@ count_unit: deduplicated_cut_sites
 read_support_policy: ignore
 peak_assignment: containing_nonoverlapping_peak
 left_cut_offset: 0
-right_cut_offset: null  # replaced by the validated integer before canonical output
+right_cut_offset: 0
 bins:
   - name: short
     min_inclusive: 0
@@ -121,9 +123,23 @@ bins:
 source_sha256: null
 feature_sha256: null
 split_sha256: null
+coordinate_validation: null
+software_versions: null
+preprocessing_counters: null
+matrix_counters: null
 ```
 
-The `null` provenance values above are schema illustrations only. Canonical data must replace them with resolved values and must record the raw fragments/index hashes, selected-feature hash, split hash, coordinate-validation summary, software versions, and preprocessing counters.
+The `null` provenance values above are schema illustrations only. Canonical data must replace them with resolved values. `source_sha256` is a mapping that includes `fragments` and `tabix_index`; `split_sha256` identifies the cell split. `feature_sha256` is bound to the current ordered `.var_names` axis by hashing each UTF-8 feature name after prefixing it with its unsigned eight-byte big-endian byte length. This avoids ambiguous concatenations and makes reordering detectable.
+
+`coordinate_validation` must record `selected_right_cut_offset: 0`, `matrix_match: exact`, `mismatched_entries: 0`, and `absolute_error: 0`. `software_versions` must identify the software used to build the object. `preprocessing_counters` are immutable source-run QC: row validity, filtering, fragment assignment, read support, and per-bin totals from the raw-fragment counting run. They intentionally remain attached when an object is safely feature-sliced. `matrix_counters` instead describe the object as currently stored: they contain `assigned_cut_sites` and one `cut_sites_per_bin.<layer>` value per declared layer. Validators compare those values exactly with `.X.sum()` and each layer sum; the loader recomputes them after feature slicing.
+
+The source-run counters obey these conservation identities:
+
+```text
+valid_rows + invalid_schema_rows + invalid_coordinate_rows = total_rows
+assigned_cut_sites + cut_sites_outside_peaks = 2 * retained_fragments
+sum(cut_sites_per_bin) = assigned_cut_sites
+```
 
 ## 4. Indices and observed data
 

@@ -1,3 +1,8 @@
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import anndata as ad
 import numpy as np
 import pandas as pd
@@ -36,7 +41,36 @@ def test_builtin_methods_are_registered():
     assert "rctd" in methods
     assert "spatialdwls" in methods
     assert "tangram" in methods
+    assert "shapemix" in methods
     assert get_method("nnls").method_name == "nnls"
+    assert get_method("shapemix").method_name == "shapemix"
+
+
+def test_listing_and_running_nnls_do_not_import_shapemix_dependencies():
+    root = Path(__file__).resolve().parents[1]
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(root / "src")
+    command = """
+import sys
+from deconvatac.methods import get_method, list_methods
+assert not any(name.startswith('deconvatac.shapemix') for name in sys.modules)
+assert 'pysam' not in sys.modules
+assert 'shapemix' in list_methods()
+assert 'deconvatac.methods.shapemix' not in sys.modules
+get_method('nnls')
+assert not any(name.startswith('deconvatac.shapemix') for name in sys.modules)
+assert 'pysam' not in sys.modules
+assert 'deconvatac.methods.shapemix' not in sys.modules
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=root,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_nnls_baseline_remains_available():

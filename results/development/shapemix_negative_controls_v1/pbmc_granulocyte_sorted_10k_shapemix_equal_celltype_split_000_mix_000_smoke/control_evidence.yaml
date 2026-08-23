@@ -1,0 +1,186 @@
+schema_version: 1
+protocol_id: shapemix_negative_controls_v1
+dataset_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke
+modality: atac
+feature_set: highly_variable
+selected_controls:
+- homogenized_omega
+- permuted_omega
+- one_bin
+- poisson_factorization
+truth_used_in_fitting: false
+all_acceptance_checks_passed: true
+axes:
+  spots: 32
+  peaks: 200
+  bins: 3
+  cell_types:
+  - CD14 Mono
+  - CD4 Naive
+  - CD8 Naive
+seeds:
+  outer_split_seed: 0
+  inner_mixture_seed: 0
+  method_seed: 0
+  permutation_seed_tuple:
+  - 20260822
+  - 0
+  - 23
+fixed_inputs:
+  reference_signature_sha256: 3f642a07f02ddc60d6e25daf7e2745c63b51853b08b224a9ffd55d7b4d9d80a7
+  A_sha256: e2d642809b064499d30bf30cbcf34a077e03f7d2acade423605b37b4d39f711d
+  omega_sha256: 6311eb18e0d37f561d38a35764b96766e0d34223fccbd9550bc5c061d81d386a
+  u_peak_sha256: db691279f3fc42d0d5b6b3de4a1af04a55df4f16f1359bdaa3f62bfa628f7353
+  phi_ref: 0.8008838701125459
+  total_likelihood: negative_binomial
+  feature_sha256: 5c911da3835408f57c1e2d6020f8379dfc64eb127eac4d603f472717d127db9c
+  dispersion_fold_membership_sha256: 5ab4bd516d9940cd0b6bd826610e05d15a5c7ca8a79c062b61377d4698895c0c
+fit_summaries:
+  count_only:
+    selected_restart: 1
+    count_log_likelihood: -19024.09375
+    shape_log_likelihood: 0.0
+    abundance_log_prior: -246.17578125
+    total_log_objective: -19270.26953125
+    selected_steps: 624
+    selected_stopping_reason: objective_patience
+    proportions_sha256: f2a6e087dbf0bfb61415e482d11b9c3ac7952dc6c7355e655093cfd2e4321e13
+  homogenized_omega:
+    selected_restart: 1
+    count_log_likelihood: -19024.09375
+    shape_log_likelihood: -23520.60546875
+    abundance_log_prior: -246.17578125
+    total_log_objective: -42790.875
+    selected_steps: 624
+    selected_stopping_reason: objective_patience
+    proportions_sha256: f2a6e087dbf0bfb61415e482d11b9c3ac7952dc6c7355e655093cfd2e4321e13
+  permuted_omega:
+    selected_restart: 0
+    count_log_likelihood: -19077.181640625
+    shape_log_likelihood: -27603.798828125
+    abundance_log_prior: -268.33026123046875
+    total_log_objective: -46949.31072998047
+    selected_steps: 718
+    selected_stopping_reason: objective_patience
+    proportions_sha256: 5a12fc0ba3138ea27d2436bc253d47976ab465706dc73aeede4bcd3b38d86c99
+  one_bin_count_only:
+    selected_restart: 1
+    count_log_likelihood: -19024.09375
+    shape_log_likelihood: 0.0
+    abundance_log_prior: -246.17578125
+    total_log_objective: -19270.26953125
+    selected_steps: 624
+    selected_stopping_reason: objective_patience
+    proportions_sha256: f2a6e087dbf0bfb61415e482d11b9c3ac7952dc6c7355e655093cfd2e4321e13
+  one_bin_shape:
+    selected_restart: 1
+    count_log_likelihood: -19024.09375
+    shape_log_likelihood: 0.0
+    abundance_log_prior: -246.17578125
+    total_log_objective: -19270.26953125
+    selected_steps: 624
+    selected_stopping_reason: objective_patience
+    proportions_sha256: f2a6e087dbf0bfb61415e482d11b9c3ac7952dc6c7355e655093cfd2e4321e13
+controls:
+  homogenized_omega:
+    status: pass
+    construction: omega[c,p,:] = u_peak[p,:] for every cell type
+    A_preserved: true
+    count_likelihood_preserved: true
+    homogeneous_across_cell_types: true
+    pooled_u_peak_sha256: db691279f3fc42d0d5b6b3de4a1af04a55df4f16f1359bdaa3f62bfa628f7353
+    control_omega_sha256: 02d7e7ad6e1ba9e02908fef1173b3f8e430f0577b8bef8c306f56e6dd356c878
+    comparison: homogenized_omega_vs_count_only
+    proportion_max_abs_difference: 0.0
+    proportion_max_abs_tolerance: 1.0e-06
+  permuted_omega:
+    status: diagnostic_complete
+    acceptance_interpretation: Score these frozen proportions only if the primary
+      shape direction is positive; a legitimate gain should disappear or reverse.
+    A_preserved: true
+    count_likelihood_preserved: true
+    bit_generator: PCG64
+    seed_tuple:
+    - 20260822
+    - 0
+    - 23
+    identity_policy: first_nonidentity_draw
+    selected_draw_index: 1
+    permutation_indices:
+    - 1
+    - 0
+    - 2
+    target_to_source_cell_type:
+      CD14 Mono: CD4 Naive
+      CD4 Naive: CD14 Mono
+      CD8 Naive: CD8 Naive
+    fixed_points: 1
+    is_nonidentity: true
+    is_exact_cell_type_axis_permutation: true
+    control_omega_sha256: 5847e9b247d1efd478aa77d974fd2257a1b928a3bf44161e4b15a11f0f93a1f3
+    numeric_omega_changed: true
+    proportion_max_abs_difference_from_count_only: 0.5259672885857368
+  one_bin:
+    status: pass
+    construction: all declared fragment bins collapsed to one bin
+    A_preserved: true
+    count_likelihood_preserved: true
+    collapsed_total_counts_sha256: b7ed5663b148bf9061feb3e9edcbc035981ac16e14c868e10f74399a8f103586
+    one_bin_omega_sha256: a7379dd2fc8be4019c9a5861254ed4e39b32f78816daf0c89d0a295d59affd67
+    shape_log_likelihood: 0.0
+    shape_log_likelihood_absolute: 0.0
+    shape_log_likelihood_abs_tolerance: 0.0
+    comparison: one_bin_shape_vs_one_bin_count_only
+    proportion_max_abs_difference: 0.0
+    proportion_max_abs_tolerance: 1.0e-06
+  poisson_factorization:
+    status: pass
+    tolerance_abs: 1.0e-10
+    factorized_log_likelihood: -13.232333329015969
+    independent_bin_log_likelihood: -13.232333329015967
+    absolute_difference: 1.7763568394002505e-15
+    counts_sha256: 19c91ce4598bf5f3fd455fc741bfe554db665c2a2a6a911efd481f955f292717
+    rates_sha256: 5939ff7976bf54b0f737b6f506437ee730bd2c199de413b1034f1f1c3fa58256
+execution_gate:
+  dataset_selection: checked_in_development
+  primary_direction_positive_attested: false
+configuration:
+  control_config_source_path: configs/experiments/shapemix_negative_controls.yaml
+  control_config_source_sha256: 65b705bc4e8073641b5bc4990964493d17aeac8737f9bf7f2e40035ac7948c84
+  control_config_resolved_sha256: 131a182ce7099737b3a021d168e86065a0679b54483bdaa80f4c237e9bbfbe01
+  shape_aware_config_source_path: configs/methods/shapemix.yaml
+  shape_aware_config_source_sha256: 11fa224e8acd3fcc5bf76d804785c2f5735475461bec1827f5c68e1cc1f8c2d5
+  shape_aware_config_resolved_sha256: 6abe1e12004ae6c3fd193062a95eb8f15755bfc60c46b39c7684744a4a64259c
+  count_only_config_source_path: configs/methods/shapemix_count_only.yaml
+  count_only_config_source_sha256: a51cdee4fbadddb24a32f9a5c30a91581f24ce11a675cd1c22dfe80bbec6af2e
+  count_only_config_resolved_sha256: e42eb2f5c6dde9c9ef10f326b085cca030a9ac3c08004b21a37d1fbb5599c6af
+dataset_config:
+  source_path: data/processed/datasets/pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke/dataset.yaml
+  source_sha256: eeb4af01c5913499181f601c022fe78ddd1ab6e9a3dfc83a34597e51538f6ea6
+  resolved_sha256: 7c1ec271160216dab10e6dbb735f3792a15667926eff705a7eaf4125e85343e4
+code_and_protocol:
+  git_commit: 31128334f6f8d64aa3b7db767a1324c298dab457
+  git_worktree_dirty: true
+  script_path: scripts/run_shapemix_negative_controls.py
+  script_sha256: 69e7040f40287e77078a83695f5e0af89bac8c72778367d7e55814fe7c0f60fa
+  benchmark_protocol_path: docs/ShapeMix/benchmark_protocol.md
+  benchmark_protocol_sha256: 1c540b1f195af1d398b2ac55a80c06236f4d01aebd2e4daaeb3a97028f8667b6
+  executed_code_sha256:
+    scripts/run_shapemix_negative_controls.py: 69e7040f40287e77078a83695f5e0af89bac8c72778367d7e55814fe7c0f60fa
+    src/deconvatac/data/loaders.py: 2e7f94a9886d4d0c458fccd3f0fb8fac8077bbc0be958d0d64946b2179547c98
+    src/deconvatac/data/registry.py: fad6e2db43babfb453f6ed1b8044c7006c4d591981be99b6a7827688acc426dd
+    src/deconvatac/data/schemas.py: a0a9ebf5762ceb5295ed75d5fbf8aa96fb300e91a5fa0df24d69a809d089bb80
+    src/deconvatac/data/validators.py: 84279066c090b208382d8cb1476760530cd427022d31f99149e08bf8b69cb888
+    src/deconvatac/shapemix/config.py: 9bda7e7f22741c5bffc6b041a47ea4185805ae628e390435bea55e1e5af17b9f
+    src/deconvatac/shapemix/diagnostics.py: e0d5cf2b62f070a419631ad65106a94bf8816041955b608f72b1f1273c41eaea
+    src/deconvatac/shapemix/likelihood.py: 9dbb9e78589562375b234f9b69c6766cda8c5010b856373d9ae218a4930f6873
+    src/deconvatac/shapemix/map.py: a5a508715947891589ffb3cad86bc770321e9d08db0e8cac3ea40875e0b52799
+    src/deconvatac/shapemix/signatures.py: ebae1bb0edfdc4681e4fb5046643dd5b2b434bd5552564294091e4f8a82c7356
+software_versions:
+  python: 3.11.15
+  numpy: 1.25.2
+  pandas: 2.3.3
+  scipy: 1.11.3
+  torch: 2.11.0
+  pyyaml: 6.0.3
+  deconvatac: 0.0.1

@@ -1,0 +1,25 @@
+description: Development-only ShapeMix nested-ablation smoke run on held-out PBMC pseudo-spots.
+benchmark_scope: development_smoke
+run_group: shapemix_smoke_development
+datasets:
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - highly_variable
+method_runs:
+  - id: shapemix_length
+    method: shapemix
+    config: configs/methods/shapemix.yaml
+  - id: shapemix_count_only
+    method: shapemix
+    config: configs/methods/shapemix_count_only.yaml
+metrics:
+  - rmse
+  - jsd
+output_root: results/development
+run_id_template: "{dataset}__{modality}__{feature_set}__{method_run_id}"
+skip_missing: false
+continue_on_error: false
+overwrite: false

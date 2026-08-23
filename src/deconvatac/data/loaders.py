@@ -7,8 +7,42 @@ import anndata as ad
 import pandas as pd
 
 from .registry import get_dataset_config, resolve_project_path
-from .schemas import DeconvolutionInput
-from .validators import validate_deconvolution_input
+from .schemas import DeconvolutionInput, FragmentShapeSpec
+from .validators import (
+    ordered_feature_sha256,
+    validate_deconvolution_input,
+    validate_fragment_shape_feature_axis,
+)
+
+
+def _slice_adata_features(
+    adata: ad.AnnData,
+    selected_features: pd.Index,
+    *,
+    validate_fragment_shape: bool,
+    role: str,
+) -> ad.AnnData:
+    """Validate the source axis, slice it, and bind metadata to the new axis."""
+    if validate_fragment_shape:
+        validate_fragment_shape_feature_axis(adata, f"original {role}")
+    selected = adata[:, selected_features].to_memory()
+    if validate_fragment_shape:
+        metadata = dict(selected.uns["fragment_shape"])
+        metadata["feature_sha256"] = ordered_feature_sha256(selected.var_names)
+        stored_spec = FragmentShapeSpec.from_mapping(metadata)
+        layer_totals = {
+            layer_name: int(selected.layers[layer_name].sum())
+            for layer_name in stored_spec.layer_names
+        }
+        metadata["matrix_counters"] = {
+            "assigned_cut_sites": sum(layer_totals.values()),
+            **{
+                f"cut_sites_per_bin.{layer_name}": count
+                for layer_name, count in layer_totals.items()
+            },
+        }
+        selected.uns["fragment_shape"] = metadata
+    return selected
 
 
 def _read_adata(
@@ -16,6 +50,8 @@ def _read_adata(
     modality: str,
     project_root: Optional[Union[str, Path]],
     selected_features: Optional[pd.Index] = None,
+    validate_fragment_shape: bool = False,
+    role: str = "input",
 ) -> ad.AnnData:
     path = resolve_project_path(spec["path"], project_root=project_root)
     selected_modality = spec.get("modality", modality)
@@ -28,14 +64,24 @@ def _read_adata(
             raise KeyError(f"Modality '{selected_modality}' is missing from {path}.")
         adata = mdata.mod[selected_modality]
         if selected_features is not None:
-            return adata[:, selected_features].to_memory()
+            return _slice_adata_features(
+                adata,
+                selected_features,
+                validate_fragment_shape=validate_fragment_shape,
+                role=role,
+            )
         return adata.copy()
 
     if path.suffix == ".h5ad":
         if selected_features is None:
             return ad.read_h5ad(path)
         adata = ad.read_h5ad(path, backed="r")
-        return adata[:, selected_features].to_memory()
+        return _slice_adata_features(
+            adata,
+            selected_features,
+            validate_fragment_shape=validate_fragment_shape,
+            role=role,
+        )
 
     raise ValueError(f"Unsupported input file type for {path}. Expected .h5ad or .h5mu.")
 
@@ -139,13 +185,38 @@ def _truth_from_spatial(
     if isinstance(truth, pd.DataFrame):
         return truth.copy()
 
-    columns = truth_spec.get("columns")
+    columns = truth_spec.get("columns") or truth_spec.get("cell_types")
     if columns is None and "proportion_names" in spatial.uns:
         columns = list(spatial.uns["proportion_names"])
     if columns is None:
         columns = [f"cell_type_{idx}" for idx in range(truth.shape[1])]
 
     return pd.DataFrame(truth, index=spatial.obs_names, columns=columns)
+
+
+def _ordered_cell_types(truth_spec: Optional[dict[str, Any]]) -> Optional[list[str]]:
+    """Read an optional, ordered truth cell-type universe."""
+    if not truth_spec or "cell_types" not in truth_spec:
+        return None
+
+    cell_types = truth_spec["cell_types"]
+    if not isinstance(cell_types, list):
+        raise TypeError("truth.cell_types must be an ordered YAML list.")
+    return cell_types.copy()
+
+
+def _fragment_shape_spec(
+    modality_config: dict[str, Any],
+    config: dict[str, Any],
+) -> Optional[FragmentShapeSpec]:
+    """Read opt-in shape metadata, preferring modality-specific metadata."""
+    if "fragment_shape" in modality_config:
+        raw_spec = modality_config["fragment_shape"]
+    else:
+        raw_spec = config.get("fragment_shape")
+    if raw_spec is None:
+        return None
+    return FragmentShapeSpec.from_mapping(raw_spec)
 
 
 def load_deconvolution_input(
@@ -164,6 +235,9 @@ def load_deconvolution_input(
         raise KeyError(f"Dataset '{dataset_id}' does not define modality '{modality}'. Available: {available}")
 
     modality_config = modality_configs[modality]
+    truth_spec = modality_config.get("truth") or config.get("truth")
+    fragment_shape = _fragment_shape_spec(modality_config, config)
+    cell_types = _ordered_cell_types(truth_spec)
     feature_sets = modality_config.get("feature_sets", {})
     selected_features = _resolve_selected_features(
         reference_spec=modality_config["reference"],
@@ -178,17 +252,21 @@ def load_deconvolution_input(
         modality=modality,
         project_root=project_root,
         selected_features=selected_features,
+        validate_fragment_shape=fragment_shape is not None,
+        role="reference",
     )
     spatial = _read_adata(
         modality_config["spatial"],
         modality=modality,
         project_root=project_root,
         selected_features=selected_features,
+        validate_fragment_shape=fragment_shape is not None,
+        role="spatial",
     )
 
     truth = _truth_from_spatial(
         spatial=spatial,
-        truth_spec=modality_config.get("truth") or config.get("truth"),
+        truth_spec=truth_spec,
         project_root=project_root,
     )
 
@@ -203,6 +281,8 @@ def load_deconvolution_input(
         truth=truth,
         output_dir=Path(output_dir) if output_dir is not None else None,
         metadata={"dataset_config": config, "modality_config": modality_config},
+        fragment_shape=fragment_shape,
+        cell_types=cell_types,
     )
     validate_deconvolution_input(data)
     return data

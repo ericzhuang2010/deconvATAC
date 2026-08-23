@@ -2,9 +2,9 @@
 
 This guide rebuilds the current operational `data/` tree from public downloads and repository scripts. It was verified on **2026-08-22**. Run every command from the repository root.
 
-The peak-matrix directory reconstructed by the original workflow is about **29.4 GiB**. ShapeMix additionally requires a 2,403,785,496-byte fragments file and its 1,089,534-byte index: **2,404,875,030 bytes (2.240 GiB)** in total. The directory is therefore about **31.6 GiB before any derived ShapeMix datasets are generated**, and direct downloads total about 20.9 GB rather than 18.5 GB. The Zenodo notebook archive expands from 1.85 GB to about 7.7 GiB.
+The peak-matrix directory reconstructed by the original workflow is about **29.4 GiB**. ShapeMix additionally requires a 2,403,785,496-byte fragments file and its 1,089,534-byte index: **2,404,875,030 bytes (2.240 GiB)** in total. The directory is therefore about **31.6 GiB before derived ShapeMix datasets**, and direct downloads total about 20.9 GB rather than 18.5 GB. The canonical Step 3 ShapeMix cache, six split trees, one smoke dataset, and 20 primary datasets add approximately **890 MiB**. The complete current `data/` tree measures about **32 GiB**. The Zenodo notebook archive expands from 1.85 GB to about 7.7 GiB.
 
-Budget at least **50 GiB of free disk space** for the reconstructed tree, staged ZIP archives, the required raw ShapeMix inputs, and a provisional 5 GiB working allowance for sparse ShapeMix H5ADs and preprocessing shards. That 5 GiB allowance is a planning estimate, not a measured final size: the Step 2/3 generators do not exist yet, and the actual derived footprint will depend on the frozen split/mixture seed count and retained peaks. Measure and record it with `du` after the first canonical build; increase the allowance before running a larger seed or sensitivity grid.
+Budget at least **50 GiB of free disk space** for the reconstructed tree, staged ZIP archives, the required raw ShapeMix inputs, and temporary H5AD writes. The measured canonical ShapeMix derived footprint is below 1 GiB, but keep more headroom before running alternate peak, seed, depth, or external-dataset grids.
 
 ## Recovery status
 
@@ -22,7 +22,7 @@ Budget at least **50 GiB of free disk space** for the reconstructed tree, staged
 
 The top-level `data/` directory is intentionally git-ignored, including its README and manifest files. A repository clone therefore does not contain any of these files. This guide recreates the operational data and the metadata needed by the unified runner; copy documentation-only files from the original machine if an exact directory snapshot is required.
 
-> **Safety:** Run this workflow against a fresh clone or an empty/new `data/` directory. It initializes `data/registry/datasets.yaml`, extracts archives with overwrite enabled, and invokes generation scripts with `--overwrite`. Back up an existing `data/` directory before using these commands on it.
+> **Safety:** Run this workflow against a fresh clone or an empty/new `data/` directory. It initializes `data/registry/datasets.yaml`, extracts archives with overwrite enabled, and invokes the historical generators with `--overwrite`. The ShapeMix generators refuse to overwrite their outputs. Back up an existing `data/` directory before using these commands on it.
 
 ## 1. Prepare the repository and environment
 
@@ -61,7 +61,7 @@ Install the lightweight ShapeMix file reader in the data-only fallback before va
 python -m pip install "pysam>=0.24,<0.25"
 ```
 
-This fallback is sufficient for the downloads, reference preparation, simulations, and raw-fragment validation below. It does not install PyTorch for ShapeMix inference and does not support the optional legacy RCTD regeneration in section 12.
+This fallback is sufficient for the downloads, reference preparation, simulations, and raw-fragment validation below. It does not install PyTorch for ShapeMix inference and does not support the optional legacy RCTD regeneration in section 13.
 
 The `shapemix` project extra is bounded to the tested Python 3.11 environment's PyTorch 2.11 and pysam 0.24 minor-version lines. PyTorch 2.11 requires Python 3.10 or newer, so use the Python 3.11 setup above for ShapeMix even though the base project still supports Python 3.9. Pyro is intentionally not an MVP dependency.
 
@@ -376,6 +376,15 @@ print(f"OK  {len(observed_contigs)} indexed contigs; validated {checked} rows")
 PY
 ```
 
+For the pinned ARC 2.0 files, the Step 2 reconstruction audit established the
+canonical Tn5 coordinates as `chromStart` and `chromEnd`, with peak membership
+`peakStart <= cut < peakEnd`. Do not substitute `chromEnd - 1` and do not weight
+counts by `readSupport`. The deterministic primary audit reproduced 158,472
+official matrix counts with zero mismatches; its sampling rule and alternative-
+convention errors are recorded in the [tracked source manifest](../configs/data_sources/pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml).
+If any pinned raw-file hash changes, rerun and re-record the coordinate audit
+before producing canonical ShapeMix layers.
+
 ## 5. Download the SnapATAC2 PBMC label source
 
 Download the current official SnapATAC2/scverse object:
@@ -675,7 +684,107 @@ The script adds the dataset index to the base seed. Running the two together as 
 
 This command writes both modality H5ADs, feature lists, truth CSVs, source-cell JSONL files, dataset YAMLs, and registry entries.
 
-## 11. Optional: recreate the deprecated CellTypist fallback
+## 11. Build the canonical ShapeMix Step 3 benchmark
+
+These commands require the fragments/index from section 4 and the canonical labels/reference from section 9. They reproduce the frozen protocol in `docs/ShapeMix/benchmark_protocol.md`. The first command verifies all seven pinned inputs, computes reference-only rankings, streams the 2.4 GB fragments file once into a reusable 5,754-peak union cache, verifies exact reconstruction against the official matrix, and writes the five primary splits:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR="$MPLCONFIGDIR" \
+  .venv/bin/python scripts/prepare_shapemix_pbmc.py \
+  --build-shape-cache \
+  --outer-split-seed 1103 \
+  --outer-split-seed 2203 \
+  --outer-split-seed 3301 \
+  --outer-split-seed 4409 \
+  --outer-split-seed 5501
+```
+
+Each primary split has 6,644 reference cells, 2,856 held-out cells, and 5,000 independently ranked peaks. Build the separate development split from the first three canonical types:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR="$MPLCONFIGDIR" \
+  .venv/bin/python scripts/prepare_shapemix_pbmc.py \
+  --outer-split-seed 0 \
+  --cell-types "CD14 Mono" "CD4 Naive" "CD8 Naive" \
+  --output-root data/processed/shapemix/pbmc_granulocyte_sorted_10k/smoke
+```
+
+Generate the one 32-spot, 200-peak smoke dataset:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR="$MPLCONFIGDIR" \
+  .venv/bin/python scripts/regenerate_shapemix_pbmc_simulations.py \
+  --split-dir data/processed/shapemix/pbmc_granulocyte_sorted_10k/smoke/split_000 \
+  --outer-split-seed 0 \
+  --inner-mixture-seed 0 \
+  --conditions equal_celltype \
+  --num-spots 32 \
+  --grid-shape 4 8 \
+  --cell-types "CD14 Mono" "CD4 Naive" "CD8 Naive" \
+  --smoke
+```
+
+Generate both frozen conditions for all ten primary outer/inner pairs. Every invocation validates its source H5AD hashes and exact `split.csv` membership before sampling:
+
+```bash
+set -e
+for outer_seed in 1103 2203 3301 4409 5501
+do
+  for inner_seed in 101 211
+  do
+    PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR="$MPLCONFIGDIR" \
+      .venv/bin/python scripts/regenerate_shapemix_pbmc_simulations.py \
+      --split-dir "data/processed/shapemix/pbmc_granulocyte_sorted_10k/split_${outer_seed}" \
+      --outer-split-seed "$outer_seed" \
+      --inner-mixture-seed "$inner_seed"
+  done
+done
+```
+
+Register the one smoke and 20 primary dataset configurations without replacing an existing conflicting entry:
+
+```bash
+.venv/bin/python - <<'PY'
+from pathlib import Path
+
+import yaml
+
+registry_path = Path("data/registry/datasets.yaml")
+registry = yaml.safe_load(registry_path.read_text()) or {}
+ids = [
+    "pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke"
+]
+for outer_seed in (1103, 2203, 3301, 4409, 5501):
+    for inner_seed in (101, 211):
+        for condition in ("equal_celltype", "observed_abundance"):
+            ids.append(
+                "pbmc_granulocyte_sorted_10k_shapemix_"
+                f"{condition}_split_{outer_seed}_mix_{inner_seed}"
+            )
+
+for dataset_id in ids:
+    entry = {
+        "config": f"data/processed/datasets/{dataset_id}/dataset.yaml"
+    }
+    if dataset_id in registry and registry[dataset_id] != entry:
+        raise SystemExit(f"conflicting registry entry: {dataset_id}")
+    registry[dataset_id] = entry
+
+registry_path.write_text(yaml.safe_dump(registry, sort_keys=False))
+PY
+```
+
+Run the artifact-level validator. It loads all 21 datasets through the maintained interface and independently reconstructs every pseudo-spot layer and truth row from held-out source-cell provenance:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR="$MPLCONFIGDIR" \
+  .venv/bin/python scripts/validate_shapemix_step3.py
+```
+
+The canonical derived output occupies approximately 890 MiB: about 348 MiB for the union cache and split trees and 541 MiB for the 21 dataset trees. The scripts refuse existing output directories. On an interrupted fresh build, inspect the completed manifests and invoke only the missing split or seed pairs; do not delete or overwrite validated outputs merely to resume.
+
+
+## 12. Optional: recreate the deprecated CellTypist fallback
 
 The canonical PBMC build does not use this branch. Recreate it only to mirror the current directory or preserve fallback provenance:
 
@@ -695,7 +804,7 @@ data/raw/sources/celltypist/pbmc_granulocyte_sorted_10k/
 
 Do not feed that fallback mapping into `prepare_pbmc_multiome_references.py` unless intentionally changing the canonical PBMC labels.
 
-## 12. Local-only archived results
+## 13. Local-only archived results
 
 Zenodo does not contain these six small files:
 
@@ -749,7 +858,7 @@ path.write_text(
 PY
 ```
 
-## 13. Validate the rebuilt tree
+## 14. Validate the rebuilt tree
 
 First inspect disk usage and the registry:
 
@@ -758,7 +867,7 @@ du -sh data
 sed -n '1,200p' data/registry/datasets.yaml
 ```
 
-The registry should contain these seven IDs:
+The registry should contain 28 IDs: these seven historical IDs plus the 21 ShapeMix IDs produced in section 11:
 
 ```text
 russell_250
@@ -769,6 +878,8 @@ human_cardiac_niches_sim_4zone_circles
 pbmc_granulocyte_sorted_10k_sim_equal_celltype
 pbmc_granulocyte_sorted_10k_sim_observed_abundance
 ```
+
+The ShapeMix subset consists of one ID ending in `_split_000_mix_000_smoke` and 20 primary IDs spanning conditions `equal_celltype` and `observed_abundance`, outer seeds `1103`, `2203`, `3301`, `4409`, and `5501`, and inner seeds `101` and `211`. Run `scripts/validate_shapemix_step3.py` rather than validating those names by count alone.
 
 Validate the expected H5AD shapes without loading matrices into memory:
 

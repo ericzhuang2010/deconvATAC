@@ -1,0 +1,68 @@
+method: shapemix
+dataset_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke
+modality: atac
+feature_set: highly_variable
+results:
+  proportions: results/proportions.csv
+  abundance: results/abundance.csv
+  diagnostics: results/diagnostics.json
+run_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke__atac__highly_variable__shapemix_count_only
+method_run_id: shapemix_count_only
+method_config:
+  method: shapemix
+  params:
+    use_shape: false
+    total_likelihood: negative_binomial
+    conditional_shape_likelihood: multinomial
+    signature_rate_pseudocount: 0.5
+    signature_shape_concentration: 1.0
+    exposure_mode: absorbed_in_abundance
+    dispersion_mode: reference_crossfit_global_scaled_by_abundance
+    dispersion_crossfit_folds: 2
+    dispersion_alpha_floor: 1.0e-08
+    background_mode: none
+    abundance_prior: gamma
+    abundance_prior_shape: 2.0
+    abundance_prior_rate: 1.0
+    optimizer: adam
+    learning_rate: 0.03
+    max_steps: 2000
+    patience: 100
+    tolerance: 1.0e-05
+    restarts: 3
+    spot_batch_size: 64
+    peak_chunk_size: 512
+    seed: 0
+    device: cpu
+    dtype: float32
+method_config_source: method_runs_config
+method_config_source_path: configs/methods/shapemix_count_only.yaml
+method_config_sha256: ddbb51cd8e6d3477df96d551e91b53642105982b9e098bd530cec14cd8944999
+method_config_source_sha256: a51cdee4fbadddb24a32f9a5c30a91581f24ce11a675cd1c22dfe80bbec6af2e
+environment:
+  python: 3.11.15 (main, Apr 14 2026, 14:45:51) [Clang 22.1.3 ]
+  platform: macOS-26.5.2-arm64-arm-64bit
+  packages: &id001
+    deconvatac: 0.0.1
+    anndata: 0.9.2
+    muon: 0.1.5
+    numpy: 1.25.2
+    pandas: 2.3.3
+    scipy: 1.11.3
+    yaml: 6.0.3
+    torch: 2.11.0
+    pysam: 0.24.0
+software_versions: *id001
+inputs:
+  dataset_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke
+  modality: atac
+  feature_set: highly_variable
+  registry: /Users/rzhuang/Documents/VscodeProjects/deconvATAC/data/registry/datasets.yaml
+seed: 0
+device: cpu
+dtype: float32
+determinism:
+  seed: 0
+  device: cpu
+  dtype: float32
+  source: resolved_method_config
