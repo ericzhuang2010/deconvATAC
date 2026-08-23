@@ -16,7 +16,6 @@
 /data/*
 !/data/archive/
 /data/archive/*
-!/data/archive/legacy_results/
 
 # /data/
 # /.r-lib/
