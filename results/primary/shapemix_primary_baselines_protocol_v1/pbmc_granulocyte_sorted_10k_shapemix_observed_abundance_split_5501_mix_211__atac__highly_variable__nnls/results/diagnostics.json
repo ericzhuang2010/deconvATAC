@@ -1,0 +1,12 @@
+{
+  "mean_residual": 268.9726034399372,
+  "method": "nnls",
+  "model": "non_negative_least_squares",
+  "n_cell_types": 16,
+  "n_features": 5000,
+  "params": {
+    "layer_ref": null,
+    "layer_spatial": null,
+    "zero_policy": "zeros"
+  }
+}

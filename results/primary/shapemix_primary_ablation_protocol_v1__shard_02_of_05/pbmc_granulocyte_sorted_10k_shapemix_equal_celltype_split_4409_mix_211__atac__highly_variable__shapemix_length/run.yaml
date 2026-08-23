@@ -1,0 +1,278 @@
+method: shapemix
+dataset_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_4409_mix_211
+modality: atac
+feature_set: highly_variable
+results:
+  proportions: results/proportions.csv
+  abundance: results/abundance.csv
+  diagnostics: results/diagnostics.json
+status: success
+run_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_4409_mix_211__atac__highly_variable__shapemix_length
+method_run_id: shapemix_length
+method_config:
+  method: shapemix
+  params:
+    use_shape: true
+    total_likelihood: negative_binomial
+    conditional_shape_likelihood: multinomial
+    signature_rate_pseudocount: 0.5
+    signature_shape_concentration: 1.0
+    exposure_mode: absorbed_in_abundance
+    dispersion_mode: reference_crossfit_global_scaled_by_abundance
+    dispersion_crossfit_folds: 2
+    dispersion_alpha_floor: 1.0e-08
+    background_mode: none
+    abundance_prior: gamma
+    abundance_prior_shape: 2.0
+    abundance_prior_rate: 1.0
+    optimizer: adam
+    learning_rate: 0.03
+    max_steps: 2000
+    patience: 100
+    tolerance: 1.0e-05
+    restarts: 3
+    spot_batch_size: 64
+    peak_chunk_size: 512
+    seed: 0
+    device: cpu
+    dtype: float32
+method_config_source: method_runs_config
+method_config_source_path: configs/methods/shapemix.yaml
+method_config_sha256: 26f227ab9e4f175f8e9e91f51b1efe9d340c5cbcf1b5888ecb3bae46de8fd159
+method_config_source_sha256: 11fa224e8acd3fcc5bf76d804785c2f5735475461bec1827f5c68e1cc1f8c2d5
+dataset_config_sha256: fe849d7be4aa0c228d38b8cee19b861a4dfc60e2acf28e21f7236fe2f729f1b4
+environment:
+  python: 3.11.15 (main, Apr 14 2026, 14:45:51) [Clang 22.1.3 ]
+  platform: macOS-26.5.2-arm64-arm-64bit
+  packages: &id001
+    deconvatac: 0.0.1
+    anndata: 0.9.2
+    muon: 0.1.5
+    numpy: 1.25.2
+    pandas: 2.3.3
+    scipy: 1.11.3
+    yaml: 6.0.3
+    torch: 2.11.0
+    pysam: 0.24.0
+  compute:
+    thread_environment:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      VECLIB_MAXIMUM_THREADS: '2'
+      NUMEXPR_NUM_THREADS: '2'
+    logical_cpu_count: 14
+    physical_cpu_count: 14
+    cpu_affinity: null
+    torch_num_threads: 2
+    torch_num_interop_threads: 14
+software_versions: *id001
+proportion_evaluation:
+  contract_version: v2
+  row_sum_atol: 1.0e-06
+  cell_types:
+  - CD14 Mono
+  - CD4 Naive
+  - CD8 Naive
+  - CD4 TCM
+  - CD16 Mono
+  - NK
+  - CD8 TEM_1
+  - CD8 TEM_2
+  - Intermediate B
+  - Memory B
+  - CD4 TEM
+  - cDC
+  - Treg
+  - gdT
+  - MAIT
+  - Naive B
+inputs:
+  dataset_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_4409_mix_211
+  modality: atac
+  feature_set: highly_variable
+  registry: /Users/rzhuang/Documents/VscodeProjects/deconvATAC/data/registry/datasets.yaml
+seed: 0
+device: cpu
+dtype: float32
+determinism:
+  seed: 0
+  device: cpu
+  dtype: float32
+  source: resolved_method_config
+execution_provenance:
+  schema_version: 1
+  experiment_config:
+    path: configs/experiments/shapemix_primary_ablation.yaml
+    source_sha256: 0604074d476b125df006565e59a909fe6d5f0983ae6773455889acf8ab16b09b
+    resolved_sha256: 1ac65d9b0fc1c43345a4e594aa1a40a5beeb8f77f74aa5ccd6858d071a53d434
+    resolved_hash_encoding: canonical_json_sorted_keys_compact_utf8
+  benchmark_protocol:
+    path: docs/ShapeMix/benchmark_protocol.md
+    source_sha256: 1c540b1f195af1d398b2ac55a80c06236f4d01aebd2e4daaeb3a97028f8667b6
+  registry:
+    path: data/registry/datasets.yaml
+    source_sha256: 1b903b374293d99872e16404f7194b1a65e42993dfed013b4962154c26be7932
+  code:
+    git_commit: 31128334f6f8d64aa3b7db767a1324c298dab457
+    git_worktree_dirty: true
+    git_status:
+    - M configs/data_sources/pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml
+    - ' M docs/ShapeMix/README.md'
+    - ' M docs/ShapeMix/implementation_plan.md'
+    - ' M docs/ShapeMix/model_specification.md'
+    - ' M scripts/evaluate_runs.py'
+    - ' M scripts/run_deconvolution.py'
+    - ' M src/deconvatac/data/__init__.py'
+    - ' M src/deconvatac/data/loaders.py'
+    - ' M src/deconvatac/data/schemas.py'
+    - ' M src/deconvatac/data/validators.py'
+    - ' M src/deconvatac/methods/registry.py'
+    - ' M src/deconvatac/metrics/__init__.py'
+    - ' M src/deconvatac/metrics/proportions.py'
+    - ' M src/deconvatac/pp/__init__.py'
+    - ' M src/deconvatac/pp/feature_selection.py'
+    - ?? configs/experiments/shapemix_baselines.yaml
+    - ?? configs/experiments/shapemix_negative_controls.yaml
+    - ?? configs/experiments/shapemix_primary_ablation.yaml
+    - ?? configs/experiments/shapemix_smoke.yaml
+    - ?? configs/experiments/shapemix_stress_tests.yaml
+    - ?? configs/methods/shapemix.yaml
+    - ?? configs/methods/shapemix_count_only.yaml
+    - ?? scripts/audit_shapemix_signal.py
+    - ?? scripts/prepare_shapemix_pbmc.py
+    - ?? scripts/regenerate_shapemix_pbmc_simulations.py
+    - ?? scripts/run_shapemix_negative_controls.py
+    - ?? scripts/shapemix_provenance.py
+    - ?? scripts/summarize_shapemix_benchmark.py
+    - ?? scripts/validate_shapemix_step3.py
+    - ?? src/deconvatac/methods/shapemix.py
+    - ?? src/deconvatac/pp/fragment_shapes.py
+    - ?? src/deconvatac/shapemix/
+    manifest_sha256: 68896dbdb4f575e2b315f896c95bde1fb8a2231c500fe900d57e8d3e9bdc7c40
+    manifest_hash_encoding: canonical_json_sorted_keys_compact_utf8
+    selection:
+    - scripts/*.py
+    - src/deconvatac/**/*.py
+    files:
+      scripts/audit_shapemix_signal.py: 28540e61febf833effa0ce0be13bb9a8fed23e58a6573587c59f01009205a349
+      scripts/evaluate_runs.py: 9296574a18069086c3fe80ddfbdf66b9c7595545f00861638d077040a284efc0
+      scripts/migrate_legacy_results.py: bf36efb886a76eed938fc7b969fc6914ddc952940b0c5053c9f136ba70329efa
+      scripts/prepare_feature_annotations.py: 94d8087570d4ef6559c23d9d5218f6e2a922d811ebdb31fa521cf5391b08eb0d
+      scripts/prepare_pbmc_multiome_labels.py: 160498e0bc44d4dde2f24701788d358f152827fc7119ca4e8dd197ffb336028e
+      scripts/prepare_pbmc_multiome_references.py: 0e0e9188aa5e0966bc2359875b6339f92e9d8d26112ac876d69fb35fe43d1549
+      scripts/prepare_shapemix_pbmc.py: 9684f2f943ffc0b9642ea811686ead892760d68bc6e8f77d7e0a04aba22cfe40
+      scripts/prepare_shared_feature_sets.py: 1b570814c28135e42657d5052daf28a4f15bc8a0d2e5a53455fba8a33079302c
+      scripts/regenerate_heart_simulations.py: 947e7f9b49075dcc57a4e6df3b5fe0d5d73f462487470c32f8b33fc471969266
+      scripts/regenerate_pbmc_simulations.py: c3dbf792c5ea566d73ece5902edf6392d5a5da6ebd4843f6f238917336c1e56c
+      scripts/regenerate_shapemix_pbmc_simulations.py: fdf098f12352a0e03ba1050370536e147045cb4b7a1fbecb55597952fd56fbfc
+      scripts/run_deconvolution.py: a7c88c97501942e8a9759ccb192af3920e9a8230b8c5730b6a357cda090916fc
+      scripts/run_shapemix_negative_controls.py: 69e7040f40287e77078a83695f5e0af89bac8c72778367d7e55814fe7c0f60fa
+      scripts/shapemix_provenance.py: bd051d96c8a453b14df29e043fec96c3bc8ac9eeb9be978a9f9dc621751a1376
+      scripts/summarize_shapemix_benchmark.py: edb7230a54d54bc5c000058ce6ba0a40a53d7e3a5bb9c88ae9078eb2e0ec6b1b
+      scripts/validate_shapemix_step3.py: 7eb297610a7b6732b54f5ff5a601e9b3782952f650c60f4256ed77e84d209e42
+      src/deconvatac/__init__.py: 9ddebe455b5e5a29af92b2cf66cc585e7d7ec5c37d0a70eac2ad03f06204c02c
+      src/deconvatac/data/__init__.py: 5789b3ef935b56c908c4aecabb01ea65a5e1a56660b8f320ff3aad6a15f32bf5
+      src/deconvatac/data/loaders.py: 2e7f94a9886d4d0c458fccd3f0fb8fac8077bbc0be958d0d64946b2179547c98
+      src/deconvatac/data/registry.py: fad6e2db43babfb453f6ed1b8044c7006c4d591981be99b6a7827688acc426dd
+      src/deconvatac/data/schemas.py: a0a9ebf5762ceb5295ed75d5fbf8aa96fb300e91a5fa0df24d69a809d089bb80
+      src/deconvatac/data/validators.py: 84279066c090b208382d8cb1476760530cd427022d31f99149e08bf8b69cb888
+      src/deconvatac/methods/__init__.py: 9ae32e7211f6b92fff7aa752165d475ebbc9fc4dd16710b1b6fb6701093d3d34
+      src/deconvatac/methods/base.py: d24c3077008c20920b7ff4db230205e471776a07ce0d3fe20fc6cf1faa4b32f2
+      src/deconvatac/methods/cell2location.py: 33cefff29f029b8af2aff9d87e5f902537b8175ce3057228acf5e6a3ec1afe17
+      src/deconvatac/methods/destvi.py: 41c04546f1113f10ead9595112468668cab5abb06787e0c3b8f6cb039cbc3dd0
+      src/deconvatac/methods/nnls.py: eed85044c56e8574ed2a31f7499f41ff7dee2f204fbf5b28cae7a955b6cf0ed7
+      src/deconvatac/methods/rctd.py: 2ed4cd17a84df8a7f11ae8dd7ae9c4efdcb8dd5633c9efad5b96bf54bb09660f
+      src/deconvatac/methods/registry.py: 7907c9a435f9eac4ae91497a2cb67e12b35465f731e3af64f94d5edf531dd7de
+      src/deconvatac/methods/shapemix.py: fc87e79a124abf9519c793d7c0b0edf0edd282ae788b6d5ce95c3d6004b670da
+      src/deconvatac/methods/spatialdwls.py: 182b30d9ba6ac3131eeba573026041a1ed3fd4d7eb69845811950412949a94f7
+      src/deconvatac/methods/tangram.py: 648142bb46f71f25fb29792171a6349deadc906c9969a8b0c5cf723c6131530c
+      src/deconvatac/metrics/__init__.py: 30b3b4abeac1bd24517f5cfe49f70c16dbe5207f176e02f39c21290eebe12982
+      src/deconvatac/metrics/proportions.py: 505e2af7ca07cc0b866fb0975aa810a580c59f6c7bca11b4baafa801f211259e
+      src/deconvatac/pp/__init__.py: a0a3c8ecbe36731f92e4d89bc8a7a18b2410f0b37c137e66e03da0bdeccf584d
+      src/deconvatac/pp/feature_selection.py: ce4b4e042512a116e9d105b13d4b143f3f570efdbd8e78f69d5bcb9ae2c25dad
+      src/deconvatac/pp/fragment_shapes.py: 5642be0507edfc9d973cfc8615f6b3a1944a91ab6467a4c83ea32b4ca9c0505a
+      src/deconvatac/pp/reads_to_fragments.py: b12da50e0cbea919fc2dae77526971589a6e41f6fb0b20005e180ab3e7416768
+      src/deconvatac/shapemix/__init__.py: 818ed6593a0378ee5cfbfaf83400fc98161190dcb367173cda1a6a683d12523b
+      src/deconvatac/shapemix/config.py: 9bda7e7f22741c5bffc6b041a47ea4185805ae628e390435bea55e1e5af17b9f
+      src/deconvatac/shapemix/diagnostics.py: e0d5cf2b62f070a419631ad65106a94bf8816041955b608f72b1f1273c41eaea
+      src/deconvatac/shapemix/likelihood.py: 9dbb9e78589562375b234f9b69c6766cda8c5010b856373d9ae218a4930f6873
+      src/deconvatac/shapemix/map.py: a5a508715947891589ffb3cad86bc770321e9d08db0e8cac3ea40875e0b52799
+      src/deconvatac/shapemix/signatures.py: ebae1bb0edfdc4681e4fb5046643dd5b2b434bd5552564294091e4f8a82c7356
+      src/deconvatac/tl/__init__.py: 09c2e4d934ba5d4bc7313bb81e946e1aa081c21aa7279f8f3fe7d70899f107e3
+      src/deconvatac/tl/cell2location.py: e291022429e5591f5a60428250ff73520a1e743784d45c14ce2bde5700df29e9
+      src/deconvatac/tl/destvi.py: 5de96bd1d488c3eaa47e2555c579c1ca9c86652722193b10811a0548ca355236
+      src/deconvatac/tl/metrics.py: bf0961411eb21e80a98ccdc60ad8102d96e357bcd5faed5a9a8a7b2fd8abe73b
+      src/deconvatac/tl/rctd.py: 5693368795ba1f24faea09a2be7c23800650f32c7c51124cd16e7eab59c0bd79
+      src/deconvatac/tl/simulate.py: a11c447770a9ae6715586c20af461d2abaad50eed98119398d8f3c417420e429
+      src/deconvatac/tl/spatialdwls.py: 99bcd462b75b3791f81b1b42701f3a60d81c9c0c1499e4a581e74cfb0cf58b3f
+      src/deconvatac/tl/tangram.py: d919a3a9280d44610fff186fe4e2624c42ce1f15a7de292fa2aae9511a314ad7
+  compute_environment:
+    thread_environment:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      VECLIB_MAXIMUM_THREADS: '2'
+      NUMEXPR_NUM_THREADS: '2'
+    logical_cpu_count: 14
+    physical_cpu_count: 14
+    cpu_affinity: null
+    torch_num_threads: 2
+    torch_num_interop_threads: 14
+  shard:
+    index: 2
+    count: 5
+    index_base: 0
+    assignment: sorted_dataset_modality_feature_set_modulo
+    unit_key_fields:
+    - dataset
+    - modality
+    - feature_set
+    selected_units:
+    - - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_2203_mix_101
+      - atac
+      - highly_variable
+    - - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_4409_mix_211
+      - atac
+      - highly_variable
+    - - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_2203_mix_101
+      - atac
+      - highly_variable
+    - - pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_4409_mix_211
+      - atac
+      - highly_variable
+    run_group_suffix: __shard_02_of_05
+execution_action: executed
+performance:
+  wall_runtime_seconds: 3209.122930791229
+  peak_rss_bytes: 1750302720
+  peak_rss_mb: 1669.21875
+  scope: load_signature_fit_diagnostics_standard_write_and_evaluation
+  clock: time.perf_counter
+  rss_measurement:
+    source: psutil_sampled_process_tree
+    sample_interval_seconds: 0.02
+    semantics: maximum sampled sum of driver and recursive child RSS
+    platform: darwin
+    ru_maxrss:
+      raw_value: 1750401024
+      units: bytes
+      bytes: 1750401024
+      platform: darwin
+      semantics: process_lifetime_high_water_mark
+  compute_environment:
+    thread_environment:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      OPENBLAS_NUM_THREADS: '2'
+      VECLIB_MAXIMUM_THREADS: '2'
+      NUMEXPR_NUM_THREADS: '2'
+    logical_cpu_count: 14
+    physical_cpu_count: 14
+    cpu_affinity: null
+    torch_num_threads: 2
+    torch_num_interop_threads: 14
+output_manifest:
+  path: output_sha256.yaml
+  schema_version: 1
+  sha256: 5771ae9f2b6fd4c3db49dbb26aeb2a7257a16d7a56bba3ef3230b578066dcfd4

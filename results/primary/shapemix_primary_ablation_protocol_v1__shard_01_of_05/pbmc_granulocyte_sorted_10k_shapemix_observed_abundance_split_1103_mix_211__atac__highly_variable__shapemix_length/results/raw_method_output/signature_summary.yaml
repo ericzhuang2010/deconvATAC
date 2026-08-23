@@ -1,0 +1,179 @@
+schema_version: 1
+method: shapemix
+model_version: 1
+source: training_reference_only
+outer_split_seed: 1103
+signature:
+  schema_version: 1
+  content_sha256: 8702a215d52348d83405a6f35cda54042919ef0dcb4ed8aa81d2bd1401f63099
+  cell_types:
+  - CD14 Mono
+  - CD4 Naive
+  - CD8 Naive
+  - CD4 TCM
+  - CD16 Mono
+  - NK
+  - CD8 TEM_1
+  - CD8 TEM_2
+  - Intermediate B
+  - Memory B
+  - CD4 TEM
+  - cDC
+  - Treg
+  - gdT
+  - MAIT
+  - Naive B
+  feature_sha256: 1ae71b2eab52150939eae63a7964fe13b8c5928c61b4a6c7f448c4625b0d16f5
+  bin_names:
+  - short
+  - mono
+  - long
+  layer_names:
+  - fragment_length_lt_100
+  - fragment_length_100_249
+  - fragment_length_ge_250
+  signature_parameter_sha256: d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba
+  signature_diagnostics:
+    n_cells: 6644
+    n_cell_types: 16
+    n_peaks: 5000
+    n_bins: 3
+    cell_counts:
+      CD14 Mono: 1785
+      CD4 Naive: 967
+      CD8 Naive: 947
+      CD4 TCM: 779
+      CD16 Mono: 309
+      NK: 282
+      CD8 TEM_1: 225
+      CD8 TEM_2: 220
+      Intermediate B: 210
+      Memory B: 208
+      CD4 TEM: 200
+      cDC: 125
+      Treg: 109
+      gdT: 100
+      MAIT: 91
+      Naive B: 87
+    bin_totals:
+      short: 11814908
+      mono: 7228904
+      long: 2869721
+    total_cut_sites: 21913533
+    accessibility_min: 1.816593668543055e-05
+    accessibility_max: 7.632390986256099
+    omega_min: 1.350587250984442e-06
+    omega_max: 0.9999924209555673
+    omega_max_sum_error: 2.220446049250313e-16
+    feature_sha256: 1ae71b2eab52150939eae63a7964fe13b8c5928c61b4a6c7f448c4625b0d16f5
+    signature_parameter_sha256: d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba
+  dispersion_diagnostics:
+    fold_seed:
+    - 20260822
+    - 1103
+    - 17
+    bit_generator: PCG64
+    numpy_version: 1.25.2
+    fold_membership_sha256: 9239eee8a55a3e85f6eb6e3f4774b5daf58d6b07fc2f3f4de9f4865841228dbb
+    fold_counts:
+      CD14 Mono:
+        fold_0: 893
+        fold_1: 892
+      CD4 Naive:
+        fold_0: 484
+        fold_1: 483
+      CD8 Naive:
+        fold_0: 474
+        fold_1: 473
+      CD4 TCM:
+        fold_0: 390
+        fold_1: 389
+      CD16 Mono:
+        fold_0: 155
+        fold_1: 154
+      NK:
+        fold_0: 141
+        fold_1: 141
+      CD8 TEM_1:
+        fold_0: 113
+        fold_1: 112
+      CD8 TEM_2:
+        fold_0: 110
+        fold_1: 110
+      Intermediate B:
+        fold_0: 105
+        fold_1: 105
+      Memory B:
+        fold_0: 104
+        fold_1: 104
+      CD4 TEM:
+        fold_0: 100
+        fold_1: 100
+      cDC:
+        fold_0: 63
+        fold_1: 62
+      Treg:
+        fold_0: 55
+        fold_1: 54
+      gdT:
+        fold_0: 50
+        fold_1: 50
+      MAIT:
+        fold_0: 46
+        fold_1: 45
+      Naive B:
+        fold_0: 44
+        fold_1: 43
+    numerator: 30646383.983518615
+    denominator: 32819656.15453345
+    alpha_ref_raw: 0.9337813851314638
+    alpha_ref: 0.9337813851314638
+    phi_ref: 1.0709144730479003
+    alpha_floor: 1.0e-08
+    rate_pseudocount: 0.5
+    crossfit_mean_min: 2.9434773299263002e-05
+    crossfit_mean_max: 8.138447381305959
+fragment_shape:
+  schema_version: 1
+  axis: parent_fragment_length_bp
+  count_unit: deduplicated_cut_sites
+  read_support_policy: ignore
+  peak_assignment: containing_nonoverlapping_peak
+  bins:
+  - name: short
+    min_inclusive: 0
+    max_exclusive: 100
+    layer: fragment_length_lt_100
+  - name: mono
+    min_inclusive: 100
+    max_exclusive: 250
+    layer: fragment_length_100_249
+  - name: long
+    min_inclusive: 250
+    layer: fragment_length_ge_250
+config_sha256: 6abe1e12004ae6c3fd193062a95eb8f15755bfc60c46b39c7684744a4a64259c
+config:
+  use_shape: true
+  total_likelihood: negative_binomial
+  conditional_shape_likelihood: multinomial
+  signature_rate_pseudocount: 0.5
+  signature_shape_concentration: 1.0
+  exposure_mode: absorbed_in_abundance
+  dispersion_mode: reference_crossfit_global_scaled_by_abundance
+  dispersion_crossfit_folds: 2
+  dispersion_alpha_floor: 1.0e-08
+  background_mode: none
+  abundance_prior: gamma
+  abundance_prior_shape: 2.0
+  abundance_prior_rate: 1.0
+  optimizer: adam
+  learning_rate: 0.03
+  max_steps: 2000
+  patience: 100
+  tolerance: 1.0e-05
+  restarts: 3
+  spot_batch_size: 64
+  peak_chunk_size: 512
+  seed: 0
+  device: cpu
+  dtype: float32

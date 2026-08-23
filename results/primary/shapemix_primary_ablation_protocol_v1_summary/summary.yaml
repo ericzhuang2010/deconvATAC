@@ -1,0 +1,124 @@
+schema_version: 1
+benchmark_protocol_version: 1
+analysis: paired ShapeMix length-minus-count-only ablation
+reporting_scope: one-donor conditional resampling variability; not biological replication,
+  donor-level uncertainty, or population-level generalization
+biological_replication: false
+donors: 1
+primary_metrics:
+- rmse_v1
+- jsd_v2
+conditions:
+- observed_abundance
+- equal_celltype
+outer_split_seeds:
+- 1103
+- 2203
+- 3301
+- 4409
+- 5501
+inner_mixture_seeds:
+- 101
+- 211
+pairing_key:
+- outer_split_seed
+- inner_mixture_seed
+- condition
+effect_definition: shapemix_length minus shapemix_count_only; negative favors ShapeMix
+inner_aggregation: mean of exactly two paired inner-mixture effects within outer split
+resampling_unit: outer_split_seed
+bootstrap:
+  method: percentile bootstrap of mean outer effect
+  seed_tuple:
+  - 20260822
+  - 9001
+  replicates: 10000
+  interval: 0.95
+sign_flip_test: exact two-sided paired sign-flip across five outer effects; exploratory
+rare_reference_types:
+- cDC
+- Treg
+- gdT
+- MAIT
+- Naive B
+rare_type_definition: pre-split prevalence below 2% of the 9500-cell universe
+true_presence_rule: truth proportion > 0
+predicted_presence_threshold: 0.01
+run_groups:
+- /Users/rzhuang/Documents/VscodeProjects/deconvATAC/results/primary/shapemix_primary_ablation_protocol_v1__shard_00_of_05
+- /Users/rzhuang/Documents/VscodeProjects/deconvATAC/results/primary/shapemix_primary_ablation_protocol_v1__shard_01_of_05
+- /Users/rzhuang/Documents/VscodeProjects/deconvATAC/results/primary/shapemix_primary_ablation_protocol_v1__shard_02_of_05
+- /Users/rzhuang/Documents/VscodeProjects/deconvATAC/results/primary/shapemix_primary_ablation_protocol_v1__shard_03_of_05
+- /Users/rzhuang/Documents/VscodeProjects/deconvATAC/results/primary/shapemix_primary_ablation_protocol_v1__shard_04_of_05
+execution_provenance:
+  experiment_config:
+    path: configs/experiments/shapemix_primary_ablation.yaml
+    source_sha256: 0604074d476b125df006565e59a909fe6d5f0983ae6773455889acf8ab16b09b
+    resolved_sha256: 1ac65d9b0fc1c43345a4e594aa1a40a5beeb8f77f74aa5ccd6858d071a53d434
+  benchmark_protocol:
+    path: docs/ShapeMix/benchmark_protocol.md
+    source_sha256: 1c540b1f195af1d398b2ac55a80c06236f4d01aebd2e4daaeb3a97028f8667b6
+  registry:
+    path: data/registry/datasets.yaml
+    source_sha256: 1b903b374293d99872e16404f7194b1a65e42993dfed013b4962154c26be7932
+  dataset_config_sha256_by_dataset:
+    pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_1103_mix_101: 812f35a4ae1089686898c27e5555f711289d95165368ee3ba684e681fd6da262
+    pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_1103_mix_211: 72e2e9af7937eecef945672e369da5a1ae463e63bc2b16144d15137f4143b231
+    pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_2203_mix_101: 9c6b74f7a7574cb1b91c109604eea1267baff7aaab30a22516eb2f54e94cb8d1
+    pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_2203_mix_211: d5d57a79003388e9d915b0451a82e4bf00f45514e2ff8f08f39ec92f0aabe40f
+    pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_3301_mix_101: 6d1e8d5c39260d06b21515bf601c04212a7eccb116d66b70363d29c62193536e
+    pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_3301_mix_211: 761b180b95e01bec273174c1bee8ff2be3a9dc99471964d83a15f2a61d81400c
+    pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_4409_mix_101: 97d98f033171c710bf6fab4e23566182434546f10fa6fbbc649d0f2e094441aa
+    pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_4409_mix_211: fe849d7be4aa0c228d38b8cee19b861a4dfc60e2acf28e21f7236fe2f729f1b4
+    pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_5501_mix_101: b9877bd41ac213c28c93c3b6dc9539cdbdd49bf31fe72310ff5ecd618c21cb4a
+    pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_5501_mix_211: ee6f6641bd91d9f3358bd995ca16c9aacf5e2b7ff597e9c1531e08e2dd58f8dc
+    pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_1103_mix_101: a7473960fdc446e5906d744f2c0cb1b7eeeba87a2d9aba3a842aa996c71e3519
+    pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_1103_mix_211: 9609ebfcaab0221f1017ca452b7a252c4810413997bad6cb46b9fa5ce4211866
+    pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_2203_mix_101: 3fccef707aaabd4bfec1309714096f6c214ab39f946cc863d03ab7e817c35657
+    pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_2203_mix_211: 296a9739537b225c65e3f2495b59443a08ce03415def52b3cbbd7921e2541bce
+    pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_3301_mix_101: ef601cc18b2ee11f6ad34dc8b31618aba5b426b04c4b259c26d5f7e892cc6363
+    pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_3301_mix_211: 34a0c8d55ad13c0c31f65b2d3f2be8a71bde636fd884053eab4f716200ead004
+    pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_4409_mix_101: 83dfa2895d41e5b4098a0857446c99fe63fb3365cb41028f27a74b038e1cf5f7
+    pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_4409_mix_211: a4041ca72e8494c84091e7146ccf6a43a125b5531f5d034e9a4e89852107892d
+    pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_5501_mix_101: 0c26daab787a9d267920ab242cdc902906f364047b52486677eaa9629807f817
+    pbmc_granulocyte_sorted_10k_shapemix_observed_abundance_split_5501_mix_211: cd485a00dcdd11de632bd80e8dcc83bf45e27ceeedc06effa568fb16832922ef
+  code:
+    git_commit: 31128334f6f8d64aa3b7db767a1324c298dab457
+    worktree_dirty: true
+    manifest_sha256: 68896dbdb4f575e2b315f896c95bde1fb8a2231c500fe900d57e8d3e9bdc7c40
+  shards:
+    count: 5
+    indices:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+  all_run_output_manifests_rehashed: true
+counts:
+  runs: 40
+  failed_runs: 0
+  nested_pairs: 20
+  unavailable_pair_metrics: 0
+  unavailable_outer_metrics: 0
+directional_support_rule: for each condition, both co-primary mean effects are below
+  zero and at least four of five outer effects favor ShapeMix for each endpoint
+directional_support_rule_met:
+  observed_abundance: false
+  equal_celltype: false
+scientific_interpretation_limit: Intervals and exploratory tests quantify conditional
+  resampling variability within one donor and cannot establish donor-level or population-level
+  generalization.
+outputs:
+  run_metrics: run_metrics.csv
+  paired_effects: paired_effects.csv
+  outer_effects: outer_effects.csv
+  primary_summary: primary_summary.csv
+  cell_type_metrics: cell_type_metrics.csv
+  cell_type_paired_effects: cell_type_paired_effects.csv
+  rare_cell_metrics: rare_cell_metrics.csv
+  rare_cell_paired_effects: rare_cell_paired_effects.csv
+  performance: performance.csv
+  reconstruction: reconstruction.csv
+  failures: failures.csv
+  provenance: provenance.csv

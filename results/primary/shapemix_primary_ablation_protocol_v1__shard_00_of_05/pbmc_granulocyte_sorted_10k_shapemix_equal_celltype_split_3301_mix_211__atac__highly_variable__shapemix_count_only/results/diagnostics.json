@@ -1,0 +1,366 @@
+{
+  "config": {
+    "abundance_prior": "gamma",
+    "abundance_prior_rate": 1.0,
+    "abundance_prior_shape": 2.0,
+    "background_mode": "none",
+    "conditional_shape_likelihood": "multinomial",
+    "device": "cpu",
+    "dispersion_alpha_floor": 1e-08,
+    "dispersion_crossfit_folds": 2,
+    "dispersion_mode": "reference_crossfit_global_scaled_by_abundance",
+    "dtype": "float32",
+    "exposure_mode": "absorbed_in_abundance",
+    "learning_rate": 0.03,
+    "max_steps": 2000,
+    "optimizer": "adam",
+    "patience": 100,
+    "peak_chunk_size": 512,
+    "restarts": 3,
+    "seed": 0,
+    "signature_rate_pseudocount": 0.5,
+    "signature_shape_concentration": 1.0,
+    "spot_batch_size": 64,
+    "tolerance": 1e-05,
+    "total_likelihood": "negative_binomial",
+    "use_shape": false
+  },
+  "config_sha256": "e42eb2f5c6dde9c9ef10f326b085cca030a9ac3c08004b21a37d1fbb5599c6af",
+  "fit": {
+    "device": "cpu",
+    "dimensions": {
+      "bins": 3,
+      "cell_types": 16,
+      "peaks": 5000,
+      "spots": 1024
+    },
+    "dtype": "float32",
+    "nnls_fallback_spots": [],
+    "nonfinite_events": [],
+    "objective": {
+      "abundance_log_prior": -31653.559692382812,
+      "count_log_likelihood": -12752267.390625,
+      "shape_log_likelihood": 0.0,
+      "total_log_objective": -12783920.950317383
+    },
+    "restarts": [
+      {
+        "abundance_log_prior": -31653.559692382812,
+        "best_step": 544,
+        "converged": true,
+        "count_log_likelihood": -12752267.390625,
+        "final_gradient_norm": 14.202521324157715,
+        "history_rows": 545,
+        "nonfinite_events": [],
+        "restart_index": 0,
+        "runtime_seconds": 708.4983055838384,
+        "seed_tuple": [
+          20260822,
+          3301,
+          211,
+          0,
+          0
+        ],
+        "shape_log_likelihood": 0.0,
+        "steps": 544,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -12783920.950317383
+      },
+      {
+        "abundance_log_prior": -31638.6181640625,
+        "best_step": 483,
+        "converged": true,
+        "count_log_likelihood": -12752316.05078125,
+        "final_gradient_norm": 21.835777282714844,
+        "history_rows": 484,
+        "nonfinite_events": [],
+        "restart_index": 1,
+        "runtime_seconds": 632.6638898327947,
+        "seed_tuple": [
+          20260822,
+          3301,
+          211,
+          0,
+          1
+        ],
+        "shape_log_likelihood": 0.0,
+        "steps": 483,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -12783954.668945312
+      },
+      {
+        "abundance_log_prior": -31650.418212890625,
+        "best_step": 516,
+        "converged": true,
+        "count_log_likelihood": -12752278.53515625,
+        "final_gradient_norm": 16.066131591796875,
+        "history_rows": 517,
+        "nonfinite_events": [],
+        "restart_index": 2,
+        "runtime_seconds": 560.8741071671247,
+        "seed_tuple": [
+          20260822,
+          3301,
+          211,
+          0,
+          2
+        ],
+        "shape_log_likelihood": 0.0,
+        "steps": 516,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -12783928.95336914
+      }
+    ],
+    "runtime_seconds": 1902.0369187090546,
+    "selected_restart": 0,
+    "stopping_reason": "selected_largest_finite_converged_objective",
+    "success": true,
+    "use_shape": false
+  },
+  "fragment_shape": {
+    "axis": "parent_fragment_length_bp",
+    "bins": [
+      {
+        "layer": "fragment_length_lt_100",
+        "max_exclusive": 100,
+        "min_inclusive": 0,
+        "name": "short"
+      },
+      {
+        "layer": "fragment_length_100_249",
+        "max_exclusive": 250,
+        "min_inclusive": 100,
+        "name": "mono"
+      },
+      {
+        "layer": "fragment_length_ge_250",
+        "min_inclusive": 250,
+        "name": "long"
+      }
+    ],
+    "count_unit": "deduplicated_cut_sites",
+    "peak_assignment": "containing_nonoverlapping_peak",
+    "read_support_policy": "ignore",
+    "schema_version": 1
+  },
+  "method": "shapemix",
+  "model_version": 1,
+  "native_outputs": {
+    "reconstruction_summary": "results/raw_method_output/reconstruction_summary.csv",
+    "residuals_by_peak_and_bin": "results/raw_method_output/residuals_by_peak_and_bin.csv.gz",
+    "restart_summary": "results/raw_method_output/restart_summary.csv",
+    "signature_summary": "results/raw_method_output/signature_summary.yaml",
+    "training_history": "results/raw_method_output/training_history.csv"
+  },
+  "reconstruction": {
+    "count": {
+      "absolute_error_sum": 14454692.552173166,
+      "entries": 5120000,
+      "expected_positive_entries": 5120000,
+      "expected_positive_fraction": 1.0,
+      "expected_total": 35768760.7141222,
+      "mean_absolute_error": 2.823182139096321,
+      "observed_nonzero_entries": 4104355,
+      "observed_nonzero_fraction": 0.8016318359375,
+      "observed_total": 36277350.0,
+      "residual_total": 508589.2858778015,
+      "root_mean_squared_error": 3.9675939987817204,
+      "squared_error_sum": 80598026.95254385
+    },
+    "shape": {
+      "absolute_error_by_bin": [
+        10501067.892968249,
+        7953158.9368016105,
+        4369913.995928946
+      ],
+      "expected_by_bin": [
+        19572367.877304055,
+        11663640.643350417,
+        4532752.19346774
+      ],
+      "observed_by_bin": [
+        19835210.0,
+        11834536.0,
+        4607604.0
+      ],
+      "residual_by_bin": [
+        262842.1226959452,
+        170895.3566495832,
+        74851.80653226003
+      ],
+      "squared_error_by_bin": [
+        43834363.028762564,
+        24034222.10178285,
+        7864302.844178861
+      ]
+    }
+  },
+  "seeds": {
+    "inner_mixture_seed": 211,
+    "method_seed": 0,
+    "outer_split_seed": 3301
+  },
+  "signature": {
+    "bin_names": [
+      "short",
+      "mono",
+      "long"
+    ],
+    "cell_types": [
+      "CD14 Mono",
+      "CD4 Naive",
+      "CD8 Naive",
+      "CD4 TCM",
+      "CD16 Mono",
+      "NK",
+      "CD8 TEM_1",
+      "CD8 TEM_2",
+      "Intermediate B",
+      "Memory B",
+      "CD4 TEM",
+      "cDC",
+      "Treg",
+      "gdT",
+      "MAIT",
+      "Naive B"
+    ],
+    "content_sha256": "33569a6a43badc7d35506ae1d2329e6bd62297317bb693bb267b07018d7da876",
+    "dispersion_diagnostics": {
+      "alpha_floor": 1e-08,
+      "alpha_ref": 0.9354462805542428,
+      "alpha_ref_raw": 0.9354462805542428,
+      "bit_generator": "PCG64",
+      "crossfit_mean_max": 8.223797447830504,
+      "crossfit_mean_min": 3.363974091344343e-05,
+      "denominator": 33094659.107355274,
+      "fold_counts": {
+        "CD14 Mono": {
+          "fold_0": 893,
+          "fold_1": 892
+        },
+        "CD16 Mono": {
+          "fold_0": 155,
+          "fold_1": 154
+        },
+        "CD4 Naive": {
+          "fold_0": 484,
+          "fold_1": 483
+        },
+        "CD4 TCM": {
+          "fold_0": 390,
+          "fold_1": 389
+        },
+        "CD4 TEM": {
+          "fold_0": 100,
+          "fold_1": 100
+        },
+        "CD8 Naive": {
+          "fold_0": 474,
+          "fold_1": 473
+        },
+        "CD8 TEM_1": {
+          "fold_0": 113,
+          "fold_1": 112
+        },
+        "CD8 TEM_2": {
+          "fold_0": 110,
+          "fold_1": 110
+        },
+        "Intermediate B": {
+          "fold_0": 105,
+          "fold_1": 105
+        },
+        "MAIT": {
+          "fold_0": 46,
+          "fold_1": 45
+        },
+        "Memory B": {
+          "fold_0": 104,
+          "fold_1": 104
+        },
+        "NK": {
+          "fold_0": 141,
+          "fold_1": 141
+        },
+        "Naive B": {
+          "fold_0": 44,
+          "fold_1": 43
+        },
+        "Treg": {
+          "fold_0": 55,
+          "fold_1": 54
+        },
+        "cDC": {
+          "fold_0": 63,
+          "fold_1": 62
+        },
+        "gdT": {
+          "fold_0": 50,
+          "fold_1": 50
+        }
+      },
+      "fold_membership_sha256": "424863bec12c81d2308e6ba118eee4fd36eb5a2ff1c851363bc066b2f5e2bc1d",
+      "fold_seed": [
+        20260822,
+        3301,
+        17
+      ],
+      "numerator": 30958275.76818609,
+      "numpy_version": "1.25.2",
+      "phi_ref": 1.0690084730547111,
+      "rate_pseudocount": 0.5
+    },
+    "feature_sha256": "c2eb7d524f30529cd4d4dc3e61152dbb1d328ab42179ebec3069ef3d8de92dc1",
+    "layer_names": [
+      "fragment_length_lt_100",
+      "fragment_length_100_249",
+      "fragment_length_ge_250"
+    ],
+    "schema_version": 1,
+    "signature_diagnostics": {
+      "accessibility_max": 8.015496091921158,
+      "accessibility_min": 1.7913046615563768e-05,
+      "bin_totals": {
+        "long": 2877409,
+        "mono": 7272676,
+        "short": 11892759
+      },
+      "cell_counts": {
+        "CD14 Mono": 1785,
+        "CD16 Mono": 309,
+        "CD4 Naive": 967,
+        "CD4 TCM": 779,
+        "CD4 TEM": 200,
+        "CD8 Naive": 947,
+        "CD8 TEM_1": 225,
+        "CD8 TEM_2": 220,
+        "Intermediate B": 210,
+        "MAIT": 91,
+        "Memory B": 208,
+        "NK": 282,
+        "Naive B": 87,
+        "Treg": 109,
+        "cDC": 125,
+        "gdT": 100
+      },
+      "feature_sha256": "c2eb7d524f30529cd4d4dc3e61152dbb1d328ab42179ebec3069ef3d8de92dc1",
+      "n_bins": 3,
+      "n_cell_types": 16,
+      "n_cells": 6644,
+      "n_peaks": 5000,
+      "omega_max": 0.9999695549114886,
+      "omega_max_sum_error": 2.220446049250313e-16,
+      "omega_min": 1.3408917088077441e-05,
+      "signature_parameter_sha256": "d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba",
+      "total_cut_sites": 22042844
+    },
+    "signature_parameter_sha256": "d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba"
+  },
+  "software_versions": {
+    "numpy": "1.25.2",
+    "pandas": "2.3.3",
+    "pysam": "0.24.0",
+    "torch": "2.11.0"
+  },
+  "use_shape": false
+}
