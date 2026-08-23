@@ -1,3 +1,6 @@
+# macOS Finder metadata.
+.DS_Store
+
 # Ignore every top-level directory except documentation.
 /*/
 !/docs/
@@ -7,6 +10,13 @@
 !/src/
 !/tests/
 !/results/
+
+# Expose only the archived legacy results within the ignored data tree.
+!/data/
+/data/*
+!/data/archive/
+/data/archive/*
+!/data/archive/legacy_results/
 
 # /data/
 # /.r-lib/
