@@ -26,8 +26,8 @@ registered dataset -> standardized loader -> method adapter -> standardized run 
 ## Data
 
 - `data/raw/`: intended place for immutable downloaded raw data.
-- `data/raw/references/human_cardiac_niches/`: large shared Heart reference files, with canonical ATAC/RNA `reference.h5ad` files plus `reference.yaml`.
-- `data/raw/references/russell_250/`: Russell ATAC reference file plus `reference.yaml`.
+- `data/processed/references/human_cardiac_niches/`: large shared Heart reference files, with canonical ATAC/RNA `reference.h5ad` files plus `reference.yaml`.
+- `data/processed/references/russell_250/`: Russell ATAC reference file plus `reference.yaml`.
 - `data/processed/datasets/`: standardized method-ready inputs.
   - `russell_250/`
   - `human_cardiac_niches_sim_1zone_3ct_low_density/`

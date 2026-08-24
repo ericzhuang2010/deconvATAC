@@ -173,7 +173,7 @@ results/development/shapemix_negative_controls_v1/
     output_sha256.yaml
 ```
 
-The `results/primary` artifacts are intentionally git-ignored. Reproduce the data first with the [data-directory recreation guide](<../recreate_data_directory (important).md>), then run the frozen Step 6 configurations and strict summarizer recorded in the [implementation plan](implementation_plan.md).
+The complete `results/` tree, including these `results/primary` artifacts, is intentionally exposed to Git. Reproduce the ignored data first with the [data-directory recreation guide](<../recreate_data_directory (important).md>), then run the frozen Step 6 configurations and strict summarizer recorded in the [implementation plan](implementation_plan.md).
 
 ## Verification
 

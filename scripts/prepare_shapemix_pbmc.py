@@ -77,7 +77,7 @@ SOURCE_ROOT = (
 DEFAULT_INPUT_PATHS = {
     "labels": ROOT / "data/raw/sources/snapatac2/pbmc10k_multiome/cell_type_mapping.csv",
     "label_summary": ROOT / "data/raw/sources/snapatac2/pbmc10k_multiome/cell_type_summary.csv",
-    "reference": ROOT / "data/raw/references/pbmc_granulocyte_sorted_10k_multiome/atac/reference.h5ad",
+    "reference": ROOT / "data/processed/references/pbmc_granulocyte_sorted_10k_multiome/atac/reference.h5ad",
     "peaks": SOURCE_ROOT / "pbmc_granulocyte_sorted_10k_atac_peaks.bed",
     "filtered_feature_matrix": SOURCE_ROOT / "pbmc_granulocyte_sorted_10k_filtered_feature_bc_matrix.h5",
     "fragments": SOURCE_ROOT / "pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz",

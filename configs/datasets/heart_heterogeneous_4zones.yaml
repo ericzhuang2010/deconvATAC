@@ -7,7 +7,7 @@ spatial_key: spatial
 modalities:
   atac:
     reference:
-      path: data/raw/references/human_cardiac_niches/atac/reference.h5ad
+      path: data/processed/references/human_cardiac_niches/atac/reference.h5ad
     spatial:
       path: data/example_notebooks/simulation/Heart_heterogeneous_4zones.h5mu
       modality: atac
@@ -25,7 +25,7 @@ modalities:
 
   rna:
     reference:
-      path: data/raw/references/human_cardiac_niches/rna/reference.h5ad
+      path: data/processed/references/human_cardiac_niches/rna/reference.h5ad
     spatial:
       path: data/example_notebooks/simulation/Heart_heterogeneous_4zones.h5mu
       modality: rna

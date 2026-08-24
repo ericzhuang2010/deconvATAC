@@ -78,7 +78,7 @@ PYTHONPATH=src MPLCONFIGDIR=/private/tmp .venv/bin/python scripts/prepare_featur
 - There are also top-level result folders, including `cell2location_results/` and `rctd_results/`.
 - Input data currently appears in several places:
   - `data/example_notebooks/`
-  - `data/raw/references/human_cardiac_niches/`
+  - `data/processed/references/human_cardiac_niches/`
   - notebooks and notebook-derived files
 - The current configs already encode important benchmark axes:
   - dataset

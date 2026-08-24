@@ -14,9 +14,11 @@ Use these files in this order:
 2. [Benchmark protocol](benchmark_protocol.md) — normative data split, peak selection, seeds, metrics, and comparison rules.
 3. [Current Bayesian tutorial source](tutorials/ShapeMix_ATAC_Bayesian_Model_Tutorial.tex) and [generated PDF](tutorials/ShapeMix_ATAC_Bayesian_Model_Tutorial.pdf) — canonical explanatory derivation of the MVP and labeled extensions.
 4. [Implementation plan](implementation_plan.md) — file-level engineering roadmap and acceptance gates.
-5. [Results summary](results_summary.md) — concise primary outcome, validation, controls, and interpretation limit.
-6. [Step 6 execution report](step6_results.md) — detailed non-normative result, diagnostics, gates, provenance, and limitations.
-7. [Research proposal](../research_class/ShapeMix_ATAC_proposal_draft.md) — current motivation, research question, and broader study design.
+5. [Data and results organization](file_organization.md) — canonical placement, lifecycle, naming, tracking, and provenance policy.
+6. [Additional dataset plan](additional_datasets.md) — external source selection, storage layout, preprocessing requirements, and acquisition gates.
+7. [Results summary](results_summary.md) — concise primary outcome, validation, controls, and interpretation limit.
+8. [Step 6 execution report](step6_results.md) — detailed non-normative result, diagnostics, gates, provenance, and limitations.
+9. [Research proposal](../research_class/ShapeMix_ATAC_proposal_draft.md) — current motivation, research question, and broader study design.
 
 If two documents disagree about the executable MVP, `model_specification.md` governs the model and `benchmark_protocol.md` governs the experiment. The implementation plan governs sequencing and repository integration. The proposal governs the scientific motivation and was reconciled with the canonical count unit and likelihood on 2026-08-22; the two normative specifications still take precedence over any future proposal drift.
 
@@ -75,4 +77,4 @@ Development degeneracy controls passed their exact algebraic checks, and the det
 
 One pre-launch shape-aware fit on `pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_1103_mix_101` was used as a blinded resource pilot: only dimensions, resource demand, convergence, and output shape were inspected. Its retained artifact records 1,268.645 seconds of fit time but not the thread environment. It remained under `/private/tmp`, outside `results/primary` and every strict summary. The completed benchmark still contains one donor only; its five outer splits quantify conditional resampling variability, not biological replication or population generalization. The final repository suite passes with 230 tests and one existing skip.
 
-Because `data/` and primary results are ignored, another clone must fetch the raw files and regenerate the derived artifacts using the [recreation guide](<../recreate_data_directory (important).md>) and [tracked source manifest](../../configs/data_sources/pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml), then rerun the frozen experiment and summary configurations.
+Because `data/` is ignored, another clone must fetch the raw files and regenerate the derived artifacts using the [recreation guide](<../recreate_data_directory (important).md>) and [tracked source manifest](../../configs/data_sources/pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml). The entire `results/` tree is intentionally exposed to Git, so committed result artifacts remain directly reviewable; the frozen experiment and summary configurations remain the authoritative way to reproduce them.

@@ -31,7 +31,7 @@ The already resolved local inputs are pinned as follows:
 |---|---|
 | `data/raw/sources/snapatac2/pbmc10k_multiome/cell_type_mapping.csv` | `3aa94d5f636c01c0159324984930cb14e775e49611102cb4dd02a491b63bf298` |
 | `data/raw/sources/snapatac2/pbmc10k_multiome/cell_type_summary.csv` | `809a3b285d996024daed95e0c2a8a17299ba93d1e5f0e884988dac9362150f4d` |
-| `data/raw/references/pbmc_granulocyte_sorted_10k_multiome/atac/reference.h5ad` | `cdaefffbfd5dd3cb36318f68158d4bec0df1d2b2bf63562b14065f1055cf6ee6` |
+| `data/processed/references/pbmc_granulocyte_sorted_10k_multiome/atac/reference.h5ad` | `cdaefffbfd5dd3cb36318f68158d4bec0df1d2b2bf63562b14065f1055cf6ee6` |
 | `data/raw/sources/10x_genomics/pbmc_granulocyte_sorted_10k/cellranger_arc_2.0.0/pbmc_granulocyte_sorted_10k_atac_peaks.bed` | `3975a4057f9caa3fb69ddaecc6ae9e530e77551717a1464c2d93ac9d73cb60ab` |
 | `data/raw/sources/10x_genomics/pbmc_granulocyte_sorted_10k/cellranger_arc_2.0.0/pbmc_granulocyte_sorted_10k_filtered_feature_bc_matrix.h5` | `f6824171378787baab244f559b8b438f79db2eb39f78d17b2196f7ecd2c03549` |
 | `data/raw/sources/10x_genomics/pbmc_granulocyte_sorted_10k/cellranger_arc_2.0.0/pbmc_granulocyte_sorted_10k_atac_fragments.tsv.gz` | `5075e32a0e9c6dded35b060bf90d6144375b150e131ffb0be121a93e3b5e1e38` |

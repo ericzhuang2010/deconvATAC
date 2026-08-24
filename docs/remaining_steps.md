@@ -40,7 +40,7 @@ The original restructuring plan now includes some completed historical checklist
   - Outputs: per-modality `spatial.h5ad` files under `data/processed/datasets/<dataset_id>/{atac,rna}/`
   - Sampled-cell tables were written as JSONL because no parquet engine is installed locally.
 - Data unification migration.
-  - Shared Human cardiac niches references now live under `data/raw/references/human_cardiac_niches/`.
+  - Shared Human cardiac niches references now live under `data/processed/references/human_cardiac_niches/`.
   - Regenerated Heart datasets now use explicit long dataset IDs.
   - Heart spatial inputs are split into per-modality `.h5ad` files.
 - Heart NNLS smoke run through the unified runner.

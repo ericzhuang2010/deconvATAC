@@ -24,7 +24,7 @@ DEFAULT_QC = (
     / "pbmc_granulocyte_sorted_10k_per_barcode_metrics.csv"
 )
 DEFAULT_MAPPING = ROOT / "data/raw/sources/snapatac2/pbmc10k_multiome/cell_type_mapping.csv"
-DEFAULT_OUTPUT_DIR = ROOT / "data/raw/references/pbmc_granulocyte_sorted_10k_multiome"
+DEFAULT_OUTPUT_DIR = ROOT / "data/processed/references/pbmc_granulocyte_sorted_10k_multiome"
 
 
 def parse_peak_coordinates(var: pd.DataFrame) -> pd.DataFrame:
@@ -103,12 +103,12 @@ def write_reference_manifest(output_dir: Path, mapping_path: Path, n_input_cells
         },
         "modalities": {
             "atac": {
-                "path": "data/raw/references/pbmc_granulocyte_sorted_10k_multiome/atac/reference.h5ad",
+                "path": "data/processed/references/pbmc_granulocyte_sorted_10k_multiome/atac/reference.h5ad",
                 "feature_type": "Peaks",
                 "source_filename": "pbmc_granulocyte_sorted_10k_filtered_feature_bc_matrix.h5",
             },
             "rna": {
-                "path": "data/raw/references/pbmc_granulocyte_sorted_10k_multiome/rna/reference.h5ad",
+                "path": "data/processed/references/pbmc_granulocyte_sorted_10k_multiome/rna/reference.h5ad",
                 "feature_type": "Gene Expression",
                 "source_filename": "pbmc_granulocyte_sorted_10k_filtered_feature_bc_matrix.h5",
             },

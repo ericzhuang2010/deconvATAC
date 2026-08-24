@@ -7,7 +7,7 @@ spatial_key: spatial
 modalities:
   atac:
     reference:
-      path: data/raw/references/russell_250/atac/reference.h5ad
+      path: data/processed/references/russell_250/atac/reference.h5ad
     spatial:
       path: data/processed/datasets/russell_250/atac/spatial.h5ad
     labels_key: cell_type

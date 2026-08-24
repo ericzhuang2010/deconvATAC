@@ -334,7 +334,7 @@ def build_dataset_config(
         "modalities": {
             "atac": {
                 "reference": {
-                    "path": "data/raw/references/pbmc_granulocyte_sorted_10k_multiome/atac/reference.h5ad"
+                    "path": "data/processed/references/pbmc_granulocyte_sorted_10k_multiome/atac/reference.h5ad"
                 },
                 "spatial": {"path": relpath(spatial_paths["atac"])},
                 "labels_key": "cell_type",
@@ -348,7 +348,7 @@ def build_dataset_config(
             },
             "rna": {
                 "reference": {
-                    "path": "data/raw/references/pbmc_granulocyte_sorted_10k_multiome/rna/reference.h5ad"
+                    "path": "data/processed/references/pbmc_granulocyte_sorted_10k_multiome/rna/reference.h5ad"
                 },
                 "spatial": {"path": relpath(spatial_paths["rna"])},
                 "labels_key": "cell_type",

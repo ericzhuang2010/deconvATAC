@@ -56,7 +56,7 @@ data/processed/datasets/<heart_dataset_id>/
 The Russell dataset also uses a file-based canonical truth table:
 
 ```text
-data/raw/references/russell_250/
+data/processed/references/russell_250/
   reference.yaml
   atac/reference.h5ad
 
@@ -71,7 +71,7 @@ data/processed/datasets/russell_250/
 The shared Human cardiac niches references are stored once under:
 
 ```text
-data/raw/references/human_cardiac_niches/
+data/processed/references/human_cardiac_niches/
   reference.yaml
   atac/reference.h5ad
   rna/reference.h5ad
@@ -111,7 +111,7 @@ data/processed/datasets/<dataset_id>/
 References should stay in `data/raw/` if they are shared and large. Use a separate shared-reference namespace:
 
 ```text
-data/raw/references/<reference_id>/
+data/processed/references/<reference_id>/
   reference.yaml
   <modality>/
     reference.h5ad
@@ -120,7 +120,7 @@ data/raw/references/<reference_id>/
 For Heart, the target layout should be:
 
 ```text
-data/raw/references/human_cardiac_niches/
+data/processed/references/human_cardiac_niches/
   reference.yaml
   atac/
     reference.h5ad
@@ -131,8 +131,8 @@ data/raw/references/human_cardiac_niches/
 The pre-migration files mapped to that target as:
 
 ```text
-data/raw/human_cardiac_niches/Adult_Peaks.h5ad -> data/raw/references/human_cardiac_niches/atac/reference.h5ad
-data/raw/human_cardiac_niches/Global_raw.h5ad -> data/raw/references/human_cardiac_niches/rna/reference.h5ad
+data/raw/human_cardiac_niches/Adult_Peaks.h5ad -> data/processed/references/human_cardiac_niches/atac/reference.h5ad
+data/raw/human_cardiac_niches/Global_raw.h5ad -> data/processed/references/human_cardiac_niches/rna/reference.h5ad
 ```
 
 The `dataset.yaml` should point to these raw references instead of copying them into every Heart dataset.
@@ -146,12 +146,12 @@ Reference data is the labeled single-cell atlas used to define what each cell ty
 Examples:
 
 ```text
-data/raw/references/human_cardiac_niches/atac/reference.h5ad
-data/raw/references/human_cardiac_niches/rna/reference.h5ad
-data/raw/references/russell_250/atac/reference.h5ad
+data/processed/references/human_cardiac_niches/atac/reference.h5ad
+data/processed/references/human_cardiac_niches/rna/reference.h5ad
+data/processed/references/russell_250/atac/reference.h5ad
 ```
 
-Keep labeled references under `data/raw/references/<reference_id>/` and point to them from each dataset config.
+Keep labeled references under `data/processed/references/<reference_id>/` and point to them from each dataset config.
 
 ### Spatial Data
 
@@ -239,7 +239,7 @@ russell_250
 
 Rules:
 
-- Use `reference_id` for shared references under `data/raw/references/<reference_id>/`.
+- Use `reference_id` for shared references under `data/processed/references/<reference_id>/`.
 - Use the same `reference_id` for ATAC and RNA when they come from the same biological atlas.
 - Put modality-specific reference files under `<modality>/reference.h5ad`.
 - Preserve source file names and download metadata in `reference.yaml`, not in the canonical filename.
@@ -285,8 +285,8 @@ simulation/source_cells_by_spot.jsonl
 For references:
 
 ```text
-data/raw/references/<reference_id>/<modality>/reference.h5ad
-data/raw/references/<reference_id>/reference.yaml
+data/processed/references/<reference_id>/<modality>/reference.h5ad
+data/processed/references/<reference_id>/reference.yaml
 ```
 
 ### Run IDs
@@ -351,7 +351,7 @@ heart_4 -> human_cardiac_niches_sim_4zone_circles
 
 Completed in this workspace:
 
-- Shared Human cardiac niches references were moved to `data/raw/references/human_cardiac_niches/`.
+- Shared Human cardiac niches references were moved to `data/processed/references/human_cardiac_niches/`.
 - Regenerated Heart simulations now use explicit long dataset IDs.
 - Heart spatial data were split from `.h5mu` into per-modality `.h5ad` files.
 - Heart feature-list files were moved into each dataset's `{modality}/features/` directory.

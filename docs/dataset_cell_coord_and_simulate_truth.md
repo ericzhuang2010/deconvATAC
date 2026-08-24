@@ -20,7 +20,7 @@ This is the Russell case.
 Russell reference:
 
 ```text
-data/raw/references/russell_250/atac/reference.h5ad
+data/processed/references/russell_250/atac/reference.h5ad
 ```
 
 The reference contains:
@@ -78,8 +78,8 @@ This is the Heart simulation case.
 Heart references:
 
 ```text
-data/raw/references/human_cardiac_niches/atac/reference.h5ad
-data/raw/references/human_cardiac_niches/rna/reference.h5ad
+data/processed/references/human_cardiac_niches/atac/reference.h5ad
+data/processed/references/human_cardiac_niches/rna/reference.h5ad
 ```
 
 The source cells have cell-type labels and molecular profiles, but they do not provide original per-cell spatial coordinates for the simulation.

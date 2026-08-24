@@ -133,7 +133,7 @@ I recommend `grid_window` instead of `region` because Russell bins are geometric
 Inputs:
 
 ```text
-data/raw/references/russell_250/atac/reference.h5ad
+data/processed/references/russell_250/atac/reference.h5ad
 data/processed/datasets/russell_250/atac/spatial.h5ad
 ```
 
@@ -151,7 +151,7 @@ Algorithm:
 1. Load Russell reference ATAC:
 
 ```python
-reference = ad.read_h5ad("data/raw/references/russell_250/atac/reference.h5ad")
+reference = ad.read_h5ad("data/processed/references/russell_250/atac/reference.h5ad")
 ```
 
 2. Load Russell spatial ATAC:

@@ -113,7 +113,7 @@ data/raw/sources/celltypist/pbmc_granulocyte_sorted_10k/
 Reference outputs:
 
 ```text
-data/raw/references/pbmc_granulocyte_sorted_10k_multiome/
+data/processed/references/pbmc_granulocyte_sorted_10k_multiome/
   reference.yaml
   atac/reference.h5ad
   rna/reference.h5ad
@@ -275,7 +275,7 @@ Read the 10x filtered feature-barcode matrix, keep labeled barcodes, attach cell
 Expected result:
 
 ```text
-data/raw/references/pbmc_granulocyte_sorted_10k_multiome/
+data/processed/references/pbmc_granulocyte_sorted_10k_multiome/
   reference.yaml
   atac/reference.h5ad
   rna/reference.h5ad
@@ -720,7 +720,7 @@ data/raw/feature_universes/hg38/catlas_cCRE_hg38/
 After converting and annotating the 10x matrix, write shared labeled references under:
 
 ```text
-data/raw/references/pbmc_granulocyte_sorted_10k_multiome/
+data/processed/references/pbmc_granulocyte_sorted_10k_multiome/
   reference.yaml
   atac/reference.h5ad
   rna/reference.h5ad
@@ -783,7 +783,7 @@ var["feature_types"] == "Gene Expression"  -> RNA AnnData
    - optionally add normalized layers later
 8. Attach QC metrics from `per_barcode_metrics.csv` if available.
 9. Copy final label columns to both ATAC and RNA references.
-10. Write `reference.h5ad` files under `data/raw/references/`.
+10. Write `reference.h5ad` files under `data/processed/references/`.
 
 The next canonical PBMC rebuild should record:
 

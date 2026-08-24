@@ -2,7 +2,7 @@
 
 from deconvatac.tl import generate_spatial_data
 import muon as mu
-mdata = mu.read("data/raw/references/human_cardiac_niches/human_cardiac_niches.h5mu")
+mdata = mu.read("data/processed/references/human_cardiac_niches/human_cardiac_niches.h5mu")
 params = {
     "n_regions": 4,
     "cell_type_number": [10, 5, 7, 3],

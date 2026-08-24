@@ -7,7 +7,7 @@ When you run the unified deconvolution workflow, the runner uses:
 - `data/registry/datasets.yaml`
 - registered `data/processed/datasets/*/dataset.yaml` files
 - data files under `data/processed/datasets/`
-- shared references under `data/raw/references/`
+- shared references under `data/processed/references/`
 - method configs under `configs/methods/`
 - experiment configs under `configs/experiments/` when `--experiment-config` is used
 - Python code under `src/deconvatac/`

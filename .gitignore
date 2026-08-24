@@ -1,7 +1,7 @@
 # macOS Finder metadata.
 .DS_Store
 
-# Ignore every top-level directory except documentation.
+# Ignore top-level working directories except tracked project trees.
 /*/
 !/docs/
 !/configs/
@@ -9,13 +9,9 @@
 !/scripts/
 !/src/
 !/tests/
-!/results/
 
-# Expose only the archived legacy results within the ignored data tree.
-!/data/
-/data/*
-!/data/archive/
-/data/archive/*
+# Experiment results are intentionally exposed to Git in full.
+!/results/
 
 # /data/
 # /.r-lib/

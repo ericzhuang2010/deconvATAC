@@ -10,12 +10,12 @@ Budget at least **50 GiB of free disk space** for the reconstructed tree, staged
 
 | Directory | Recovery route | Fidelity |
 |---|---|---|
-| `data/raw/references/human_cardiac_niches/` | Heart Cell Atlas direct downloads | Byte-exact |
+| `data/processed/references/human_cardiac_niches/` | Heart Cell Atlas direct downloads | Byte-exact |
 | `data/example_notebooks/` | Zenodo record `15089738` | Authoritative archive; logically exact |
 | `data/raw/sources/10x_genomics/` | 10x Genomics CDN | Byte-exact |
 | `data/raw/sources/snapatac2/` | Official SnapATAC2/scverse mirror | Labels are exact; see the PBMC caveat below |
-| `data/raw/references/russell_250/` | Zenodo source plus repository feature selection | Reproducible with the pinned environment |
-| `data/raw/references/pbmc_*` | Repository preparation scripts | Reproducible; reference H5ADs were verified byte-exact |
+| `data/processed/references/russell_250/` | Zenodo source plus repository feature selection | Reproducible with the pinned environment |
+| `data/processed/references/pbmc_*` | Repository preparation scripts | Reproducible; reference H5ADs were verified byte-exact |
 | `data/processed/datasets/` | Repository simulation/preparation scripts | Scientifically reproducible; HDF5 bytes can depend on package versions |
 | `data/archive/legacy_results/deconvolution_results/` | Zenodo record `15089738` | Byte-exact |
 | Legacy Cell2location/RCTD top-level results | Transfer from the original machine or regenerate | Not publicly downloadable |
@@ -110,11 +110,11 @@ Source collection: [Spatially resolved multiomics of human cardiac niches](https
 
 ```bash
 fetch_data \
-  data/raw/references/human_cardiac_niches/atac/reference.h5ad \
+  data/processed/references/human_cardiac_niches/atac/reference.h5ad \
   https://cellgeni.cog.sanger.ac.uk/heartcellatlas/v2/Adult_Peaks.h5ad
 
 fetch_data \
-  data/raw/references/human_cardiac_niches/rna/reference.h5ad \
+  data/processed/references/human_cardiac_niches/rna/reference.h5ad \
   https://cellgeni.cog.sanger.ac.uk/heartcellatlas/v2/Global_raw.h5ad
 ```
 
@@ -131,7 +131,7 @@ Create the small reference manifest:
 .venv/bin/python - <<'PY'
 from pathlib import Path
 
-path = Path("data/raw/references/human_cardiac_niches/reference.yaml")
+path = Path("data/processed/references/human_cardiac_niches/reference.yaml")
 path.parent.mkdir(parents=True, exist_ok=True)
 path.write_text(
     """reference_id: human_cardiac_niches
@@ -139,10 +139,10 @@ description: Human cardiac niches single-cell reference atlas used for regenerat
 labels_key: cell_type
 modalities:
   atac:
-    path: data/raw/references/human_cardiac_niches/atac/reference.h5ad
+    path: data/processed/references/human_cardiac_niches/atac/reference.h5ad
     source_filename: Adult_Peaks.h5ad
   rna:
-    path: data/raw/references/human_cardiac_niches/rna/reference.h5ad
+    path: data/processed/references/human_cardiac_niches/rna/reference.h5ad
     source_filename: Global_raw.h5ad
 """
 )
@@ -422,8 +422,8 @@ from pathlib import Path
 
 download_root = Path(os.environ["DECONVATAC_DOWNLOAD_DIR"])
 checks = [
-    ("sha256", Path("data/raw/references/human_cardiac_niches/atac/reference.h5ad"), "f5fd7c42cdc89ac19879f852b0635a8c6a59b4bb75bf1e9c2d5bc354041cd442"),
-    ("sha256", Path("data/raw/references/human_cardiac_niches/rna/reference.h5ad"), "2280a34361a67ac6b24a787ddc037d0f7f78d7db91f5dcfb8ee822d7e80c7ed2"),
+    ("sha256", Path("data/processed/references/human_cardiac_niches/atac/reference.h5ad"), "f5fd7c42cdc89ac19879f852b0635a8c6a59b4bb75bf1e9c2d5bc354041cd442"),
+    ("sha256", Path("data/processed/references/human_cardiac_niches/rna/reference.h5ad"), "2280a34361a67ac6b24a787ddc037d0f7f78d7db91f5dcfb8ee822d7e80c7ed2"),
     ("sha256", Path("data/raw/sources/10x_genomics/pbmc_granulocyte_sorted_10k/cellranger_arc_2.0.0/pbmc_granulocyte_sorted_10k_filtered_feature_bc_matrix.h5"), "f6824171378787baab244f559b8b438f79db2eb39f78d17b2196f7ecd2c03549"),
     ("sha256", Path("data/raw/sources/10x_genomics/pbmc_granulocyte_sorted_10k/cellranger_arc_2.0.0/pbmc_granulocyte_sorted_10k_atac_peaks.bed"), "3975a4057f9caa3fb69ddaecc6ae9e530e77551717a1464c2d93ac9d73cb60ab"),
     ("sha256", Path("data/raw/sources/10x_genomics/pbmc_granulocyte_sorted_10k/cellranger_arc_2.0.0/pbmc_granulocyte_sorted_10k_per_barcode_metrics.csv"), "fd3e069b83e152145af234667b419c982968aca0df322a92adb71284d0d902cd"),
@@ -482,7 +482,7 @@ for column in ("highly_variable", "highly_accessible"):
     spatial.var[column] = spatial.var_names.isin(selected)
 
 reference_path = Path(
-    "data/raw/references/russell_250/atac/reference.h5ad"
+    "data/processed/references/russell_250/atac/reference.h5ad"
 )
 spatial_path = Path(
     "data/processed/datasets/russell_250/atac/spatial.h5ad"
@@ -491,7 +491,7 @@ truth_path = Path(
     "data/processed/datasets/russell_250/truth/proportions.csv"
 )
 reference_manifest_path = Path(
-    "data/raw/references/russell_250/reference.yaml"
+    "data/processed/references/russell_250/reference.yaml"
 )
 dataset_config_path = Path(
     "data/processed/datasets/russell_250/dataset.yaml"
@@ -890,11 +890,11 @@ from pathlib import Path
 import anndata as ad
 
 expected = {
-    "data/raw/references/human_cardiac_niches/atac/reference.h5ad": (139835, 429828),
-    "data/raw/references/human_cardiac_niches/rna/reference.h5ad": (704296, 32732),
-    "data/raw/references/russell_250/atac/reference.h5ad": (2535, 53451),
-    "data/raw/references/pbmc_granulocyte_sorted_10k_multiome/atac/reference.h5ad": (9627, 143887),
-    "data/raw/references/pbmc_granulocyte_sorted_10k_multiome/rna/reference.h5ad": (9627, 36601),
+    "data/processed/references/human_cardiac_niches/atac/reference.h5ad": (139835, 429828),
+    "data/processed/references/human_cardiac_niches/rna/reference.h5ad": (704296, 32732),
+    "data/processed/references/russell_250/atac/reference.h5ad": (2535, 53451),
+    "data/processed/references/pbmc_granulocyte_sorted_10k_multiome/atac/reference.h5ad": (9627, 143887),
+    "data/processed/references/pbmc_granulocyte_sorted_10k_multiome/rna/reference.h5ad": (9627, 36601),
     "data/processed/datasets/russell_250/atac/spatial.h5ad": (360, 53451),
 }
 

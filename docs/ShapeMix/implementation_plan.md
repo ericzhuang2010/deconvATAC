@@ -638,7 +638,7 @@ Goal: produce a statistically valid, paired assessment of whether shape contribu
 | Add | `tests/test_shapemix_negative_controls.py`, `tests/test_shapemix_step6_configs.py`, and `tests/test_evaluate_runs.py` | Test control identities, execution gates, Step 6 configurations, strict evaluation, and failure behavior. |
 | Modify | `src/deconvatac/shapemix/likelihood.py` and `src/deconvatac/shapemix/map.py` | Make cell-type-homogeneous shape signatures exactly abundance-invariant with zero `z` gradient, and center the stopping criterion on the initial shape likelihood so a data-only constant cannot change convergence timing. |
 | Modify | `scripts/evaluate_runs.py` and `scripts/run_deconvolution.py` | Use one shared versioned metric registry, pass the declared universe, record full provenance and resource use, write per-run hash manifests, support deterministic paired sharding, and make resume fail closed. |
-| Produce, git-ignored | `results/primary/shapemix_primary_ablation_protocol_v1__shard_*` and `results/primary/shapemix_primary_ablation_protocol_v1_summary/` | Write 40 primary runs, five shard manifests, comparisons, paired/outer effects, cell-type and rare-cell metrics, reconstruction, performance, failure, provenance, and strict summary artifacts. No figure was generated. |
+| Produce, tracked | `results/primary/shapemix_primary_ablation_protocol_v1__shard_*` and `results/primary/shapemix_primary_ablation_protocol_v1_summary/` | Write 40 primary runs, five shard manifests, comparisons, paired/outer effects, cell-type and rare-cell metrics, reconstruction, performance, failure, provenance, and strict summary artifacts. No figure was generated. |
 | Add | `docs/ShapeMix/step6_results.md` | Record the non-normative execution report, results, gates, limitations, artifact map, and resource-pilot disclosure without modifying the frozen benchmark protocol. |
 | Delete | None | Failed runs remain represented in manifests rather than being removed from summaries. |
 
@@ -885,7 +885,7 @@ Temporary preprocessing shards may be removed only after final outputs are atomi
 
 ## 9. Generated artifacts and tracking policy
 
-The repository must be reproducible even though `data/`, `results/primary/`, and `results/sensitivity/` are ignored. The small `results/development/` control evidence is deliberately not ignored so it can be reviewed and optionally committed; it is currently an untracked, hash-manifested workspace artifact. The scripts, tracked configs, hashes, and recreation guide are therefore part of the implementation, not optional documentation.
+The repository must be reproducible even though `data/` is ignored. The entire `results/` tree, including development, primary, sensitivity, external-validation, and real-spatial campaigns, is intentionally exposed to Git so completed outputs and their provenance can be reviewed and committed. The scripts, tracked configs, hashes, and recreation guide remain part of the implementation, not optional documentation.
 
 ```text
 data/raw/sources/10x_genomics/.../
