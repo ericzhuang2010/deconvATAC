@@ -1,0 +1,151 @@
+schema_version: 1
+source_dataset_id: gse129785_immune
+accession: GSE129785
+provider: NCBI GEO
+bioproject: PRJNA532774
+sra_study: SRP192525
+pubmed_id: 31375813
+organism: human
+tissue: peripheral blood and sorted immune cells
+assay: 10x single-cell ATAC-seq
+cellranger_atac_version: 1.0.0
+genome_build: hg19
+source_page: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE129785
+raw_directory: data/raw/sources/ncbi_geo/GSE129785
+work_directory: data/work/downloads/gse129785
+processed_directory: data/processed/shapemix/gse129785_immune
+reference_directory: data/processed/references/gse129785_immune
+manifest_frozen_at: 2026-08-23
+lock_manifest: configs/data_sources/shapemix_gse129785_lock.yaml
+
+reuse_statement: >-
+  Public GEO/SRA research data. Preserve source attribution to Granja et al.
+  (2019), GEO GSE129785, and PubMed 31375813.
+
+fragment_format:
+  compression: BGZF
+  coordinate_system: zero-based, half-open
+  record_semantics: one deduplicated fragment per row
+  columns: [chrom, chromStart, chromEnd, barcode, readSupport]
+  shapemix_read_support_policy: ignore
+  shapemix_length_definition: chromEnd - chromStart
+  right_cut_offset_status: "resolved to -1 by exact reconstruction after one-based peak labels are normalized to BED intervals"
+
+scope:
+  included_fragment_files: 30
+  dilution_samples: 14
+  sorted_reference_samples: 9
+  pbmc_replicates: 4
+  preparation_samples: 3
+  excluded: tumor, bone marrow, CD34 progenitors, cell-line mixtures, and redundant sorted-cell replicates
+
+series_files:
+  - filename: GSE129785_family.soft.gz
+    role: geo_family_metadata
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/soft/GSE129785_family.soft.gz
+  - filename: GSE129785_scATAC-Hematopoiesis-All.cell_barcodes.txt.gz
+    role: author_cell_metadata_and_filtered_barcodes
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-Hematopoiesis-All.cell_barcodes.txt.gz
+  - filename: GSE129785_scATAC-Hematopoiesis-All.peaks.txt.gz
+    role: author_hg19_peak_axis
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-Hematopoiesis-All.peaks.txt.gz
+  - filename: GSE129785_scATAC-Hematopoiesis-All.mtx.gz
+    role: author_peak_by_cell_count_matrix
+    payload_encoding: plain_matrix_market_despite_gz_suffix
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-Hematopoiesis-All.mtx.gz
+  - filename: GSE129785_scATAC-PBMCs-Fresh.cell_barcodes.txt.gz
+    role: author_fresh_pbmc_cell_metadata
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-PBMCs-Fresh.cell_barcodes.txt.gz
+  - filename: GSE129785_scATAC-PBMCs-Fresh.peaks.txt.gz
+    role: author_fresh_pbmc_peak_axis
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-PBMCs-Fresh.peaks.txt.gz
+  - filename: GSE129785_scATAC-PBMCs-Fresh.mtx.gz
+    role: author_fresh_pbmc_count_matrix
+    payload_encoding: plain_matrix_market_despite_gz_suffix
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-PBMCs-Fresh.mtx.gz
+  - filename: GSE129785_scATAC-PBMCs-Frozen.cell_barcodes.txt.gz
+    role: author_frozen_unsorted_pbmc_cell_metadata
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-PBMCs-Frozen.cell_barcodes.txt.gz
+  - filename: GSE129785_scATAC-PBMCs-Frozen.peaks.txt.gz
+    role: author_frozen_unsorted_pbmc_peak_axis
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-PBMCs-Frozen.peaks.txt.gz
+  - filename: GSE129785_scATAC-PBMCs-Frozen.mtx.gz
+    role: author_frozen_unsorted_pbmc_count_matrix
+    payload_encoding: plain_matrix_market_despite_gz_suffix
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-PBMCs-Frozen.mtx.gz
+  - filename: GSE129785_scATAC-PBMCs-FrozenSort.cell_barcodes.txt.gz
+    role: author_frozen_sorted_pbmc_cell_metadata
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-PBMCs-FrozenSort.cell_barcodes.txt.gz
+  - filename: GSE129785_scATAC-PBMCs-FrozenSort.peaks.txt.gz
+    role: author_frozen_sorted_pbmc_peak_axis
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-PBMCs-FrozenSort.peaks.txt.gz
+  - filename: GSE129785_scATAC-PBMCs-FrozenSort.mtx.gz
+    role: author_frozen_sorted_pbmc_count_matrix
+    payload_encoding: plain_matrix_market_despite_gz_suffix
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE129nnn/GSE129785/suppl/GSE129785_scATAC-PBMCs-FrozenSort.mtx.gz
+
+samples:
+  # Physical dilution series. Fractions follow the component order in title.
+  - {gsm: GSM3722011, srx: SRX5679881, title: 0p1_99p9_CD4Mem_CD8Naive, role: physical_dilution, family: cd4_memory_cd8_naive, components: [CD4 Memory, CD8 Naive], fractions: [0.001, 0.999]}
+  - {gsm: GSM3722013, srx: SRX5679883, title: 0p5_99p5_CD4Mem_CD8Naive, role: physical_dilution, family: cd4_memory_cd8_naive, components: [CD4 Memory, CD8 Naive], fractions: [0.005, 0.995]}
+  - {gsm: GSM3722016, srx: SRX5679886, title: 1_99_CD4Mem_CD8Naive, role: physical_dilution, family: cd4_memory_cd8_naive, components: [CD4 Memory, CD8 Naive], fractions: [0.01, 0.99]}
+  - {gsm: GSM3722018, srx: SRX5679888, title: 50_50_CD4Mem_CD8Naive, role: physical_dilution, family: cd4_memory_cd8_naive, components: [CD4 Memory, CD8 Naive], fractions: [0.5, 0.5]}
+  - {gsm: GSM3722020, srx: SRX5679890, title: 99_1_CD4Mem_CD8Naive, role: physical_dilution, family: cd4_memory_cd8_naive, components: [CD4 Memory, CD8 Naive], fractions: [0.99, 0.01]}
+  - {gsm: GSM3722022, srx: SRX5679892, title: 99p5_0p5_CD4Mem_CD8Naive, role: physical_dilution, family: cd4_memory_cd8_naive, components: [CD4 Memory, CD8 Naive], fractions: [0.995, 0.005]}
+  - {gsm: GSM3722024, srx: SRX5679894, title: 99p9_0p1_CD4Mem_CD8Naive, role: physical_dilution, family: cd4_memory_cd8_naive, components: [CD4 Memory, CD8 Naive], fractions: [0.999, 0.001]}
+  - {gsm: GSM3722012, srx: SRX5679882, title: 0p1_99p9_Mono_T, role: physical_dilution, family: monocyte_t_cell, components: [Monocytes, T cells], fractions: [0.001, 0.999]}
+  - {gsm: GSM3722014, srx: SRX5679884, title: 0p5_99p5_Mono_T, role: physical_dilution, family: monocyte_t_cell, components: [Monocytes, T cells], fractions: [0.005, 0.995]}
+  - {gsm: GSM3722017, srx: SRX5679887, title: 1_99_Mono_T, role: physical_dilution, family: monocyte_t_cell, components: [Monocytes, T cells], fractions: [0.01, 0.99]}
+  - {gsm: GSM3722019, srx: SRX5679889, title: 50_50_Mono_T, role: physical_dilution, family: monocyte_t_cell, components: [Monocytes, T cells], fractions: [0.5, 0.5]}
+  - {gsm: GSM3722021, srx: SRX5679891, title: 99_1_MonoT, role: physical_dilution, family: monocyte_t_cell, components: [Monocytes, T cells], fractions: [0.99, 0.01]}
+  - {gsm: GSM3722023, srx: SRX5679893, title: 99p5_0p5_MonoT, role: physical_dilution, family: monocyte_t_cell, components: [Monocytes, T cells], fractions: [0.995, 0.005]}
+  - {gsm: GSM3722025, srx: SRX5679895, title: 99p9_0p1_Mono_T, role: physical_dilution, family: monocyte_t_cell, components: [Monocytes, T cells], fractions: [0.999, 0.001]}
+
+  # Sorted reference populations. Labels are sample identities, not inferred clusters.
+  - {gsm: GSM3722026, srx: SRX5679896, title: Dendritic_Cells, role: sorted_reference, cell_type: Dendritic cells}
+  - {gsm: GSM3722027, srx: SRX5679897, title: Monocytes, role: sorted_reference, cell_type: Monocytes}
+  - {gsm: GSM3722028, srx: SRX5679898, title: B_Cells, role: sorted_reference, cell_type: B cells}
+  - {gsm: GSM3722030, srx: SRX5679900, title: Regulatory_T_Cells, role: sorted_reference, cell_type: Regulatory T cells}
+  - {gsm: GSM3722031, srx: SRX5679901, title: Naive_CD4_T_Cells_Rep1, role: sorted_reference, cell_type: Naive CD4 T cells}
+  - {gsm: GSM3722032, srx: SRX5679902, title: Memory_CD4_T_Cells_Rep1, role: sorted_reference, cell_type: Memory CD4 T cells}
+  - {gsm: GSM3722036, srx: SRX5679906, title: NK_Cells, role: sorted_reference, cell_type: NK cells}
+  - {gsm: GSM3722037, srx: SRX5679907, title: Naive_CD8_T_Cells, role: sorted_reference, cell_type: Naive CD8 T cells}
+  - {gsm: GSM3722038, srx: SRX5679908, title: Memory_CD8_T_Cells, role: sorted_reference, cell_type: Memory CD8 T cells}
+
+  # Unsorted PBMC replicates and preparation-mismatch samples.
+  - {gsm: GSM3722015, srx: SRX5679885, title: PBMC_Rep1, role: pbmc_evaluation, replicate: 1}
+  - {gsm: GSM3722076, srx: SRX5679946, title: PBMC_Rep2, role: pbmc_evaluation, replicate: 2}
+  - {gsm: GSM3722075, srx: SRX5679945, title: PBMC_Rep3, role: pbmc_evaluation, replicate: 3}
+  - {gsm: GSM3722077, srx: SRX5679947, title: PBMC_Rep4, role: pbmc_evaluation, replicate: 4}
+  - {gsm: GSM3722040, srx: SRX5679910, title: Fresh_pbmc_5k, role: preparation_evaluation, preparation: fresh}
+  - {gsm: GSM3722041, srx: SRX5679911, title: Frozen_sorted_pbmc_5k, role: preparation_evaluation, preparation: frozen_sorted}
+  - {gsm: GSM3722042, srx: SRX5679912, title: Frozen_unsorted_pbmc_5k, role: preparation_evaluation, preparation: frozen_unsorted}
+
+download_policy:
+  fragment_url_template: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM3722nnn/{gsm}/suppl/{gsm}_{title}_fragments.tsv.gz
+  staging_suffix: .part
+  require_content_length: true
+  require_gzip_integrity: true
+  require_five_column_fragment_schema: true
+  atomic_promotion: true
+
+preprocessing_policy:
+  author_peak_coordinates: one-based closed feature labels normalized to zero-based half-open intervals [start - 1, end)
+  reference_cell_calls: author Hematopoiesis-All barcode table
+  preparation_cell_calls: matching author PBMC barcode tables where raw barcodes are present
+  dilution_cell_calls: explicit fragment-depth rule calibrated against author-filtered immune samples
+  peak_selection: 5000 reference-only peaks using ShapeMix protocol-v1 variance score
+  normalized_fragment_storage: hard-link 29 BGZF sources; atomically recompress plain-gzip GSM3722026 as derived BGZF; create derived tabix indexes
+  barcode_namespace: <GSM>#<raw_barcode>
+  read_support_policy: ignored for ShapeMix counts; retained in source audit only
+  physical_truth: nominal sample-level proportions; not exact per-cell truth
+  cross_build_policy: keep first benchmark in hg19; do not lift over fragment intervals
+
+validation_gates:
+  - exact source byte size and SHA-256
+  - gzip/BGZF integrity and five-column fragment schema
+  - official barcode membership or documented fallback cell calling
+  - author matrix dimensions and ordered axes
+  - right-cut coordinate convention against author counts
+  - nonnegative integer CSR layers whose exact sum equals X
+  - identical ordered selected-peak axis in reference and mixtures

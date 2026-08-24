@@ -1,6 +1,6 @@
 # ShapeMix additional dataset acquisition and preprocessing plan
 
-Status: planned; no new external files described here have been downloaded or registered as ShapeMix datasets as of 2026-08-23
+Status: GSE129785 acquisition and preprocessing completed on 2026-08-24; GSE194122, GSE205055/GSE205052, and GSE263333 remain planned
 
 This document specifies the additional data needed after the completed one-donor PBMC benchmark. It defines the scientific role of each source, where its raw and processed files should live, and the preprocessing required before it can be used by ShapeMix. It does not change, replace, or reinterpret the completed protocol-v1 PBMC result.
 
@@ -195,6 +195,8 @@ Yes, but only derived preprocessing:
 Run one factor at a time first. A small, predeclared depth-by-rare-cell interaction can follow; a complete factorial grid would be unnecessarily large and difficult to interpret.
 
 ## 5. GSE129785 immune-cell and dilution data
+
+Status: the frozen 30-sample immune scope was acquired and preprocessed on 2026-08-24. See the [GSE129785 preprocessing record](gse129785_preprocessing.md) and tracked size/hash lock `configs/data_sources/shapemix_gse129785_lock.yaml`.
 
 ### 5.1 Description and scientific use
 

@@ -312,6 +312,21 @@ def test_adapter_is_deterministic_and_output_dir_is_optional():
     assert second.diagnostics["native_outputs"] is None
 
 
+def test_adapter_accepts_explicit_external_dataset_seeds():
+    data = _shape_input()
+    dataset_config = data.metadata["dataset_config"]
+    del dataset_config["simulation"]
+    dataset_config["shapemix_seeds"] = {
+        "outer_split_seed": 17,
+        "inner_mixture_seed": 23,
+    }
+
+    result = ShapeMixDeconvolver(use_shape=True, **FAST_CONFIG).run(data)
+
+    assert result.diagnostics["seeds"]["outer_split_seed"] == 17
+    assert result.diagnostics["seeds"]["inner_mixture_seed"] == 23
+
+
 def test_adapter_configuration_is_strict():
     with pytest.raises(ValueError, match="Unknown ShapeMix parameter"):
         ShapeMixDeconvolver(use_shapes=True)

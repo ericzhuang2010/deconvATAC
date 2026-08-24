@@ -238,6 +238,12 @@ def load_deconvolution_input(
     truth_spec = modality_config.get("truth") or config.get("truth")
     fragment_shape = _fragment_shape_spec(modality_config, config)
     cell_types = _ordered_cell_types(truth_spec)
+    if cell_types is None:
+        declared_cell_types = modality_config.get("cell_types", config.get("cell_types"))
+        if declared_cell_types is not None:
+            if not isinstance(declared_cell_types, list):
+                raise TypeError("cell_types must be an ordered YAML list.")
+            cell_types = declared_cell_types.copy()
     feature_sets = modality_config.get("feature_sets", {})
     selected_features = _resolve_selected_features(
         reference_spec=modality_config["reference"],

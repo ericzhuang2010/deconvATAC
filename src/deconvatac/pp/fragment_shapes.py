@@ -580,7 +580,7 @@ def _validate_right_cut_offset(right_cut_offset: int) -> int:
         raise TypeError("right_cut_offset must be the integer 0 or -1.")
     offset = int(right_cut_offset)
     if offset not in (-1, 0):
-        raise ValueError("right_cut_offset must be 0 or -1; canonical output requires 0.")
+        raise ValueError("right_cut_offset must be 0 or -1.")
     return offset
 
 

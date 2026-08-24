@@ -41,26 +41,34 @@ def _require_seed_metadata(data: DeconvolutionInput) -> tuple[int, int]:
     dataset_config = metadata.get("dataset_config")
     if not isinstance(dataset_config, Mapping):
         raise ValueError(
-            "ShapeMix requires data.metadata['dataset_config'] with simulation seeds."
+            "ShapeMix requires data.metadata[\"dataset_config\"] with declared seeds."
         )
     configured_id = dataset_config.get("dataset_id")
     if configured_id is not None and configured_id != data.dataset_id:
         raise ValueError("dataset_config.dataset_id does not match data.dataset_id.")
-    simulation = dataset_config.get("simulation")
-    if not isinstance(simulation, Mapping):
+    seed_block_name = "shapemix_seeds"
+    seed_block = dataset_config.get(seed_block_name)
+    if seed_block is None:
+        # Simulation descriptors predate external datasets and remain supported.
+        seed_block_name = "simulation"
+        seed_block = dataset_config.get(seed_block_name)
+    if not isinstance(seed_block, Mapping):
         raise ValueError(
-            "ShapeMix requires dataset_config.simulation with outer and inner seeds."
+            "ShapeMix requires dataset_config.shapemix_seeds (or legacy "
+            "dataset_config.simulation) with outer and inner seeds."
         )
 
     seeds = []
     for name in ("outer_split_seed", "inner_mixture_seed"):
-        value = simulation.get(name)
+        value = seed_block.get(name)
         if isinstance(value, bool) or not isinstance(value, Integral):
-            raise ValueError(f"dataset_config.simulation.{name} must be an integer.")
+            raise ValueError(
+                f"dataset_config.{seed_block_name}.{name} must be an integer."
+            )
         normalized = int(value)
         if normalized < 0:
             raise ValueError(
-                f"dataset_config.simulation.{name} must be nonnegative."
+                f"dataset_config.{seed_block_name}.{name} must be nonnegative."
             )
         seeds.append(normalized)
     return seeds[0], seeds[1]

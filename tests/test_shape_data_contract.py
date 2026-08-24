@@ -205,6 +205,13 @@ def test_fragment_shape_requires_declared_cell_types() -> None:
         validate_deconvolution_input(data)
 
 
+def test_declared_cell_types_without_truth_are_valid_for_real_data() -> None:
+    data = _shape_input()
+    data.truth = None
+
+    validate_deconvolution_input(data)
+
+
 def test_missing_fragment_shape_layer_is_rejected() -> None:
     data = _shape_input()
     del data.spatial.layers["fragment_length_100_249"]
@@ -247,11 +254,26 @@ def test_invalid_fragment_shape_counts_are_rejected(value: float, message: str) 
         validate_deconvolution_input(data)
 
 
-def test_shape_metadata_must_match_yaml_and_both_objects() -> None:
+def test_shape_metadata_allows_independent_reference_and_spatial_provenance() -> None:
     data = _shape_input()
     data.spatial.uns["fragment_shape"]["split_sha256"] = "e" * 64
+    data.spatial.uns["fragment_shape"]["source_sha256"] = {
+        "fragments": "f" * 64,
+        "tabix_index": "0" * 64,
+    }
+    data.spatial.uns["fragment_shape"]["software_versions"] = {
+        "deconvatac": "0.0.2",
+        "pysam": "0.24.1",
+    }
 
-    with pytest.raises(ValueError, match="metadata disagree.*split_sha256"):
+    validate_deconvolution_input(data)
+
+
+def test_shape_metadata_must_match_yaml_and_both_feature_axes() -> None:
+    data = _shape_input()
+    data.spatial.uns["fragment_shape"]["feature_sha256"] = "e" * 64
+
+    with pytest.raises(ValueError, match="current ordered feature axis"):
         validate_deconvolution_input(data)
 
 
@@ -297,6 +319,17 @@ def test_coordinate_validation_must_record_an_exact_offset_zero_match(
 
     with pytest.raises(ValueError, match=field_name):
         validate_deconvolution_input(data)
+
+
+def test_coordinate_validation_accepts_exact_offset_minus_one() -> None:
+    data = _shape_input()
+    for adata in (data.reference, data.spatial):
+        adata.uns["fragment_shape"]["right_cut_offset"] = -1
+        adata.uns["fragment_shape"]["coordinate_validation"][
+            "selected_right_cut_offset"
+        ] = -1
+
+    validate_deconvolution_input(data)
 
 
 def test_coordinate_validation_requires_matrix_match_field() -> None:
@@ -466,12 +499,13 @@ def test_feature_slicing_preserves_shape_contract() -> None:
         assert (adata.X != expected).nnz == 0
 
 
-def _write_shape_dataset(tmp_path: Path) -> Path:
+def _write_shape_dataset(tmp_path: Path, *, with_truth: bool = True) -> Path:
     data = _shape_input()
     reference_path = tmp_path / "reference.h5ad"
     spatial_path = tmp_path / "spatial.h5ad"
     data.reference.write_h5ad(reference_path)
-    data.spatial.obsm["truth"] = data.truth
+    if with_truth:
+        data.spatial.obsm["truth"] = data.truth
     data.spatial.write_h5ad(spatial_path)
 
     config = {
@@ -491,6 +525,10 @@ def _write_shape_dataset(tmp_path: Path) -> Path:
             }
         },
     }
+    if not with_truth:
+        del config["modalities"]["atac"]["truth"]
+        config["modalities"]["atac"]["cell_types"] = ["A", "B"]
+
     config_path = tmp_path / "shape_toy.yaml"
     config_path.write_text(yaml.safe_dump(config))
     registry_path = tmp_path / "datasets.yaml"
@@ -511,6 +549,19 @@ def test_loader_parses_shape_spec_and_ordered_cell_types(tmp_path: Path) -> None
     assert data.cell_types == ["A", "B"]
     assert list(data.truth.columns) == ["A", "B"]
     assert all(sparse.isspmatrix_csr(data.reference.layers[name]) for name in data.fragment_shape.layer_names)
+
+
+def test_loader_accepts_declared_cell_types_without_truth(tmp_path: Path) -> None:
+    registry_path = _write_shape_dataset(tmp_path, with_truth=False)
+
+    data = load_deconvolution_input(
+        dataset_id="shape_toy",
+        modality="atac",
+        registry_path=registry_path,
+    )
+
+    assert data.cell_types == ["A", "B"]
+    assert data.truth is None
 
 
 def test_loader_feature_slicing_preserves_shape_layers(tmp_path: Path) -> None:

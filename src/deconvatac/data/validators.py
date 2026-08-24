@@ -114,9 +114,9 @@ def validate_fragment_shape_spec(spec: FragmentShapeSpec) -> None:
     ):
         raise ValueError("fragment_shape.left_cut_offset must be 0 when declared.")
     if spec.right_cut_offset is not None and (
-        not _is_integer(spec.right_cut_offset) or spec.right_cut_offset != 0
+        not _is_integer(spec.right_cut_offset) or spec.right_cut_offset not in (-1, 0)
     ):
-        raise ValueError("fragment_shape.right_cut_offset must be the validated value 0 when declared.")
+        raise ValueError("fragment_shape.right_cut_offset must be the validated value 0 or -1 when declared.")
 
 
 def _matrix_values(matrix: Any) -> np.ndarray:
@@ -300,13 +300,24 @@ def _validate_matrix_counters(
         raise ValueError("fragment_shape.matrix_counters.assigned_cut_sites does not match stored X.")
 
 
-def _validate_coordinate_provenance(value: Any, role: str) -> None:
+def _validate_coordinate_provenance(
+    value: Any, role: str, right_cut_offset: int
+) -> None:
     if not isinstance(value, Mapping) or not value:
         raise ValueError(
             f"{role}.uns['fragment_shape'].coordinate_validation must be a non-empty mapping."
         )
+    selected_offset = value.get("selected_right_cut_offset")
+    if not _is_integer(selected_offset) or int(selected_offset) not in (-1, 0):
+        raise ValueError(
+            "fragment_shape.coordinate_validation.selected_right_cut_offset must be 0 or -1."
+        )
+    if int(selected_offset) != right_cut_offset:
+        raise ValueError(
+            "fragment_shape.coordinate_validation.selected_right_cut_offset must "
+            "match fragment_shape.right_cut_offset."
+        )
     expected_numeric = {
-        "selected_right_cut_offset": 0,
         "mismatched_entries": 0,
         "absolute_error": 0,
     }
@@ -349,7 +360,9 @@ def _validate_provenance(spec: FragmentShapeSpec, role: str) -> None:
     _validate_sha256(spec.feature_sha256, "feature_sha256")
     _validate_sha256(spec.split_sha256, "split_sha256")
 
-    _validate_coordinate_provenance(spec.coordinate_validation, role)
+    _validate_coordinate_provenance(
+        spec.coordinate_validation, role, int(spec.right_cut_offset)
+    )
     if not isinstance(spec.software_versions, Mapping) or not spec.software_versions:
         raise ValueError(f"{role}.uns['fragment_shape'].software_versions must be a non-empty mapping.")
     if any(
@@ -458,16 +471,15 @@ def _validate_declared_cell_types(data: DeconvolutionInput) -> None:
     if observed_cell_types != set(data.cell_types):
         raise ValueError("cell_types must exactly match the reference label universe.")
 
-    if data.truth is None:
-        raise ValueError("truth is required when cell_types are declared.")
-    if list(data.truth.columns) != data.cell_types:
-        raise ValueError("truth columns must exactly match the declared cell_types order.")
-    if data.truth.index.has_duplicates:
-        raise ValueError("truth observation names must be unique.")
-    if not data.truth.index.equals(data.spatial.obs_names):
-        raise ValueError("truth rows must be aligned to spatial observations in the same order.")
-    if data.truth.isna().any().any():
-        raise ValueError("truth contains missing values.")
+    if data.truth is not None:
+        if list(data.truth.columns) != data.cell_types:
+            raise ValueError("truth columns must exactly match the declared cell_types order.")
+        if data.truth.index.has_duplicates:
+            raise ValueError("truth observation names must be unique.")
+        if not data.truth.index.equals(data.spatial.obs_names):
+            raise ValueError("truth rows must be aligned to spatial observations in the same order.")
+        if data.truth.isna().any().any():
+            raise ValueError("truth contains missing values.")
 
 
 def validate_fragment_shape_input(data: DeconvolutionInput) -> None:
@@ -492,11 +504,8 @@ def validate_fragment_shape_input(data: DeconvolutionInput) -> None:
         "bins",
         "left_cut_offset",
         "right_cut_offset",
-        "source_sha256",
         "feature_sha256",
-        "split_sha256",
         "coordinate_validation",
-        "software_versions",
     )
     for field_name in aligned_fields:
         if getattr(reference_spec, field_name) != getattr(spatial_spec, field_name):
