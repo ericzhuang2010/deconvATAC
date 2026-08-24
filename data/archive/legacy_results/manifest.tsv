@@ -1,4 +1,0 @@
-source	destination	status
-cell2location_results	data/archive/legacy_results/cell2location_results	archived
-rctd_results	data/archive/legacy_results/rctd_results	archived
-data/deconvolution_results	data/archive/legacy_results/deconvolution_results	archived
