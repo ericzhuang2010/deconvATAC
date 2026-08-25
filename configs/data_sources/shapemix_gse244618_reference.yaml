@@ -1,0 +1,124 @@
+schema_version: 1
+source_dataset_id: shapemix_gse244618_human_hippocampus_reference
+accession: GSE244618
+provider: ncbi_geo_and_catlas
+organism: Homo sapiens
+tissue: hippocampus
+stage: adult
+genome_build: GRCh38
+assay: snATAC-seq
+raw_directory: data/raw/sources/ncbi_geo/GSE244618
+work_directory: data/work/downloads/gse244618_reference
+processed_directory: data/processed/shapemix/gse244618_human_hippocampus_reference
+standardized_reference_id: gse244618_human_hippocampus_donor3_region3_v1
+selection:
+  policy: one author BEDPE sample from each HiT, HiB, and Sub region for donors 1, 2, and 4; use rep1 where HiB has technical replicates
+  regions: [HiT, HiB, Sub]
+  donors: [1, 2, 4]
+  expected_samples: 9
+  gsm_accessions: [GSM7822250, GSM7822251, GSM7822252, GSM7822253, GSM7822254, GSM7822256, GSM7822258, GSM7822259, GSM7822260]
+  rationale: complete donor-by-hippocampal-region coverage without technical-replicate duplication
+resources:
+  - {name: GSE244618_family.soft.gz, role: geo_family_metadata, url: "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE244nnn/GSE244618/soft/GSE244618_family.soft.gz", expected_bytes: 14358, payload: gzip, destination: series_metadata/GSE244618_family.soft.gz}
+  - {name: Table_S1.xlsx, role: author_brain_dissection_annotations, url: "https://decoder-genetics.wustl.edu/catlasv1/humanbrain/data/Supplementary_Tables/Table%20S1%20-%20Human%20brain%20dissection%20and%20annotation.xlsx", expected_bytes: 13741, expected_etag: 35ad-5f179124e2000, payload: xlsx, destination: portal_metadata/Table_S1.xlsx}
+  - {name: Table_S2.xlsx, role: author_experiment_metadata, url: "https://decoder-genetics.wustl.edu/catlasv1/humanbrain/data/Supplementary_Tables/Table%20S2%20-%20Metatable%20of%20snATAC-seq%20experiments.xlsx", expected_bytes: 17713, expected_etag: 4531-5f179123eddc0, payload: xlsx, destination: portal_metadata/Table_S2.xlsx}
+  - {name: Table_S3_nuclei.tsv.gz, role: author_cell_level_annotations, url: "https://decoder-genetics.wustl.edu/catlasv1/humanbrain/data/Supplementary_Tables/Table%20S3%20%E2%80%93%20Metatable%20and%20annotation%20of%20single%20nuclei.gz", expected_bytes: 45420853, expected_etag: 2b51135-5f179123eddc0, payload: gzip, destination: portal_metadata/Table_S3_nuclei.tsv.gz}
+  - {name: Table_S4.xlsx, role: author_cell_taxonomy, url: "https://decoder-genetics.wustl.edu/catlasv1/humanbrain/data/Supplementary_Tables/Table%20S4%20-%20Human%20brain%20cell%20taxonmy%20and%20annotation.xlsx", expected_bytes: 18719, expected_etag: 491f-5f179123eddc0, payload: xlsx, destination: portal_metadata/Table_S4.xlsx}
+  - {name: Table_S5.xlsx, role: author_subclass_markers, url: "https://decoder-genetics.wustl.edu/catlasv1/humanbrain/data/Supplementary_Tables/Table%20S5%20-%20Cell%20subclass%20annotation%20and%20marker%20genes.xlsx", expected_bytes: 18633, expected_etag: 48c9-5f179124e2000, payload: xlsx, destination: portal_metadata/Table_S5.xlsx}
+  - {name: Table_S6_ccres.bed.gz, role: author_candidate_ccres, url: "https://decoder-genetics.wustl.edu/catlasv1/humanbrain/data/Supplementary_Tables/Table%20S6%20%E2%80%93%20List%20of%20cCREs%20in%20bed%20format.gz", expected_bytes: 5705260, expected_etag: 570e2c-5f179125d6240, payload: gzip, destination: portal_metadata/Table_S6_ccres.bed.gz}
+  - name: GSM7822250_MM_802.bedpe.gz
+    role: selected_hippocampal_parent_fragments
+    gsm: GSM7822250
+    region: HiT
+    donor: 1
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7822nnn/GSM7822250/suppl/GSM7822250_MM_802.bedpe.gz
+    expected_bytes: 775549599
+    payload: gzip
+    destination: samples/GSM7822250/source_files/GSM7822250_MM_802.bedpe.gz
+  - name: GSM7822251_MM_910.bedpe.gz
+    role: selected_hippocampal_parent_fragments
+    gsm: GSM7822251
+    region: HiT
+    donor: 2
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7822nnn/GSM7822251/suppl/GSM7822251_MM_910.bedpe.gz
+    expected_bytes: 614885613
+    payload: gzip
+    destination: samples/GSM7822251/source_files/GSM7822251_MM_910.bedpe.gz
+  - name: GSM7822252_MM_932.bedpe.gz
+    role: selected_hippocampal_parent_fragments
+    gsm: GSM7822252
+    region: HiT
+    donor: 4
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7822nnn/GSM7822252/suppl/GSM7822252_MM_932.bedpe.gz
+    expected_bytes: 810106422
+    payload: gzip
+    destination: samples/GSM7822252/source_files/GSM7822252_MM_932.bedpe.gz
+  - name: GSM7822253_MM_908.bedpe.gz
+    role: selected_hippocampal_parent_fragments
+    gsm: GSM7822253
+    region: HiB
+    donor: 1
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7822nnn/GSM7822253/suppl/GSM7822253_MM_908.bedpe.gz
+    expected_bytes: 657575822
+    payload: gzip
+    destination: samples/GSM7822253/source_files/GSM7822253_MM_908.bedpe.gz
+  - name: GSM7822254_MM_793.bedpe.gz
+    role: selected_hippocampal_parent_fragments
+    gsm: GSM7822254
+    region: HiB
+    donor: 2
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7822nnn/GSM7822254/suppl/GSM7822254_MM_793.bedpe.gz
+    expected_bytes: 281505228
+    payload: gzip
+    destination: samples/GSM7822254/source_files/GSM7822254_MM_793.bedpe.gz
+  - name: GSM7822256_MM_970.bedpe.gz
+    role: selected_hippocampal_parent_fragments
+    gsm: GSM7822256
+    region: HiB
+    donor: 4
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7822nnn/GSM7822256/suppl/GSM7822256_MM_970.bedpe.gz
+    expected_bytes: 708857062
+    payload: gzip
+    destination: samples/GSM7822256/source_files/GSM7822256_MM_970.bedpe.gz
+  - name: GSM7822258_MM_814.bedpe.gz
+    role: selected_hippocampal_parent_fragments
+    gsm: GSM7822258
+    region: Sub
+    donor: 1
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7822nnn/GSM7822258/suppl/GSM7822258_MM_814.bedpe.gz
+    expected_bytes: 1699390462
+    payload: gzip
+    destination: samples/GSM7822258/source_files/GSM7822258_MM_814.bedpe.gz
+  - name: GSM7822259_MM_902.bedpe.gz
+    role: selected_hippocampal_parent_fragments
+    gsm: GSM7822259
+    region: Sub
+    donor: 2
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7822nnn/GSM7822259/suppl/GSM7822259_MM_902.bedpe.gz
+    expected_bytes: 478213060
+    payload: gzip
+    destination: samples/GSM7822259/source_files/GSM7822259_MM_902.bedpe.gz
+  - name: GSM7822260_MM_898.bedpe.gz
+    role: selected_hippocampal_parent_fragments
+    gsm: GSM7822260
+    region: Sub
+    donor: 4
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7822nnn/GSM7822260/suppl/GSM7822260_MM_898.bedpe.gz
+    expected_bytes: 1482105793
+    payload: gzip
+    destination: samples/GSM7822260/source_files/GSM7822260_MM_898.bedpe.gz
+preprocessing_policy:
+  immutable_source: retain byte-for-byte
+  peak_selection: reference-only ranking from author cCREs
+  label_resolution: freeze an author-taxonomy broad ontology after the source audit and before feature selection
+  fragment_bins_bp: [[0, 100], [100, 250], [250, null]]
+  right_cut_offset: audit BEDPE coordinate semantics against the author specification before freezing
+  truth_policy: reference labels are not spatial composition truth
+validation_gates:
+  - exact remote byte size and complete gzip streams
+  - exact donor-by-region subset and technical-replicate exclusion
+  - exact BEDPE barcode mapping to Table S3
+  - GRCh38 coordinate and parent-fragment validation
+  - broad-label support in every retained donor
+  - nonnegative integer CSR layers whose sum equals X
+download_workers_max: 2

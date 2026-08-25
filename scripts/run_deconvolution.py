@@ -47,8 +47,8 @@ RUN_REQUIRED_OUTPUTS = {
     "inputs.yaml",
     "results/diagnostics.json",
     "results/proportions.csv",
-    "results/truth.csv",
 }
+EVALUATION_MODES = {"exact_truth", "prediction_only"}
 CODE_SOURCE_PATTERNS = (
     "scripts/*.py",
     "src/deconvatac/**/*.py",
@@ -474,6 +474,24 @@ def _execution_metadata(method_config: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _configure_shapemix_torch_threads(method: str) -> None:
+    """Enforce the co-tenant one-thread policy before ShapeMix imports work."""
+    if str(method).lower() != "shapemix":
+        return
+
+    import torch
+
+    torch.set_num_threads(1)
+    if torch.get_num_interop_threads() == 1:
+        return
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError as exc:
+        if torch.get_num_interop_threads() != 1:
+            raise RuntimeError(
+                "ShapeMix requires torch inter-op threads=1 under the co-tenant policy."
+            ) from exc
+
 def run_one(
     dataset: str,
     modality: str,
@@ -524,6 +542,7 @@ def run_one(
         output_dir=output_dir,
     )
 
+    _configure_shapemix_torch_threads(method)
     method_cls = get_method(method)
     method_instance = method_cls(**method_config.get("params", {}))
     result = method_instance.run(data)
@@ -547,6 +566,7 @@ def run_one(
             "contract_version": PROPORTION_CONTRACT_VERSION,
             "row_sum_atol": PROPORTION_ROW_SUM_ATOL,
             "cell_types": data.cell_types,
+            "evidence": "exact_truth" if data.truth is not None else "prediction_only",
         },
         "inputs": {
             "dataset_id": dataset,
@@ -987,6 +1007,13 @@ def _validate_resume_run(
     )
     if missing_required:
         raise ValueError(f"required output(s) missing: {missing_required!r}")
+    inputs_metadata = read_inputs_metadata(run_dir)
+    truth_is_declared = inputs_metadata.get("truth") == "results/truth.csv"
+    truth_path = run_dir / "results" / "truth.csv"
+    if truth_is_declared != truth_path.is_file():
+        raise ValueError(
+            "inputs.yaml truth declaration and results/truth.csv presence do not agree"
+        )
     performance = metadata.get("performance")
     if not isinstance(performance, Mapping):
         raise ValueError("run.yaml has no performance mapping")
@@ -1052,13 +1079,53 @@ def _flatten_execution_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def evaluate_run(run_dir: Path, metrics: list[str]) -> list[dict[str, Any]]:
+def evaluate_run(
+    run_dir: Path,
+    metrics: list[str],
+    evaluation_mode: str = "exact_truth",
+) -> list[dict[str, Any]]:
+    if evaluation_mode not in EVALUATION_MODES:
+        raise ValueError(f"Unknown evaluation_mode {evaluation_mode!r}.")
     metadata = read_run_metadata(run_dir)
     inputs_metadata = read_inputs_metadata(run_dir)
     predicted = pd.read_csv(run_dir / "results" / "proportions.csv", index_col=0)
-    truth = pd.read_csv(run_dir / "results" / "truth.csv", index_col=0)
     cell_types = declared_cell_types_from_metadata(metadata, inputs_metadata)
     universe_json = _canonical_config_json(list(cell_types))
+
+    expected_columns = list(cell_types)
+    if list(predicted.columns) != expected_columns:
+        raise ValueError(
+            "Prediction columns must exactly match the declared cell_types order: "
+            f"expected {expected_columns!r}, found {list(predicted.columns)!r}."
+        )
+    if predicted.empty:
+        raise ValueError("Prediction output must contain at least one spot.")
+    if not pd.Index(predicted.index).is_unique:
+        raise ValueError("Prediction spot identifiers must be unique.")
+
+    truth_is_declared = inputs_metadata.get("truth") == "results/truth.csv"
+    truth_path = run_dir / "results" / "truth.csv"
+    if truth_is_declared != truth_path.is_file():
+        raise ValueError(
+            "inputs.yaml truth declaration and results/truth.csv presence do not agree"
+        )
+
+    if evaluation_mode == "prediction_only":
+        if metrics:
+            raise ValueError("prediction_only evaluation cannot request exact-truth metrics.")
+        if truth_is_declared:
+            raise ValueError(
+                "prediction_only evaluation requires a dataset descriptor without exact truth."
+            )
+        return []
+
+    if not metrics:
+        raise ValueError("exact_truth evaluation requires at least one metric.")
+    if not truth_is_declared:
+        raise ValueError(
+            "exact_truth evaluation requires inputs.yaml to declare results/truth.csv."
+        )
+    truth = pd.read_csv(truth_path, index_col=0)
 
     rows = []
     for metric_name in metrics:
@@ -1386,7 +1453,23 @@ def run_experiment(
     if resume and effective_overwrite:
         raise ValueError("--resume and overwrite are mutually exclusive.")
 
-    metrics = _as_list(experiment_config.get("metrics")) or ["rmse_v1", "jsd_v2"]
+    evaluation_mode = str(experiment_config.get("evaluation_mode", "exact_truth"))
+    if evaluation_mode not in EVALUATION_MODES:
+        raise ValueError(
+            f"evaluation_mode must be one of {sorted(EVALUATION_MODES)!r}."
+        )
+    if evaluation_mode == "prediction_only":
+        metrics = _as_list(experiment_config.get("metrics"))
+        if metrics:
+            raise ValueError("prediction_only evaluation requires metrics: [].")
+    else:
+        metrics = (
+            _as_list(experiment_config["metrics"])
+            if "metrics" in experiment_config
+            else ["rmse_v1", "jsd_v2"]
+        )
+        if not metrics:
+            raise ValueError("exact_truth evaluation requires at least one metric.")
     resolved_metric_ids: list[str] = []
     for metric_name in metrics:
         try:
@@ -1462,7 +1545,7 @@ def run_experiment(
                 metadata = _validate_resume_run(run_dir, job, execution_provenance)
                 # Scientific evaluation is part of completion; artifact hashes
                 # alone do not make a contract-invalid output reusable.
-                evaluate_run(run_dir, metrics)
+                evaluate_run(run_dir, metrics, evaluation_mode=evaluation_mode)
             except Exception as exc:
                 raise ValueError(
                     f"Cannot resume run '{job['run_id']}': {exc}. "
@@ -1537,7 +1620,7 @@ def run_experiment(
             # Evaluation is part of run validity. Contract violations and
             # non-finite endpoints are recorded as failures rather than
             # silently dropping spots, types, or metric rows.
-            evaluate_run(run_dir, metrics)
+            evaluate_run(run_dir, metrics, evaluation_mode=evaluation_mode)
             performance = _attach_compute_metadata(
                 monitor.stop(
                     started_at,
@@ -1635,7 +1718,28 @@ def run_experiment(
         if not comparison_path.is_absolute():
             comparison_path = ROOT / comparison_path
 
-    write_comparison(comparison_path, successful_runs=successful_runs, failures=failures, metrics=metrics)
+    if evaluation_mode == "prediction_only":
+        prediction_rows = [
+            {
+                **dict(row),
+                "evaluation_mode": evaluation_mode,
+                "metric": None,
+                "value": None,
+                "error": None,
+            }
+            for row in manifest_rows
+            if row.get("status") == "success"
+        ]
+        prediction_rows.extend(failures)
+        comparison_path.parent.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(prediction_rows).to_csv(comparison_path, index=False)
+    else:
+        write_comparison(
+            comparison_path,
+            successful_runs=successful_runs,
+            failures=failures,
+            metrics=metrics,
+        )
     _write_batch_manifest(
         batch_dir,
         run_group=run_group,

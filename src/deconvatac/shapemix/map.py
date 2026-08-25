@@ -21,6 +21,8 @@ SEED_NAMESPACE = 20260822
 ABUNDANCE_EPSILON = 1.0e-8
 INITIAL_ABUNDANCE_FLOOR = 5.0e-2
 RESTART_LOG_STANDARD_DEVIATION = 0.20
+CUDA_CACHE_FRACTION = 0.75
+CUDA_WORKSPACE_MARGIN_BYTES = 512 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -342,27 +344,170 @@ def _seeded_restart(
     return _softplus_inverse(np.maximum(abundance, INITIAL_ABUNDANCE_FLOOR), ABUNDANCE_EPSILON)
 
 
+def _resolve_device(config: ShapeMixConfig) -> torch.device:
+    """Resolve and qualify the requested execution device."""
+    device = torch.device(config.device)
+    if device.type == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                f"ShapeMix requested device={config.device!r}, but "
+                "torch.cuda.is_available() is false."
+            )
+        torch.cuda.set_device(device)
+        torch.set_float32_matmul_precision("highest")
+        torch.use_deterministic_algorithms(True, warn_only=False)
+        torch.manual_seed(config.seed)
+        torch.cuda.manual_seed_all(config.seed)
+    return device
+
+
 def _torch_signatures(
     A: np.ndarray,
     omega: np.ndarray,
+    device: torch.device,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     return (
-        torch.as_tensor(A, dtype=torch.float32, device="cpu"),
-        torch.as_tensor(omega, dtype=torch.float32, device="cpu"),
+        torch.as_tensor(A, dtype=torch.float32, device=device),
+        torch.as_tensor(omega, dtype=torch.float32, device=device),
     )
+
+
+def _prepare_count_cache(
+    counts: _CountSource,
+    device: torch.device,
+    config: ShapeMixConfig,
+) -> tuple[Optional[torch.Tensor], dict[str, Any]]:
+    """Cache counts on CUDA when the conservative free-memory gate passes."""
+    requested_bytes = int(np.prod(counts.shape, dtype=np.int64)) * 4
+    metadata: dict[str, Any] = {
+        "count_cache_mode": "streamed_host_chunks",
+        "count_cache_bytes": 0,
+        "count_cache_requested_bytes": requested_bytes,
+        "device_total_memory_bytes": None,
+        "device_free_memory_bytes_before_cache": None,
+        "cuda_workspace_margin_bytes": None,
+    }
+    if device.type != "cuda":
+        return None, metadata
+
+    free_bytes, total_bytes = torch.cuda.mem_get_info(device)
+    if config.cuda_count_cache == "disabled":
+        return None, metadata
+    workspace_margin = max(
+        CUDA_WORKSPACE_MARGIN_BYTES,
+        config.spot_batch_size
+        * config.peak_chunk_size
+        * counts.shape[2]
+        * 4
+        * 16,
+    )
+    metadata.update(
+        {
+            "device_total_memory_bytes": int(total_bytes),
+            "device_free_memory_bytes_before_cache": int(free_bytes),
+            "cuda_workspace_margin_bytes": int(workspace_margin),
+        }
+    )
+    cache_budget = int(float(free_bytes) * CUDA_CACHE_FRACTION)
+    if requested_bytes + workspace_margin > cache_budget:
+        return None, metadata
+
+    cache: Optional[torch.Tensor] = None
+    try:
+        cache = torch.empty(counts.shape, dtype=torch.float32, device=device)
+        for spot_start in range(0, counts.shape[0], config.spot_batch_size):
+            spot_stop = min(spot_start + config.spot_batch_size, counts.shape[0])
+            spot_slice = slice(spot_start, spot_stop)
+            for peak_start in range(0, counts.shape[1], config.peak_chunk_size):
+                peak_stop = min(peak_start + config.peak_chunk_size, counts.shape[1])
+                peak_slice = slice(peak_start, peak_stop)
+                cache[spot_slice, peak_slice, :] = torch.as_tensor(
+                    counts.numpy_chunk(spot_slice, peak_slice),
+                    dtype=torch.float32,
+                    device=device,
+                )
+        torch.cuda.synchronize(device)
+    except torch.OutOfMemoryError:
+        del cache
+        torch.cuda.empty_cache()
+        metadata["count_cache_mode"] = "streamed_after_cache_oom"
+        return None, metadata
+
+    metadata["count_cache_mode"] = "full_cuda"
+    metadata["count_cache_bytes"] = requested_bytes
+    return cache, metadata
+
+
+def _count_chunk(
+    counts: _CountSource,
+    cache: Optional[torch.Tensor],
+    spot_slice: slice,
+    peak_slice: slice,
+    device: torch.device,
+) -> torch.Tensor:
+    if cache is not None:
+        return cache[spot_slice, peak_slice, :]
+    return torch.as_tensor(
+        counts.numpy_chunk(spot_slice, peak_slice),
+        dtype=torch.float32,
+        device=device,
+    )
+
+
+def _execution_metadata(
+    cache_metadata: Mapping[str, Any],
+    device: torch.device,
+) -> dict[str, Any]:
+    """Finalize JSON-safe execution metadata for a fit record."""
+    result = dict(cache_metadata)
+    result.update(
+        {
+            "device_index": None,
+            "device_name": None,
+            "device_compute_capability": None,
+            "torch_version": str(torch.__version__),
+            "cuda_runtime_version": None if torch.version.cuda is None else str(torch.version.cuda),
+            "deterministic_algorithms": bool(torch.are_deterministic_algorithms_enabled()),
+            "float32_matmul_precision": str(torch.get_float32_matmul_precision()),
+            "torch_num_threads": int(torch.get_num_threads()),
+            "torch_num_interop_threads": int(torch.get_num_interop_threads()),
+        }
+    )
+    result["peak_device_memory_allocated_bytes"] = None
+    result["peak_device_memory_reserved_bytes"] = None
+    if device.type == "cuda":
+        device_index = torch.cuda.current_device() if device.index is None else device.index
+        properties = torch.cuda.get_device_properties(device_index)
+        result.update(
+            {
+                "device_index": int(device_index),
+                "device_name": str(properties.name),
+                "device_compute_capability": f"{properties.major}.{properties.minor}",
+            }
+        )
+        torch.cuda.synchronize(device)
+        result["peak_device_memory_allocated_bytes"] = int(
+            torch.cuda.max_memory_allocated(device)
+        )
+        result["peak_device_memory_reserved_bytes"] = int(
+            torch.cuda.max_memory_reserved(device)
+        )
+    return result
 
 
 def _complete_objective(
     raw_z: torch.Tensor,
     counts: _CountSource,
+    count_cache: Optional[torch.Tensor],
     A: torch.Tensor,
     omega: torch.Tensor,
     phi_ref: float,
     config: ShapeMixConfig,
 ) -> _ObjectiveValues:
-    count_value = 0.0
-    shape_value = 0.0
-    prior_value = 0.0
+    device = raw_z.device
+    count_value = torch.zeros((), dtype=torch.float64, device=device)
+    shape_value = torch.zeros((), dtype=torch.float64, device=device)
+    prior_value = torch.zeros((), dtype=torch.float64, device=device)
     with torch.no_grad():
         for spot_start in range(0, counts.shape[0], config.spot_batch_size):
             spot_stop = min(spot_start + config.spot_batch_size, counts.shape[0])
@@ -373,14 +518,12 @@ def _complete_objective(
                 shape=config.abundance_prior_shape,
                 rate=config.abundance_prior_rate,
             )
-            prior_value += float(prior.detach())
+            prior_value += prior.detach().to(dtype=torch.float64)
             for peak_start in range(0, counts.shape[1], config.peak_chunk_size):
                 peak_stop = min(peak_start + config.peak_chunk_size, counts.shape[1])
                 peak_slice = slice(peak_start, peak_stop)
-                shape_counts = torch.as_tensor(
-                    counts.numpy_chunk(spot_slice, peak_slice),
-                    dtype=torch.float32,
-                    device="cpu",
+                shape_counts = _count_chunk(
+                    counts, count_cache, spot_slice, peak_slice, device
                 )
                 components = likelihood_components(
                     z_batch,
@@ -393,20 +536,31 @@ def _complete_objective(
                     total_likelihood=config.total_likelihood,
                     eps=ABUNDANCE_EPSILON,
                 )
-                count_value += float(components.count_log_likelihood.detach())
-                shape_value += float(components.shape_log_likelihood.detach())
-    return _ObjectiveValues(count_value, shape_value, prior_value)
+                count_value += components.count_log_likelihood.detach().to(
+                    dtype=torch.float64
+                )
+                shape_value += components.shape_log_likelihood.detach().to(
+                    dtype=torch.float64
+                )
+    return _ObjectiveValues(
+        float(count_value.item()),
+        float(shape_value.item()),
+        float(prior_value.item()),
+    )
 
 
 def _streaming_backward(
     raw_z: torch.Tensor,
     counts: _CountSource,
+    count_cache: Optional[torch.Tensor],
     A: torch.Tensor,
     omega: torch.Tensor,
     phi_ref: float,
     config: ShapeMixConfig,
 ) -> Optional[str]:
     """Accumulate an exact full gradient while releasing every chunk graph."""
+    device = raw_z.device
+    all_finite = torch.ones((), dtype=torch.bool, device=device)
     for spot_start in range(0, counts.shape[0], config.spot_batch_size):
         spot_stop = min(spot_start + config.spot_batch_size, counts.shape[0])
         spot_slice = slice(spot_start, spot_stop)
@@ -416,8 +570,7 @@ def _streaming_backward(
             shape=config.abundance_prior_shape,
             rate=config.abundance_prior_rate,
         )
-        if not torch.isfinite(prior):
-            return f"nonfinite_prior_spots_{spot_start}_{spot_stop}"
+        all_finite.logical_and_(torch.isfinite(prior))
         (-prior).backward()
 
         for peak_start in range(0, counts.shape[1], config.peak_chunk_size):
@@ -426,10 +579,8 @@ def _streaming_backward(
             # Recompute z so this small graph can be released immediately after
             # backward instead of retaining a graph for the full S x P x B fit.
             z_chunk = positive_abundance(raw_z[spot_slice], eps=ABUNDANCE_EPSILON)
-            shape_counts = torch.as_tensor(
-                counts.numpy_chunk(spot_slice, peak_slice),
-                dtype=torch.float32,
-                device="cpu",
+            shape_counts = _count_chunk(
+                counts, count_cache, spot_slice, peak_slice, device
             )
             components = likelihood_components(
                 z_chunk,
@@ -443,12 +594,10 @@ def _streaming_backward(
                 eps=ABUNDANCE_EPSILON,
             )
             objective = components.total_log_objective
-            if not torch.isfinite(objective):
-                return (
-                    f"nonfinite_likelihood_spots_{spot_start}_{spot_stop}_"
-                    f"peaks_{peak_start}_{peak_stop}"
-                )
+            all_finite.logical_and_(torch.isfinite(objective))
             (-objective).backward()
+    if not bool(all_finite.item()):
+        return "nonfinite_streamed_objective"
     return None
 
 
@@ -545,9 +694,13 @@ def fit_shapemix_map(
         A_array,
         canonical_spot_names,
     )
-    A_tensor, omega_tensor = _torch_signatures(A_array, omega_array)
-
+    device = _resolve_device(config)
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     fit_started = time.perf_counter()
+    A_tensor, omega_tensor = _torch_signatures(A_array, omega_array, device)
+    count_cache, cache_metadata = _prepare_count_cache(counts, device, config)
+
     diagnostics: list[RestartRecord] = []
     converged_candidates: list[tuple[float, int, np.ndarray, _ObjectiveValues]] = []
     for restart_index in range(config.restarts):
@@ -560,11 +713,11 @@ def fit_shapemix_map(
             restart_index,
         )
         raw_initial = _seeded_restart(initial_abundance, seed_tuple)
-        raw_z = torch.nn.Parameter(torch.as_tensor(raw_initial, dtype=torch.float32, device="cpu"))
+        raw_z = torch.nn.Parameter(torch.as_tensor(raw_initial, dtype=torch.float32, device=device))
         optimizer = torch.optim.Adam([raw_z], lr=config.learning_rate)
 
         initial_summary = _complete_objective(
-            raw_z, counts, A_tensor, omega_tensor, phi, config
+            raw_z, counts, count_cache, A_tensor, omega_tensor, phi, config
         )
         history = [_history_record(0, initial_summary)]
         nonfinite_events: list[str] = []
@@ -595,6 +748,7 @@ def fit_shapemix_map(
                 nonfinite_chunk = _streaming_backward(
                     raw_z,
                     counts,
+                    count_cache,
                     A_tensor,
                     omega_tensor,
                     phi,
@@ -623,7 +777,7 @@ def fit_shapemix_map(
                     break
 
                 summary = _complete_objective(
-                    raw_z, counts, A_tensor, omega_tensor, phi, config
+                    raw_z, counts, count_cache, A_tensor, omega_tensor, phi, config
                 )
                 history.append(_history_record(step, summary))
                 objective_value = summary.total_log_objective
@@ -717,6 +871,7 @@ def fit_shapemix_map(
                 for event in record.nonfinite_events
             ),
             runtime_seconds=time.perf_counter() - fit_started,
+            **_execution_metadata(cache_metadata, device),
         )
         raise MAPOptimizationError(
             f"No finite converged ShapeMix MAP restart succeeded ({reasons}).",
@@ -747,6 +902,7 @@ def fit_shapemix_map(
             device=config.device,
             restarts=tuple(diagnostics),
             runtime_seconds=time.perf_counter() - fit_started,
+            **_execution_metadata(cache_metadata, device),
         )
         raise MAPOptimizationError(
             "Selected MAP restart produced invalid output proportions.",
@@ -775,6 +931,7 @@ def fit_shapemix_map(
             for event in record.nonfinite_events
         ),
         runtime_seconds=time.perf_counter() - fit_started,
+        **_execution_metadata(cache_metadata, device),
     )
     return MAPFitResult(
         abundance=abundance,

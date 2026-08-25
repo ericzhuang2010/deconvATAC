@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from dataclasses import dataclass, fields
 from numbers import Integral, Real
 from typing import Any, Mapping
@@ -70,6 +71,7 @@ class ShapeMixConfig:
     peak_chunk_size: int = 512
     seed: int = 0
     device: str = "cpu"
+    cuda_count_cache: str = "auto"
     dtype: str = "float32"
 
     def __post_init__(self) -> None:
@@ -84,7 +86,6 @@ class ShapeMixConfig:
             "background_mode": "none",
             "abundance_prior": "gamma",
             "optimizer": "adam",
-            "device": "cpu",
             "dtype": "float32",
         }
         for name, expected in fixed_strings.items():
@@ -96,6 +97,21 @@ class ShapeMixConfig:
                     f"{name}={observed!r} is not supported by ShapeMix model version 1; "
                     f"expected {expected!r}."
                 )
+
+        if not isinstance(self.device, str):
+            raise TypeError("device must be a string.")
+        if self.device != "cpu" and re.fullmatch(r"cuda:[0-9]+", self.device) is None:
+            raise ValueError(
+                "ShapeMix device must be 'cpu' or an explicit 'cuda:<index>'; "
+                f"observed {self.device!r}."
+            )
+
+        if not isinstance(self.cuda_count_cache, str):
+            raise TypeError("cuda_count_cache must be a string.")
+        if self.cuda_count_cache not in {"auto", "disabled"}:
+            raise ValueError(
+                "cuda_count_cache must be 'auto' or 'disabled'."
+            )
 
         fixed_floats = {
             "signature_rate_pseudocount": 0.5,
@@ -184,7 +200,7 @@ class ShapeMixConfig:
         """Return whether all settings equal the frozen primary configuration."""
         defaults = type(self)()
         return all(
-            field.name == "use_shape"
+            field.name in {"use_shape", "device", "cuda_count_cache"}
             or getattr(self, field.name) == getattr(defaults, field.name)
             for field in fields(self)
         )
@@ -195,7 +211,7 @@ class ShapeMixConfig:
         changed = {
             field.name: (getattr(defaults, field.name), getattr(self, field.name))
             for field in fields(self)
-            if field.name != "use_shape"
+            if field.name not in {"use_shape", "device", "cuda_count_cache"}
             and getattr(self, field.name) != getattr(defaults, field.name)
         }
         if changed:

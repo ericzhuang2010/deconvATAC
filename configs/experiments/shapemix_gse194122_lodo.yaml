@@ -1,0 +1,78 @@
+description: >-
+  Quantitative leave-one-donor-out GSE194122 BMMC evaluation using the frozen
+  seven-class ontology and exact held-out-source-cell pseudo-spot truth.
+benchmark_scope: external_donor_heldout_exact_truth
+protocol:
+  name: shapemix_full_evaluation
+  version: 1
+  frozen_date: "2026-08-24"
+  donors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  inner_mixture_seeds: [101, 211]
+  conditions: [observed_abundance, equal_celltype]
+  analysis_unit: donor
+run_group: shapemix_gse194122_broad7_lodo_protocol_v1_cuda
+datasets:
+  - gse194122_shapemix_broad7_lodo_donor_1_observed_abundance_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_1_observed_abundance_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_1_equal_celltype_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_1_equal_celltype_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_2_observed_abundance_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_2_observed_abundance_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_2_equal_celltype_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_2_equal_celltype_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_3_observed_abundance_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_3_observed_abundance_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_3_equal_celltype_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_3_equal_celltype_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_4_observed_abundance_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_4_observed_abundance_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_4_equal_celltype_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_4_equal_celltype_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_5_observed_abundance_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_5_observed_abundance_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_5_equal_celltype_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_5_equal_celltype_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_6_observed_abundance_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_6_observed_abundance_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_6_equal_celltype_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_6_equal_celltype_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_7_observed_abundance_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_7_observed_abundance_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_7_equal_celltype_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_7_equal_celltype_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_8_observed_abundance_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_8_observed_abundance_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_8_equal_celltype_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_8_equal_celltype_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_9_observed_abundance_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_9_observed_abundance_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_9_equal_celltype_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_9_equal_celltype_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_10_observed_abundance_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_10_observed_abundance_mix_211
+  - gse194122_shapemix_broad7_lodo_donor_10_equal_celltype_mix_101
+  - gse194122_shapemix_broad7_lodo_donor_10_equal_celltype_mix_211
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - highly_variable
+method_runs:
+  - id: shapemix_length
+    method: shapemix
+    config: configs/methods/shapemix_cuda.yaml
+  - id: shapemix_count_only
+    method: shapemix
+    config: configs/methods/shapemix_count_only_cuda.yaml
+  - id: nnls
+    method: nnls
+    config: configs/methods/nnls.yaml
+evaluation_mode: exact_truth
+metrics:
+  - rmse_v1
+  - jsd_v2
+output_root: results/external_validation/shapemix_gse194122_lodo_v1
+run_id_template: "{dataset}__{modality}__{feature_set}__{method_run_id}"
+skip_missing: false
+continue_on_error: true
+overwrite: false

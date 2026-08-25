@@ -1,0 +1,114 @@
+schema_version: 1
+source_dataset_id: gse263333_spatial_mux
+accession: GSE263333
+provider: ncbi_geo
+organisms: [Mus musculus]
+raw_directory: data/raw/sources/ncbi_geo/GSE263333
+work_directory: data/work/downloads/gse263333
+processed_directory: data/processed/shapemix/gse263333_spatial_mux
+archive:
+  filename: GSE263333_RAW.tar
+  role: complete_series_processed_supplementary_files
+  expected_bytes: 3306485760
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE263nnn/GSE263333/suppl/GSE263333_RAW.tar
+series_metadata:
+  - {accession: GSE263333, role: parent_series}
+sample_groups:
+  - id: me13_50um_histone_rep1
+    organism: Mus musculus
+    tissue: embryo
+    stage: E13
+    resolution_um: 50
+    genome_build: mm10
+    atac: []
+    rna: []
+    protein: []
+    validation_epigenome: [GSM8189704]
+  - id: me13_50um_histone_rep2
+    organism: Mus musculus
+    tissue: embryo
+    stage: E13
+    resolution_um: 50
+    genome_build: mm10
+    atac: []
+    rna: []
+    protein: []
+    validation_epigenome: [GSM8189705]
+  - id: me13_50um_atac
+    organism: Mus musculus
+    tissue: embryo
+    stage: E13
+    resolution_um: 50
+    genome_build: mm10
+    atac: [GSM8189706]
+    rna: [GSM8189707]
+    protein: []
+    validation_epigenome: [GSM8189706]
+  - id: me13_20um_histone_rna_protein
+    organism: Mus musculus
+    tissue: embryo
+    stage: E13
+    resolution_um: 20
+    genome_build: mm10
+    atac: []
+    rna: [GSM8189709]
+    protein: [GSM8189710]
+    validation_epigenome: [GSM8189708]
+  - id: p21_brain_20um_histone_rna
+    organism: Mus musculus
+    tissue: brain
+    stage: P21
+    resolution_um: 20
+    genome_build: mm10
+    atac: []
+    rna: [GSM8189712]
+    protein: []
+    validation_epigenome: [GSM8189711]
+  - id: five_modality_5month_eae_brain_20um_atac
+    organism: Mus musculus
+    tissue: brain
+    stage: 5 months
+    condition: experimental autoimmune encephalomyelitis (EAE)
+    resolution_um: 20
+    genome_build: mm10
+    atac: [GSM8494157]
+    rna: [GSM8494158]
+    protein: [GSM8494159]
+    validation_epigenome: [GSM8494157]
+metadata_discrepancies:
+  - samples: [GSM8494157, GSM8494158, GSM8494159]
+    field: tissue
+    geo_value: Embryo
+    publication_value: five-month-old EAE mouse brain
+    resolution: resolved from the primary publication and the deposited 5M sample naming; retain this discrepancy in provenance
+reference_candidates:
+  mouse_embryo_whole:
+    accession: GSE216371
+    status: audit_only
+    caveat: the E10.5-E13.5 whole-embryo atlas has cell-level labels and mm10 fragment BED files; pooled SPATAC barcode and parent-fragment semantics must pass a reference audit
+  mouse_brain:
+    accession: GSE246791
+    status: audit_only
+    caveat: processed per-sample H5AD objects retain raw mm10 fragments, but labels, EAE compatibility, and parent-fragment semantics must pass a reference audit
+    fallback_accession: GSE111586
+    fallback_caveat: processed matrices use mm9 and lack fragment lengths; raw-read reconstruction and mm10 realignment are required
+preprocessing_policy:
+  raw_archive: retain byte-for-byte and extract only into the processed family tree
+  atac_only_for_shapemix: true
+  cut_and_tag_and_protein: validation_only
+  normalize_fragments: BGZF plus tabix without modifying source archive
+  coordinate_system: zero-based half-open intervals as deposited; audit Tn5 endpoint convention separately
+  spatial_assets: safely extract images, scale factors, and tissue positions
+  rna_and_protein: convert deposited pixel matrices to sparse H5AD where schemas permit
+  cross_modality: compare exact pixel identifiers within each declared sample group
+  feature_axis: must come from a compatible frozen single-cell ATAC reference
+  truth_policy: no exact proportions; store orthogonal validation only
+validation_gates:
+  - exact archive byte size and SHA-256
+  - complete tar stream and safe member paths
+  - complete gzip streams for every compressed member
+  - full fragment-schema, coordinate-order, assay, and barcode audit
+  - exact spatial coordinate and modality pixel reconciliation
+  - no CUT&Tag fragment file may enter ShapeMix layers
+  - preserve the GEO-versus-publication five-month EAE tissue discrepancy in provenance
+  - no runnable ShapeMix dataset before a compatible labeled reference passes

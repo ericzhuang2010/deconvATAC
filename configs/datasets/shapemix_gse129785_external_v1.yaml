@@ -1,0 +1,21 @@
+schema_version: 1
+template_id: shapemix_gse129785_external_v1
+status: materialized_and_registered
+source_manifest: configs/data_sources/shapemix_gse129785.yaml
+source_lock: configs/data_sources/shapemix_gse129785_lock.yaml
+builder: scripts/preprocess_gse129785.py
+experiment: configs/experiments/shapemix_gse129785_external.yaml
+reusable_root: data/processed/shapemix/gse129785_immune
+reference:
+  id: gse129785_immune
+  path: data/processed/references/gse129785_immune/atac/reference.h5ad
+dataset_root: data/processed/datasets
+registry: data/registry/datasets.yaml
+materialization:
+  descriptors: 16
+  physical_dilutions: 14
+  prediction_only_groups: 2
+  exact_truth_descriptors: 0
+  nominal_validation_path: validation/nominal_broad_proportions.csv
+  no_overwrite: true
+

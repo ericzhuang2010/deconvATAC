@@ -13,6 +13,8 @@ from deconvatac.shapemix.config import (
 ROOT = Path(__file__).resolve().parents[1]
 SHAPE_CONFIG = ROOT / "configs" / "methods" / "shapemix.yaml"
 COUNT_CONFIG = ROOT / "configs" / "methods" / "shapemix_count_only.yaml"
+CUDA_SHAPE_CONFIG = ROOT / "configs" / "methods" / "shapemix_cuda.yaml"
+CUDA_COUNT_CONFIG = ROOT / "configs" / "methods" / "shapemix_count_only_cuda.yaml"
 SMOKE_EXPERIMENT = ROOT / "configs" / "experiments" / "shapemix_smoke.yaml"
 ALL_METHODS_EXPERIMENT = (
     ROOT / "configs" / "experiments" / "all_methods_all_atac_datasets.yaml"
@@ -58,6 +60,30 @@ def test_method_configs_are_full_frozen_nested_ablation_configs() -> None:
     assert normalized_shape == normalized_count
     assert not any(
         "fragment" in key or "layer" in key for key in shape_mapping["params"]
+    )
+
+
+def test_cuda_method_configs_preserve_the_nested_protocol_contract() -> None:
+    shape_mapping = _read_yaml(CUDA_SHAPE_CONFIG)
+    count_mapping = _read_yaml(CUDA_COUNT_CONFIG)
+    shape = ShapeMixConfig.from_mapping(shape_mapping)
+    count = ShapeMixConfig.from_mapping(count_mapping)
+
+    validate_nested_ablation_configs(shape, count)
+    shape.validate_protocol_v1()
+    count.validate_protocol_v1()
+    assert shape.is_protocol_v1
+    assert count.is_protocol_v1
+    assert shape.device == count.device == "cuda:0"
+    assert {
+        key
+        for key in shape_mapping["params"]
+        if shape_mapping["params"][key] != count_mapping["params"][key]
+    } == {"use_shape"}
+    assert CUDA_SHAPE_CONFIG.read_text().replace(
+        "use_shape: true", "use_shape: <ablation>"
+    ) == CUDA_COUNT_CONFIG.read_text().replace(
+        "use_shape: false", "use_shape: <ablation>"
     )
 
 

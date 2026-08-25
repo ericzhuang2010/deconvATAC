@@ -1,0 +1,26 @@
+schema_version: 1
+source_dataset_id: gse263333_spatial_mux
+accession: GSE263333
+completed_at: '2026-08-24T14:31:08.063068+00:00'
+config: configs/data_sources/shapemix_gse263333.yaml
+resources: 2
+total_bytes: 3306490696
+files:
+- name: GSE263333_family.soft.gz
+  role: parent_series
+  accession: GSE263333
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE263nnn/GSE263333/soft/GSE263333_family.soft.gz
+  path: data/raw/sources/ncbi_geo/GSE263333/series_metadata/GSE263333_family.soft.gz
+  bytes: 4936
+  sha256: 6ae79160b65d16caf71f23b6b7443b82aa7a2e927449d2d6543c5443f3831c65
+  integrity: passed_full_gzip_stream
+  tar_members: null
+- name: GSE263333_RAW.tar
+  role: complete_series_processed_supplementary_files
+  accession: GSE263333
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE263nnn/GSE263333/suppl/GSE263333_RAW.tar
+  path: data/raw/sources/ncbi_geo/GSE263333/processed_downloads/GSE263333_RAW.tar
+  bytes: 3306485760
+  sha256: a303eb357e3b3cebce83fe65efe0e366981511d975cbb7c245eabb2a290cd7a4
+  integrity: passed_tar_stream_and_safe_member_audit
+  tar_members: 32

@@ -1,0 +1,70 @@
+schema_version: 1
+source_dataset_id: gse194122_bmmc_multiome
+accession: GSE194122
+provider: ncbi_geo_sra
+organism: Homo sapiens
+tissue: bone marrow mononuclear cells
+genome_build: GRCh38
+raw_directory: data/raw/sources/ncbi_geo/GSE194122
+work_directory: data/work/downloads/gse194122
+processed_directory: data/processed/shapemix/gse194122_bmmc
+series_file:
+  filename: GSE194122_family.soft.gz
+  role: geo_family_metadata
+  expected_bytes: 4897
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE194nnn/GSE194122/soft/GSE194122_family.soft.gz
+processed_object:
+  filename: GSE194122_openproblems_neurips2021_multiome_BMMC_processed.h5ad.gz
+  role: author_processed_multiome_counts_and_annotations
+  expected_bytes: 2917117242
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE194nnn/GSE194122/suppl/GSE194122_openproblems_neurips2021_multiome_BMMC_processed.h5ad.gz
+pilot_gsm: GSM5828489
+openproblems_fragments:
+  role: author_cellranger_arc_fragments_indexes_and_barcode_metrics
+  base_url: https://openproblems-bio.s3.amazonaws.com/public/post_competition/multiome
+  provenance_workflow: https://github.com/timoast/epi-immune/blob/master/Snakefile
+  expected_total_bytes: 31687758209
+  files:
+    - {sample_key: s1d1, gsm: GSM5828481, fragment_bytes: 2403439043, fragment_etag: 64026306d47da20abe20affa68237e37-287, index_bytes: 1248641, index_etag: d716bf056797a09b58a8c0c158a149bb, metrics_bytes: 87627805, metrics_etag: 1058564ebc1cfcc5c4893d90f3f51f05-11}
+    - {sample_key: s1d2, gsm: GSM5828482, fragment_bytes: 1564854898, fragment_etag: 5b52655710d51d4455f7c680c1cbc0b2-187, index_bytes: 924352, index_etag: 0236326645a36a971ee5061c45717fb4, metrics_bytes: 87601990, metrics_etag: d3fefbb94a022f405ebfd2339c5581d8-11}
+    - {sample_key: s1d3, gsm: GSM5828483, fragment_bytes: 1263511449, fragment_etag: dc69a48286f03c6f23b3fa7aa82ae556-151, index_bytes: 847988, index_etag: c6aad9da76189049cfb0552e3e667b37, metrics_bytes: 87350368, metrics_etag: 32aef068031fe8f11171433a1e92584a-11}
+    - {sample_key: s2d1, gsm: GSM5828484, fragment_bytes: 1921805111, fragment_etag: 5aff11ea2cc31905c6640521c95ae88c-230, index_bytes: 1017472, index_etag: 66bd239b4a28dd89278de72702f32cf4, metrics_bytes: 85816960, metrics_etag: 1a8c681273523ac1a43e5ab031e998fd-11}
+    - {sample_key: s2d4, gsm: GSM5828485, fragment_bytes: 2017561876, fragment_etag: c453d9d95d68cf4ecf57a058bd9c6cf0-241, index_bytes: 1033810, index_etag: abc7c4113a45a1e9f54f85942abededa, metrics_bytes: 85582257, metrics_etag: 79a4912fe06b70e91e7a90e4dd85bc3b-11}
+    - {sample_key: s2d5, gsm: GSM5828486, fragment_bytes: 1847108464, fragment_etag: 6e17bc6ec3b79708bff940df1c272e73-221, index_bytes: 987703, index_etag: a995bb7e0473e2c24e065242184044e0, metrics_bytes: 83044199, metrics_etag: ae78c5d43e571f40b472a39b0f9f2d4c-10}
+    - {sample_key: s3d10, gsm: GSM5828487, fragment_bytes: 4953616309, fragment_etag: a7762310096b90f13a546aff8a6671e9-591, index_bytes: 1715958, index_etag: 4b3f153a062ca13d2245ffcccd034d48, metrics_bytes: 87400242, metrics_etag: 566a08e5cacfeaa3b549a3fe0c615a00-11}
+    - {sample_key: s3d3, gsm: GSM5828488, fragment_bytes: 4450075207, fragment_etag: ada091eb53ee81898fcd1fcf176f2b2f-531, index_bytes: 1570277, index_etag: 100fab49f0707e4e7d779d31fdf90f6d, metrics_bytes: 86931484, metrics_etag: 8b304c87647ec098d770b1bac13c2256-11}
+    - {sample_key: s3d6, gsm: GSM5828489, fragment_bytes: 1051100810, fragment_etag: 397bd1500288238fe64c12c063bcd4aa-126, index_bytes: 781764, index_etag: 88d0571e8137413f621eaf49770c12a5, metrics_bytes: 87389121, metrics_etag: 119660d88a829f8b99c62b239ecdfd51-11}
+    - {sample_key: s3d7, gsm: GSM5828490, fragment_bytes: 3310057789, fragment_etag: 884cbc1da46ecca2580ba6b49b48ab90-395, index_bytes: 1475120, index_etag: b75275250755f722319abe110dc315e3, metrics_bytes: 90073271, metrics_etag: d7aac883210cb9b5f731002ac4d99292-11}
+    - {sample_key: s4d1, gsm: GSM5828491, fragment_bytes: 2627962730, fragment_etag: 70e455e57a9809d46e426415afda1d1c-314, index_bytes: 1218544, index_etag: 7f81171d333be388e7b5ded5bf2b636d, metrics_bytes: 86509991, metrics_etag: f1f1a5e0bf6d6b80465529efb65fcd1a-11}
+    - {sample_key: s4d8, gsm: GSM5828492, fragment_bytes: 2041853762, fragment_etag: 205496298836a24510247e5b0b956929-244, index_bytes: 1018410, index_etag: db775160368e88be4760ac56e353dcd6, metrics_bytes: 85156546, metrics_etag: 9f18e78208c5080e91b169417028e302-11}
+    - {sample_key: s4d9, gsm: GSM5828493, fragment_bytes: 1105066544, fragment_etag: 18010f693ae7d5298000a45ccdf8294c-132, index_bytes: 789697, index_etag: f01bc46e626585b658192a85258a09a3, metrics_bytes: 74630247, metrics_etag: 8251262ad0b139d4258eae09a7d4824b-9}
+atac_samples:
+  - {gsm: GSM5828481, site: 1, donor: 1, donor_id: '15078', biosample: SAMN25154788, experiment: SRX13856461, run: SRR17693265, bam_filename: site1_donor01_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-1.s3.amazonaws.com/SRR17693265/site1_donor01_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 36031414815, bam_md5: 215fefbc86f5720113e38bf5677ad752}
+  - {gsm: GSM5828482, site: 1, donor: 2, donor_id: '10886', biosample: SAMN25154787, experiment: SRX13856462, run: SRR17693264, bam_filename: site1_donor02_multiome_atac.possorted_bam.bam, bam_url: 'https://sra-pub-src-2.s3.amazonaws.com/SRR17693264/site1_donor02_multiome_atac.possorted_bam.bam.1', bam_bytes: 24476553523, bam_md5: 346e6d924d32deddf2ff95a6d3b5c066}
+  - {gsm: GSM5828483, site: 1, donor: 3, donor_id: '18303', biosample: SAMN25154786, experiment: SRX13856463, run: SRR17693263, bam_filename: site1_donor03_multiome_atac.possorted_bam.bam, bam_url: 'https://sra-pub-src-2.s3.amazonaws.com/SRR17693263/site1_donor03_multiome_atac.possorted_bam.bam.1', bam_bytes: 21441924411, bam_md5: c8c7ef4439a3fbb5f00c033e0b9602e5}
+  - {gsm: GSM5828484, site: 2, donor: 1, donor_id: '15078', biosample: SAMN25154785, experiment: SRX13856464, run: SRR17693262, bam_filename: site2_donor01_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-2.s3.amazonaws.com/SRR17693262/site2_donor01_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 31965168894, bam_md5: 83b577bf1ff848b4ba728d5248d38ee1}
+  - {gsm: GSM5828485, site: 2, donor: 4, donor_id: '12710', biosample: SAMN25154784, experiment: SRX13856465, run: SRR17693261, bam_filename: site2_donor04_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-2.s3.amazonaws.com/SRR17693261/site2_donor04_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 32854772768, bam_md5: 9745b3766e6cd96b1174fc720f17742d}
+  - {gsm: GSM5828486, site: 2, donor: 5, donor_id: '16710', biosample: SAMN25154783, experiment: SRX13856466, run: SRR17693260, bam_filename: site2_donor05_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-2.s3.amazonaws.com/SRR17693260/site2_donor05_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 27625541174, bam_md5: c8443a9ec5f5073ab090fa10733d3231}
+  - {gsm: GSM5828487, site: 3, donor: 10, donor_id: '28483', biosample: SAMN25154782, experiment: SRX13856467, run: SRR17693259, bam_filename: site3_donor10_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-2.s3.amazonaws.com/SRR17693259/site3_donor10_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 76386883756, bam_md5: bcb0d8bb60448a2e26df00d216f625ea}
+  - {gsm: GSM5828488, site: 3, donor: 3, donor_id: '18303', biosample: SAMN25154781, experiment: SRX13856468, run: SRR17693258, bam_filename: site3_donor03_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-1.s3.amazonaws.com/SRR17693258/site3_donor03_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 68629246782, bam_md5: 5f2b44ceb331034e1e9286cced144b3b}
+  - {gsm: GSM5828489, site: 3, donor: 6, donor_id: '28045', biosample: SAMN25154780, experiment: SRX13856469, run: SRR17693257, bam_filename: site3_donor06_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-1.s3.amazonaws.com/SRR17693257/site3_donor06_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 16961779971, bam_md5: 5db844825869f5c994a82e12a59b2aa2}
+  - {gsm: GSM5828490, site: 3, donor: 7, donor_id: '11466', biosample: SAMN25154779, experiment: SRX13856470, run: SRR17693256, bam_filename: site3_donor07_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-2.s3.amazonaws.com/SRR17693256/site3_donor07_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 60961209438, bam_md5: f1066caff5f92002b09bfb8143051874}
+  - {gsm: GSM5828491, site: 4, donor: 1, donor_id: '15078', biosample: SAMN25154778, experiment: SRX13856471, run: SRR17693255, bam_filename: site4_donor01_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-1.s3.amazonaws.com/SRR17693255/site4_donor01_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 54291802475, bam_md5: 9dd664d52177753a13f2bec4387c476f}
+  - {gsm: GSM5828492, site: 4, donor: 8, donor_id: '19593', biosample: SAMN25154777, experiment: SRX13856472, run: SRR17693254, bam_filename: site4_donor08_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-2.s3.amazonaws.com/SRR17693254/site4_donor08_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 54801186301, bam_md5: 73faf1d9576db7b241db06b5e8389b7c}
+  - {gsm: GSM5828493, site: 4, donor: 9, donor_id: '13272', biosample: SAMN25154776, experiment: SRX13856473, run: SRR17693253, bam_filename: site4_donor09_multiome_atac.possorted_genome_bam.bam, bam_url: 'https://sra-pub-src-2.s3.amazonaws.com/SRR17693253/site4_donor09_multiome_atac.possorted_genome_bam.bam.1', bam_bytes: 24807087634, bam_md5: 182d2739245571dc0b44241b0fd28e65}
+preprocessing_policy:
+  processed_h5ad: retain immutable gzip and decompress atomically into processed source_object
+  original_fragments: retain all 13 author Cell Ranger ARC fragment/index/metrics trios from the Open Problems post-competition bucket
+  original_bams: freeze all authoritative NCBI URLs and identities as reconstruction fallback; do not download when the fragment suite validates
+  fragment_reconstruction_fallback: use author Cell Ranger ARC coordinate-sorted BAM, corrected CB tag, proper primary pairs, MAPQ at least 30, exclude QC-fail/secondary/supplementary/duplicate reads, apply Tn5 left +4 and right -5 shifts, emit one deduplicated five-column fragment row
+  pilot: GSM5828489 (smallest authoritative BAM; Site 3 Donor 6)
+  labels: preserve author annotations and emit an explicit harmonized label table
+  folds: materialize donor/site index tables only; learn peaks and signatures from training donors downstream
+validation_gates:
+  - exact GEO byte sizes and full gzip integrity
+  - all 13 unique GSM/SRX/SRR/BioSample/BAM identities match the NCBI metadata snapshot
+  - processed H5AD cell, feature, modality, label, donor, and site audit
+  - all 13 fragment/index/metrics trios match frozen S3 sizes and ETags and pass integrity/schema checks
+  - exact pilot processed-cell barcode reconciliation
+  - pilot depth-normalized count containment establishes fragment and cut-coordinate semantics before the remaining fragment products are retained
+  - no held-out donor contributes to feature selection or signature estimation

@@ -1,0 +1,89 @@
+schema_version: 1
+source_dataset_id: gse205055_spatial_epigenome_transcriptome
+accession: GSE205055
+completed_at: '2026-08-24T14:42:57.721394+00:00'
+config: configs/data_sources/shapemix_gse205055.yaml
+resources: 9
+total_bytes: 8177103162
+files:
+- name: GSE205055_family.soft.gz
+  role: parent_super_series
+  accession: GSE205055
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE205nnn/GSE205055/soft/GSE205055_family.soft.gz
+  path: data/raw/sources/ncbi_geo/GSE205055/series_metadata/GSE205055_family.soft.gz
+  bytes: 4881
+  sha256: a9976c32cd26771fded3e488276e8d48a57641641fb8d3a750c1f7c6e462ed64
+  integrity: passed_full_gzip_stream
+  tar_members: null
+- name: GSE205051_family.soft.gz
+  role: mouse_cut_and_tag
+  accession: GSE205051
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE205nnn/GSE205051/soft/GSE205051_family.soft.gz
+  path: data/raw/sources/ncbi_geo/GSE205055/series_metadata/GSE205051_family.soft.gz
+  bytes: 2421
+  sha256: e42aaff961977a2597db3a8832a3cbececd670fc486bc1f98984de6b933d578f
+  integrity: passed_full_gzip_stream
+  tar_members: null
+- name: GSE205052_family.soft.gz
+  role: mouse_atac
+  accession: GSE205052
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE205nnn/GSE205052/soft/GSE205052_family.soft.gz
+  path: data/raw/sources/ncbi_geo/GSE205055/series_metadata/GSE205052_family.soft.gz
+  bytes: 2751
+  sha256: 72a4f0459b484e68c9448bb38ecb0eb99e8aea33a335c378a792d4235dd1c5a9
+  integrity: passed_full_gzip_stream
+  tar_members: null
+- name: GSE205054_family.soft.gz
+  role: mouse_rna
+  accession: GSE205054
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE205nnn/GSE205054/soft/GSE205054_family.soft.gz
+  path: data/raw/sources/ncbi_geo/GSE205055/series_metadata/GSE205054_family.soft.gz
+  bytes: 2620
+  sha256: 17f09706f839dc102518c5c02d759be1a6de9e3db40e0039f75d99e6fe9b3c10
+  integrity: passed_full_gzip_stream
+  tar_members: null
+- name: GSE205180_family.soft.gz
+  role: human_atac
+  accession: GSE205180
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE205nnn/GSE205180/soft/GSE205180_family.soft.gz
+  path: data/raw/sources/ncbi_geo/GSE205055/series_metadata/GSE205180_family.soft.gz
+  bytes: 2396
+  sha256: 4c4c3460ad81236c1d1aa5fa2ed664425687011b7309456b1a7d1a761d75ce7a
+  integrity: passed_full_gzip_stream
+  tar_members: null
+- name: GSE205181_family.soft.gz
+  role: human_rna
+  accession: GSE205181
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE205nnn/GSE205181/soft/GSE205181_family.soft.gz
+  path: data/raw/sources/ncbi_geo/GSE205055/series_metadata/GSE205181_family.soft.gz
+  bytes: 2361
+  sha256: 049d280f157ed37501454eb43484540b040677bc99e436bfafbfa35916bbdeae
+  integrity: passed_full_gzip_stream
+  tar_members: null
+- name: GSE217091_family.soft.gz
+  role: mouse_spatial_cut_and_tag_replicates
+  accession: GSE217091
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE217nnn/GSE217091/soft/GSE217091_family.soft.gz
+  path: data/raw/sources/ncbi_geo/GSE205055/series_metadata/GSE217091_family.soft.gz
+  bytes: 2692
+  sha256: bf731f922c99c32a37db626a06256aafdd6cf91ef9c744253d92702444d07670
+  integrity: passed_full_gzip_stream
+  tar_members: null
+- name: GSE218593_family.soft.gz
+  role: mouse_rna_replicates
+  accession: GSE218593
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE218nnn/GSE218593/soft/GSE218593_family.soft.gz
+  path: data/raw/sources/ncbi_geo/GSE205055/series_metadata/GSE218593_family.soft.gz
+  bytes: 2720
+  sha256: 1d5c25a864edbcc12afa92a3b5cd3aaa679cc805c2f9efe22bd499671a018414
+  integrity: passed_full_gzip_stream
+  tar_members: null
+- name: GSE205055_RAW.tar
+  role: complete_super_series_processed_supplementary_files
+  accession: GSE205055
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE205nnn/GSE205055/suppl/GSE205055_RAW.tar
+  path: data/raw/sources/ncbi_geo/GSE205055/processed_downloads/GSE205055_RAW.tar
+  bytes: 8177080320
+  sha256: 30c4fc6354cefab86f83fb1dee7b545f77233321f798f462bf636fdee08d2f0d
+  integrity: passed_tar_stream_and_safe_member_audit
+  tar_members: 38

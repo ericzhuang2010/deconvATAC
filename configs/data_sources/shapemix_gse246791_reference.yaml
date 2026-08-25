@@ -1,0 +1,147 @@
+schema_version: 1
+source_dataset_id: shapemix_gse246791_adult_mouse_brain_reference
+accession: GSE246791
+provider: ncbi_geo_and_catlas
+organism: Mus musculus
+tissue: whole brain regional atlas
+stage: adult
+genome_build: mm10
+assay: snATAC-seq
+raw_directory: data/raw/sources/ncbi_geo/GSE246791
+work_directory: data/work/downloads/gse246791_reference
+processed_directory: data/processed/shapemix/gse246791_mouse_brain_reference
+standardized_reference_id: gse246791_adult_mouse_brain_major12_v1
+selection:
+  policy: lexicographically first author sample with biorep=early within each of the 12 MajorRegion values in SI Table 1
+  major_regions: [AMY, CB, HPF, HY, Isocortex, MB, MY, OLF, PAL, Pons, STR, TH]
+  expected_samples: 12
+  rationale: region-balanced source-independent subset with one sample per atlas major region
+resources:
+  - {name: GSE246791_family.soft.gz, role: geo_family_metadata, url: "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE246nnn/GSE246791/soft/GSE246791_family.soft.gz", expected_bytes: 26931, payload: gzip, destination: series_metadata/GSE246791_family.soft.gz}
+  - {name: SI_Table_1.xlsx, role: author_sample_dissection_metadata, url: "https://decoder-genetics.wustl.edu/catlasv1/wholemousebrain/data/Supplementary_Tables/SI%20Table%201%20Sample%20and%20dissection%20summary.xlsx", expected_bytes: 30092, expected_etag: 758c-6091649a8e580, payload: xlsx, destination: portal_metadata/SI_Table_1.xlsx}
+  - {name: SI_Table_2_nuclei.txt, role: author_cell_level_annotations, url: "https://decoder-genetics.wustl.edu/catlasv1/wholemousebrain/data/Supplementary_Tables/SI%20Table%202%20Metadata%20table%20for%20all%20the%202.3%20million%20nuclei%20in%20the%20snATAC-seq%20data.txt", expected_bytes: 364535893, expected_etag: 15ba6055-607d64ad2f900, payload: text, destination: portal_metadata/SI_Table_2_nuclei.txt}
+  - {name: Subclass.names.map.csv, role: author_subclass_name_map, url: "https://decoder-genetics.wustl.edu/catlasv1/wholemousebrain/data/Supplementary_Tables/Subclass.names.map.csv", expected_bytes: 41973, expected_etag: a3f5-60a74c5e70640, payload: csv, destination: portal_metadata/Subclass.names.map.csv}
+  - {name: wmb_meta.tsv, role: author_sample_metadata, url: "https://decoder-genetics.wustl.edu/catlasv1/wholemousebrain/data/Supplementary_Tables/wmb_meta.tsv", expected_bytes: 33266, expected_etag: 81f2-60a9bf98956c0, payload: tsv, destination: portal_metadata/wmb_meta.tsv}
+  - name: GSM7877041_CEMBA200820_7H_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7877041
+    sample: CEMBA200820_7H
+    major_region: AMY
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7877nnn/GSM7877041/suppl/GSM7877041_CEMBA200820_7H_rm_dlt.h5ad.gz
+    expected_bytes: 977386816
+    payload: gzip
+    destination: samples/GSM7877041/source_files/GSM7877041_CEMBA200820_7H_rm_dlt.h5ad.gz
+  - name: GSM7876942_CEMBA201217_14B_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7876942
+    sample: CEMBA201217_14B
+    major_region: CB
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7876nnn/GSM7876942/suppl/GSM7876942_CEMBA201217_14B_rm_dlt.h5ad.gz
+    expected_bytes: 736108390
+    payload: gzip
+    destination: samples/GSM7876942/source_files/GSM7876942_CEMBA201217_14B_rm_dlt.h5ad.gz
+  - name: GSM7877006_CEMBA190212_9H_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7877006
+    sample: CEMBA190212_9H
+    major_region: HPF
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7877nnn/GSM7877006/suppl/GSM7877006_CEMBA190212_9H_rm_dlt.h5ad.gz
+    expected_bytes: 563118144
+    payload: gzip
+    destination: samples/GSM7877006/source_files/GSM7877006_CEMBA190212_9H_rm_dlt.h5ad.gz
+  - name: GSM7877102_CEMBA200305_7J_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7877102
+    sample: CEMBA200305_7J
+    major_region: HY
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7877nnn/GSM7877102/suppl/GSM7877102_CEMBA200305_7J_rm_dlt.h5ad.gz
+    expected_bytes: 428260026
+    payload: gzip
+    destination: samples/GSM7877102/source_files/GSM7877102_CEMBA200305_7J_rm_dlt.h5ad.gz
+  - name: GSM7877014_CEMBA171206_3C_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7877014
+    sample: CEMBA171206_3C
+    major_region: Isocortex
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7877nnn/GSM7877014/suppl/GSM7877014_CEMBA171206_3C_rm_dlt.h5ad.gz
+    expected_bytes: 610098333
+    payload: gzip
+    destination: samples/GSM7877014/source_files/GSM7877014_CEMBA171206_3C_rm_dlt.h5ad.gz
+  - name: GSM7877013_CEMBA200730_11H_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7877013
+    sample: CEMBA200730_11H
+    major_region: MB
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7877nnn/GSM7877013/suppl/GSM7877013_CEMBA200730_11H_rm_dlt.h5ad.gz
+    expected_bytes: 681585629
+    payload: gzip
+    destination: samples/GSM7877013/source_files/GSM7877013_CEMBA200730_11H_rm_dlt.h5ad.gz
+  - name: GSM7877084_CEMBA210408_15C_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7877084
+    sample: CEMBA210408_15C
+    major_region: MY
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7877nnn/GSM7877084/suppl/GSM7877084_CEMBA210408_15C_rm_dlt.h5ad.gz
+    expected_bytes: 932941222
+    payload: gzip
+    destination: samples/GSM7877084/source_files/GSM7877084_CEMBA210408_15C_rm_dlt.h5ad.gz
+  - name: GSM7877017_CEMBA180119_1B_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7877017
+    sample: CEMBA180119_1B
+    major_region: OLF
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7877nnn/GSM7877017/suppl/GSM7877017_CEMBA180119_1B_rm_dlt.h5ad.gz
+    expected_bytes: 397429127
+    payload: gzip
+    destination: samples/GSM7877017/source_files/GSM7877017_CEMBA180119_1B_rm_dlt.h5ad.gz
+  - name: GSM7876953_CEMBA180724_4H_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7876953
+    sample: CEMBA180724_4H
+    major_region: PAL
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7876nnn/GSM7876953/suppl/GSM7876953_CEMBA180724_4H_rm_dlt.h5ad.gz
+    expected_bytes: 505490346
+    payload: gzip
+    destination: samples/GSM7876953/source_files/GSM7876953_CEMBA180724_4H_rm_dlt.h5ad.gz
+  - name: GSM7876902_CEMBA200917_14C_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7876902
+    sample: CEMBA200917_14C
+    major_region: Pons
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7876nnn/GSM7876902/suppl/GSM7876902_CEMBA200917_14C_rm_dlt.h5ad.gz
+    expected_bytes: 865933496
+    payload: gzip
+    destination: samples/GSM7876902/source_files/GSM7876902_CEMBA200917_14C_rm_dlt.h5ad.gz
+  - name: GSM7877011_CEMBA171214_4D_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7877011
+    sample: CEMBA171214_4D
+    major_region: STR
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7877nnn/GSM7877011/suppl/GSM7877011_CEMBA171214_4D_rm_dlt.h5ad.gz
+    expected_bytes: 367439433
+    payload: gzip
+    destination: samples/GSM7877011/source_files/GSM7877011_CEMBA171214_4D_rm_dlt.h5ad.gz
+  - name: GSM7877047_CEMBA190423_10G_rm_dlt.h5ad.gz
+    role: selected_sample_h5ad_with_raw_fragments
+    gsm: GSM7877047
+    sample: CEMBA190423_10G
+    major_region: TH
+    url: https://ftp.ncbi.nlm.nih.gov/geo/samples/GSM7877nnn/GSM7877047/suppl/GSM7877047_CEMBA190423_10G_rm_dlt.h5ad.gz
+    expected_bytes: 588305682
+    payload: gzip
+    destination: samples/GSM7877047/source_files/GSM7877047_CEMBA190423_10G_rm_dlt.h5ad.gz
+preprocessing_policy:
+  immutable_source: retain byte-for-byte
+  decompress_h5ad_to: data/processed/shapemix/gse246791_mouse_brain_reference/source_objects
+  peak_selection: reference-only ranking on the selected samples
+  fragment_bins_bp: [[0, 100], [100, 250], [250, null]]
+  right_cut_offset: audit against the deposited 500-bp matrices before freezing
+  truth_policy: reference labels are not spatial composition truth
+validation_gates:
+  - exact remote byte size and complete gzip streams
+  - exact reproducibility of the frozen SI-Table-1 subset rule
+  - exact selected-cell mapping to SI Table 2
+  - mm10 coordinate and parent-fragment validation
+  - one selected sample for every declared major region
+  - nonnegative integer CSR layers whose sum equals X
+download_workers_max: 2

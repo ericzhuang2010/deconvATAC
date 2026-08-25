@@ -13,13 +13,15 @@ Use these files in this order:
 1. [Model specification](model_specification.md) — normative data semantics and statistical model.
 2. [Benchmark protocol](benchmark_protocol.md) — normative data split, peak selection, seeds, metrics, and comparison rules.
 3. [Current Bayesian tutorial source](tutorials/ShapeMix_ATAC_Bayesian_Model_Tutorial.tex) and [generated PDF](tutorials/ShapeMix_ATAC_Bayesian_Model_Tutorial.pdf) — canonical explanatory derivation of the MVP and labeled extensions.
-4. [Implementation plan](implementation_plan.md) — file-level engineering roadmap and acceptance gates.
+4. [Implementation plan](iimplementation_plan.md) — file-level engineering roadmap, full-evaluation campaign, GPU strategy, and acceptance gates.
 5. [Data and results organization](file_organization.md) — canonical placement, lifecycle, naming, tracking, and provenance policy.
 6. [Additional dataset plan](additional_datasets.md) — external source selection, storage layout, preprocessing requirements, and acquisition gates.
 7. [GSE129785 preprocessing record](gse129785_preprocessing.md) — frozen immune scope, commands, cell calls, feature selection, outputs, and validation gates.
-8. [Results summary](results_summary.md) — concise primary outcome, validation, controls, and interpretation limit.
-9. [Step 6 execution report](step6_results.md) — detailed non-normative result, diagnostics, gates, provenance, and limitations.
-10. [Research proposal](../research_class/ShapeMix_ATAC_proposal_draft.md) — current motivation, research question, and broader study design.
+8. [GSE205055/GSE263333 preprocessing record](gse205055_gse263333_preprocessing.md) — complete spatial source scope, hashes, preprocessing outputs, barcode alignment, and reference gates.
+9. [GSE194122 preprocessing record](gse194122_preprocessing.md) — multi-donor BMMC source identities, fragments, barcode bridge, labels/features, and leave-one-donor-out indices.
+10. [Results summary](results_summary.md) — concise primary outcome, validation, controls, and interpretation limit.
+11. [Step 6 execution report](step6_results.md) — detailed non-normative result, diagnostics, gates, provenance, and limitations.
+12. [Research proposal](../research_class/ShapeMix_ATAC_proposal_draft.md) — current motivation, research question, and broader study design.
 
 If two documents disagree about the executable MVP, `model_specification.md` governs the model and `benchmark_protocol.md` governs the experiment. The implementation plan governs sequencing and repository integration. The proposal governs the scientific motivation and was reconciled with the canonical count unit and likelihood on 2026-08-22; the two normative specifications still take precedence over any future proposal drift.
 

@@ -445,14 +445,18 @@ def simulate_shapemix_spots(
             layer_rows[layer_name].append(_canonical_csr(row))
         for cell_type in sampled_types:
             truth_counts[spot_index, type_index[cell_type]] += 1
-        provenance.append(
-            {
-                "spot_id": f"spot_{spot_index:04d}",
-                "cell_count": int(cell_count),
-                "cell_id": source_barcodes,
-                "cell_type": sampled_types.tolist(),
-            }
-        )
+        provenance_row = {
+            "spot_id": f"spot_{spot_index:04d}",
+            "cell_count": int(cell_count),
+            "cell_id": source_barcodes,
+            "cell_type": sampled_types.tolist(),
+        }
+        for column in ("sample_key", "site", "donor", "author_cell_type"):
+            if column in heldout_cells.obs:
+                provenance_row[column] = (
+                    heldout_cells.obs.iloc[source_positions][column].astype(str).tolist()
+                )
+        provenance.append(provenance_row)
 
     layers = {
         layer_name: sparse.vstack(rows_for_layer, format="csr", dtype=np.int64)
@@ -781,6 +785,9 @@ def write_simulation_dataset(
     labels_key: str = "cell_type",
     dataset_reference: Optional[ad.AnnData] = None,
     benchmark_scope: Optional[str] = None,
+    source: str = "pbmc_granulocyte_sorted_10k_shapemix_heldout_simulation",
+    description: Optional[str] = None,
+    scientific_scope: Optional[str] = None,
 ) -> Path:
     """Atomically write one complete dataset and refuse every overwrite."""
     output_root = Path(output_root)
@@ -848,8 +855,8 @@ def write_simulation_dataset(
 
         dataset_config = {
             "dataset_id": dataset_id,
-            "source": "pbmc_granulocyte_sorted_10k_shapemix_heldout_simulation",
-            "description": (
+            "source": source,
+            "description": description or (
                 "ShapeMix PBMC pseudo-spots aggregated exclusively from held-out cells; "
                 "this one-donor benchmark measures conditional resampling variability, "
                 "not donor-level or population-level generalization."
@@ -905,7 +912,7 @@ def write_simulation_dataset(
             "dataset_id": dataset_id,
             "status": "complete",
             "benchmark_scope": benchmark_scope,
-            "scientific_scope": (
+            "scientific_scope": scientific_scope or (
                 "Conditional resampling variability within one PBMC Multiome donor; "
                 "not donor-level or biological generalization uncertainty."
             ),

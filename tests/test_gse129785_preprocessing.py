@@ -7,9 +7,11 @@ from scripts.download_gse129785 import load_config, resources_from_config
 from scripts.preprocess_gse129785 import (
     DEFAULT_CONFIG,
     REFERENCE_TYPES,
+    ROOT,
     is_bgzf,
     merged_query_regions,
     parse_author_peaks,
+    physical_dilution_descriptor,
 )
 from deconvatac.pp import PeakInterval
 
@@ -68,4 +70,40 @@ def test_peak_queries_include_end_at_peak_start_without_duplicate_windows():
         ("chr1", 99, 400),
         ("chr1", 500, 600),
         ("chr2", 0, 50),
+    )
+
+
+def test_physical_dilution_descriptor_keeps_nominal_evidence_out_of_truth():
+    dataset_id = "gse129785_shapemix_physical_dilution_test"
+    dataset_root = ROOT / "data/processed/datasets" / dataset_id
+    descriptor = physical_dilution_descriptor(
+        {
+            "gsm": "GSM_TEST",
+            "family": "cd4_memory_cd8_naive",
+            "components": ["CD4 Memory", "CD8 Naive"],
+            "fractions": [0.001, 0.999],
+        },
+        dataset_id,
+        ROOT / "data/processed/references/gse129785_immune/atac/reference.h5ad",
+        dataset_root / "atac/spatial.h5ad",
+        dataset_root / "atac/features/selected_reference_peaks.txt",
+        dataset_root / "validation/nominal_broad_proportions.csv",
+    )
+
+    assert "truth" not in descriptor["modalities"]["atac"]
+    nominal = descriptor["validation"]["nominal_broad_proportions"]
+    assert nominal == {
+        "path": (
+            "data/processed/datasets/"
+            "gse129785_shapemix_physical_dilution_test/"
+            "validation/nominal_broad_proportions.csv"
+        ),
+        "evidence_class": "nominal_sample_level",
+        "exact_truth": False,
+    }
+    assert descriptor["benchmark_scope"] == "external_validation_nominal"
+    assert (
+        descriptor["physical_dilution"]["evidence_limitation"]
+        == "Nominal sample-level input proportions; sorting and cell-recovery "
+        "uncertainty remain."
     )

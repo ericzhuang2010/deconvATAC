@@ -1,0 +1,57 @@
+schema_version: 1
+template_id: shapemix_pbmc_stress_v1
+status: frozen_before_predictions
+builder: scripts/prepare_shapemix_pbmc_sensitivity.py
+source_split: data/processed/shapemix/pbmc_granulocyte_sorted_10k/split_1103
+output_root: data/processed/datasets
+reference_root: data/processed/references/shapemix_pbmc_stress_v1
+reusable_root: data/processed/shapemix/pbmc_granulocyte_sorted_10k/sensitivity/stress_v1
+registry: data/registry/datasets.yaml
+evaluation:
+  outer_split_seed: 1103
+  inner_mixture_seeds: [307, 401]
+  num_spots: 1024
+  grid_shape: [32, 32]
+anchor:
+  condition: observed_abundance
+  cell_types: all_frozen_16
+  mean_cells_per_spot: 10.0
+  selected_peaks: 5000
+  depth_retain_probability: null
+  reference_support: all_available
+  bins:
+    - [0, 100]
+    - [100, 250]
+    - [250, null]
+factors:
+  depth:
+    levels: [keep_0p25, keep_0p50, keep_0p75, keep_1p00]
+    control: keep_1p00
+  cells:
+    levels: [mean_2, mean_5, mean_10, mean_20]
+    control: mean_10
+  rare_nk:
+    levels: [fraction_0p001, fraction_0p005, fraction_0p010, observed]
+    control: observed
+  subtype:
+    levels: [broad3, cd4_related3]
+    control: broad3
+  reference_support:
+    levels: [per_type_50, per_type_100, per_type_250, all]
+    control: all
+  features:
+    levels: [peaks_1000, peaks_2500, peaks_5000]
+    control: peaks_5000
+  bins:
+    levels: [two, three, five]
+    control: three
+    two: [[0, 100], [100, null]]
+    five: [[0, 80], [80, 100], [100, 180], [180, 250], [250, null]]
+materialization:
+  unique_datasets: 40
+  one_factor_at_a_time: true
+  complete_factorial: false
+  depth_by_rare_interaction: false
+  no_overwrite: true
+  registry_after_complete_validation: true
+

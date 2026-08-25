@@ -1,6 +1,6 @@
 # ShapeMix additional dataset acquisition and preprocessing plan
 
-Status: GSE129785 acquisition and preprocessing completed on 2026-08-24; GSE194122, GSE205055/GSE205052, and GSE263333 remain planned
+Status: GSE129785, GSE194122, GSE205055, and GSE263333 acquisition and source-ready preprocessing completed on 2026-08-24; the real-spatial reference gates and downstream external experiments remain planned
 
 This document specifies the additional data needed after the completed one-donor PBMC benchmark. It defines the scientific role of each source, where its raw and processed files should live, and the preprocessing required before it can be used by ShapeMix. It does not change, replace, or reinterpret the completed protocol-v1 PBMC result.
 
@@ -18,7 +18,7 @@ The planned sources are:
 | Family | Organism and tissue | Main role | Exact composition truth? | Raw fragment availability | Preprocessing required? |
 |---|---|---|---|---|---|
 | Existing 10x PBMC sensitivity datasets | Human peripheral blood | Controlled depth, spot-size, rare-cell, subtype, feature, and bin stress tests | Yes, from recorded source cells | Already available locally | Yes; derived datasets only |
-| [GSE129785](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE129785) | Human PBMC, sorted immune cells, bone marrow, and tumor samples | Independent immune data, physical dilution series, and fresh/frozen mismatch | Nominal sample-level truth for dilution samples; exact truth for newly recorded pseudo-spots | Per-sample fragment TSV files and SRA reads | Yes |
+| [GSE129785](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE129785) | Human PBMC, sorted immune cells, bone marrow, and tumor samples | Independent immune data, physical dilution series, and fresh/frozen mismatch | No exact truth for physical dilutions; nominal ratios are validation evidence. Exact truth is available only for newly recorded pseudo-spots | Per-sample fragment TSV files and SRA reads | Yes |
 | [GSE194122](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE194122) | Human bone marrow mononuclear cells from 12 healthy donors and four sites | Donor- and site-level quantitative generalization | Yes for pseudo-spots built from annotated held-out donor cells | Raw reads in SRA; processed Multiome H5AD on GEO | Yes; substantial |
 | [GSE205055](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE205055), especially ATAC SubSeries [GSE205052](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE205052) | Mouse embryo, mouse brain, and human brain spatial epigenome/transcriptome samples | Real spatial ATAC validation | No exact proportions | Spatial fragment TSVs and SRA reads | Yes |
 | [GSE263333](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE263333) | Mouse spatial multi-omics tissue sections | Real spatial ATAC validation with RNA, protein, and histone-mark evidence | No exact proportions | Spatial ATAC fragment TSVs and SRA reads | Yes |
@@ -45,8 +45,8 @@ Examples:
 ```text
 data/raw/sources/ncbi_geo/GSE129785/samples/GSM3722011/source_files/
 data/raw/sources/ncbi_geo/GSE194122/processed_downloads/
-data/raw/sources/ncbi_geo/GSE205055/samples/GSM6801813/source_files/
-data/raw/sources/ncbi_geo/GSE263333/samples/GSM8189706/source_files/
+data/raw/sources/ncbi_geo/GSE205055/processed_downloads/GSE205055_RAW.tar
+data/raw/sources/ncbi_geo/GSE263333/processed_downloads/GSE263333_RAW.tar
 ```
 
 Do not modify, recompress, rename, lift over, sort, or index files inside `source_files/`. Any normalized BGZF copy, tabix index, aligned BAM, reconstructed fragment table, or genome-converted artifact is derived data and belongs under `data/processed/shapemix/`.
@@ -256,6 +256,8 @@ This source should be the first external acquisition pilot because author-provid
 
 ## 6. GSE194122 multi-donor BMMC Multiome data
 
+Status: complete through source-ready preprocessing. See the [GSE194122 preprocessing record](gse194122_preprocessing.md) and tracked lock `configs/data_sources/shapemix_gse194122_lock.yaml`.
+
 ### 6.1 Description and scientific use
 
 [GSE194122](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE194122) contains single-cell multi-omics data from 12 healthy human bone-marrow donors collected at four sites. Its Multiome arm contains paired RNA and ATAC measurements and author-provided cell annotations. Donor 1 appears at multiple sites, which permits a useful separation of donor effects from site effects.
@@ -268,7 +270,7 @@ The primary role is quantitative leave-one-donor-out evaluation:
 - summarize effects first by donor; and
 - never treat spots or mixture seeds as biological replicates.
 
-The initial acquisition includes the processed `GSE194122_openproblems_neurips2021_multiome_BMMC_processed.h5ad.gz` file and all Multiome ATAC samples listed on GEO. A representative sample, [GSM5828481](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM5828481), was processed with Cell Ranger ARC 2.0 against GRCh38 but exposes raw data through SRA rather than a supplementary fragment file.
+The acquisition includes the processed `GSE194122_openproblems_neurips2021_multiome_BMMC_processed.h5ad.gz` file and all 13 Multiome ATAC site/donor samples listed on GEO. GEO exposes the author Cell Ranger ARC 2.0 BAMs through SRA rather than as supplementary fragment files. The public Open Problems post-competition bucket, referenced by a public primary-analysis workflow, provides the 13 corresponding author Cell Ranger ARC fragment files, tabix indexes, and per-barcode metrics files. Those 39 objects total 31,687,758,209 bytes, compared with 531,234,571,942 bytes for the frozen NCBI BAM fallback.
 
 ### 6.2 Planned locations
 
@@ -276,13 +278,17 @@ The initial acquisition includes the processed `GSE194122_openproblems_neurips20
 data/raw/sources/ncbi_geo/GSE194122/
   series_metadata/
   processed_downloads/GSE194122_openproblems_neurips2021_multiome_BMMC_processed.h5ad.gz
-  samples/<GSM>/sra/<SRR>.sra
+  samples/<GSM>/source_files/
+    atac_fragments.tsv.gz
+    atac_fragments.tsv.gz.tbi
+    per_barcode_metrics.csv
 
 configs/data_sources/shapemix_gse194122.yaml
 
 data/processed/shapemix/gse194122_bmmc/
   source_audit/
-  reconstructed_fragments/<site>_<donor>/
+  source_object/
+  normalized_fragments/GRCh38/<sample_key>/
   fragment_shape_cache/
   harmonized_labels/
   feature_axes/
@@ -296,45 +302,45 @@ data/processed/datasets/
 
 ### 6.3 Required preprocessing
 
-Yes, and it is the heaviest preprocessing family:
+Yes. Source-ready preprocessing now does the following:
 
-1. Resolve all Multiome ATAC GSM/SRR, donor, and site mappings from GEO/SRA metadata.
-2. Inspect the processed H5AD for cell IDs, author cell types, donor/site columns, ATAC features, RNA labels, and doublet/QC exclusions.
-3. Pilot one sample before downloading every raw run.
-4. Reconstruct deduplicated fragment tables from the submitted reads with a pinned Multiome-aware pipeline, or acquire original ARC fragment/BAM outputs if an authoritative source becomes available.
-5. Demonstrate exact barcode mapping between reconstructed fragments and processed H5AD cells.
-6. Reconstruct a subset of the processed ATAC matrix to freeze cut coordinates, duplicate handling, and count semantics.
-7. Harmonize cell types across donors using training metadata only and exclude types lacking adequate support under a predeclared rule.
-8. Build donor-held-out peak axes, signatures, and pseudo-spots without held-out leakage.
-9. Report within-site, cross-site, and cross-donor performance separately.
+1. Freeze all 13 Multiome ATAC GSM/SRR/BioSample, donor/site, original BAM, and author fragment-product identities.
+2. Audit the 69,249-cell by 129,921-feature H5AD, including 22 author cell types, ten donors, four sites, 116,490 ATAC peaks, 13,431 genes, and the raw count layer.
+3. Retain the 13 author fragments/indexes/metrics trios as verified hard links under the processed tree.
+4. Map every processed cell by its 16-base sequence to the called Cell Ranger common `barcode` written in fragment column 4; retain the distinct raw ATAC-library barcode from `per_barcode_metrics.csv` only as provenance.
+5. Compare a deterministic GSM5828489 count-matrix subset to the full fragments, proving that the depth-normalized aggregate H5AD counts are contained entrywise and freezing `chromEnd` as the right-cut coordinate with one count per deduplicated fragment row.
+6. Preserve author labels without biological reinterpretation and write ten exact donor-held-out membership tables.
 
-Do not begin the full SRA download until the one-sample pilot establishes the barcode layout, processing command, temporary-space requirement, expected fragments, and matrix-reconstruction tolerance.
+The remaining experiment-specific work is deliberately downstream: apply a predeclared training-support rule to the 22 labels, select peaks independently within each training fold, build fragment-shape caches and signatures on training donors only, construct held-out-donor pseudo-spots, and report within-site, cross-site, and cross-donor effects separately.
+
+The complete SRA/BAM download is no longer necessary. The BAM identities remain frozen as a reconstruction fallback, but the authoritative author fragment suite is the primary route.
 
 ## 7. GSE205055 spatial ATAC–RNA data
 
+Status: complete through source-ready preprocessing. See the [GSE205055/GSE263333 preprocessing record](gse205055_gse263333_preprocessing.md) and tracked lock `configs/data_sources/shapemix_gse205055_lock.yaml`.
+
 ### 7.1 Description and scientific use
 
-[GSE205055](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE205055) is a spatial epigenome/transcriptome SuperSeries. Relevant SubSeries include mouse ATAC [GSE205052](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE205052), mouse RNA GSE205054, human ATAC GSE205180, and human RNA GSE205181. The series contains mouse embryo, mouse brain, and human brain sections at multiple spatial resolutions and includes spatial coordinates or image-related files.
+[GSE205055](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE205055) is a spatial epigenome/transcriptome SuperSeries. The complete acquired family includes mouse CUT&Tag GSE205051, mouse ATAC [GSE205052](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE205052), mouse RNA GSE205054, human ATAC GSE205180, human RNA GSE205181, mouse spatial CUT&Tag replicates GSE217091, and mouse RNA replicates GSE218593. Together these SubSeries contain mouse embryo, mouse brain, and human hippocampus sections at multiple spatial resolutions, with spatial coordinates and image assets.
 
-The first real-spatial pilot should use one matched ATAC/RNA section pair with deposited fragment and spatial files. [GSM6801813](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM6801813), for example, is an E13 mouse embryo 50-um ATAC sample with a 440 MB BED-like fragment file and spatial archive. Replicate mouse-brain sections can follow after the pilot.
+The immutable acquisition is the complete parent processed-data archive rather than a hand-picked sample subset: 38 unique supplementary files from 22 samples. Six matched ATAC/RNA groups are available for later ShapeMix analysis; the remaining deposited modalities are retained as orthogonal validation evidence. [GSM6801813](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM6801813), for example, is an E13 mouse embryo 50-um ATAC sample with a deposited BED-like fragment file and spatial archive.
 
 ### 7.2 Planned locations
 
 ```text
 data/raw/sources/ncbi_geo/GSE205055/
-  series_metadata/
-  subseries/GSE205052/<GSM>/atac/
-  subseries/GSE205054/<GSM>/rna/
-  subseries/GSE205180/<GSM>/atac/
-  subseries/GSE205181/<GSM>/rna/
+  series_metadata/<GSE>_family.soft.gz
+  processed_downloads/GSE205055_RAW.tar
 
 configs/data_sources/shapemix_gse205055.yaml
 
 data/processed/shapemix/gse205055_spatial/
   source_audit/
-  normalized_fragments/<sample>/
-  spatial_coordinates/<sample>/
-  cross_modality_alignment/<sample>/
+  extracted_payload/<GSM>/
+  normalized_atac_fragments/<GSM>/
+  validation_modalities/{epigenome,rna}/<GSM>/
+  spatial_coordinates/<GSM>/
+  cross_modality_alignment/<group>.yaml
   feature_axes/<reference_id>/
   fragment_shape_spatial/<sample>/
 
@@ -379,15 +385,17 @@ Reference selection is a preprocessing gate, not an afterthought:
 - freeze label harmonization and the shared cell-type universe before inspecting spatial maps; and
 - select peaks from the single-cell reference only.
 
-Potential sources to audit include the adult mouse tissue scATAC atlas [GSE111586](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111586) for adult mouse brain and the human brain snATAC atlas [GSE244618](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244618) for human brain. These are candidate references, not yet approved downloads. The human atlas is very large, so a region- and donor-limited subset should be defined before acquisition. An E13-compatible mouse embryo reference still must be selected and audited.
+The preferred adult mouse-brain candidate is [GSE246791](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE246791), whose processed per-sample H5AD objects retain raw mm10 fragments; its labels and parent-fragment semantics still require an audit. [GSE111586](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111586) remains a fallback, but its processed matrices are mm9 and lack fragment lengths. The human brain candidate is [GSE244618](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE244618), frozen to hippocampal regions and donors before download. The embryo candidate is [GSE216371](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE216371), an E10.5-E13.5 whole-embryo mm10 SPATAC atlas with cell-level annotations and deposited fragment BED files. These candidates still require fragment, barcode, label, and coordinate gates.
 
 ## 8. GSE263333 spatial-Mux-seq data
+
+Status: complete through source-ready preprocessing. See the [GSE205055/GSE263333 preprocessing record](gse205055_gse263333_preprocessing.md) and tracked lock `configs/data_sources/shapemix_gse263333_lock.yaml`.
 
 ### 8.1 Description and scientific use
 
 [GSE263333](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE263333) contains mouse spatial multi-omics measurements. It combines spatial ATAC with RNA and, for selected sections, proteins and histone modifications. This makes it a valuable orthogonal validation family after the simpler GSE205055 pilot.
 
-The initial ShapeMix scope contains the two sample groups with explicit ATAC fragments:
+The immutable acquisition contains the complete 12-sample, 32-file processed deposit. The eventual ShapeMix scope contains the two sample groups with explicit ATAC fragments:
 
 | ATAC sample | Paired evidence | Notes |
 |---|---|---|
@@ -396,25 +404,24 @@ The initial ShapeMix scope contains the two sample groups with explicit ATAC fra
 
 Only files explicitly identified as ATAC fragments may populate ShapeMix fragment-length layers. CUT&Tag fragment lengths measure a different assay and must remain separate validation modalities.
 
+GEO labels GSM8494157-GSM8494159 as `tissue: Embryo`, but the primary publication and the deposited `5M` names identify this group as five-month-old EAE mouse brain. The preprocessing manifest uses the publication-supported identity and permanently records the GEO discrepancy; it must not be silently discarded.
+
 ### 8.2 Planned locations
 
 ```text
 data/raw/sources/ncbi_geo/GSE263333/
-  series_metadata/
-  samples/GSM8189706/source_files/
-  samples/GSM8189707/source_files/
-  samples/GSM8494157/source_files/
-  samples/GSM8494158/source_files/
-  samples/GSM8494159/source_files/
+  series_metadata/GSE263333_family.soft.gz
+  processed_downloads/GSE263333_RAW.tar
 
 configs/data_sources/shapemix_gse263333.yaml
 
 data/processed/shapemix/gse263333_spatial_mux/
   source_audit/
+  extracted_payload/<GSM>/
   normalized_atac_fragments/<sample>/
   spatial_coordinates/<sample>/
   cross_modality_alignment/<sample>/
-  validation_modalities/<sample>/
+  validation_modalities/{epigenome,rna,protein}/<sample>/
   fragment_shape_spatial/<sample>/
 
 data/processed/datasets/
@@ -441,11 +448,12 @@ Acquire and preprocess in this order:
 1. Generate the existing-PBMC stress datasets; no external download is required.
 2. Download and validate one GSE129785 dilution fragment file and its matching pure/reference samples.
 3. Freeze the full ShapeMix-relevant GSE129785 sample list, then acquire that immune subset.
-4. Download the GSE194122 processed H5AD and pilot one Multiome ATAC SRA sample.
-5. After the pilot passes barcode and matrix reconstruction, acquire the remaining Multiome ATAC runs.
-6. Pilot one GSE205055 matched ATAC/RNA spatial section after selecting its single-cell reference.
-7. Process the two GSE263333 ATAC-bearing spatial-Mux groups and their orthogonal modalities.
-8. Expand real-spatial validation to additional sections or species only after the first complete section passes.
+4. Acquire the GSE194122 processed H5AD and complete 13-sample author fragment/index/metrics suite. Completed 2026-08-24; the 531 GB NCBI BAM inventory is retained only as a frozen fallback.
+5. Audit the GSE194122 barcode bridge and raw count semantics, then freeze donor-held-out membership indices. Completed 2026-08-24; fold-specific peaks, signatures, pseudo-spots, and fits remain downstream experiments.
+6. Acquire and source-preprocess the complete GSE205055 parent archive and all related SubSeries metadata. Completed 2026-08-24; reference selection remains gated.
+7. Acquire and source-preprocess the complete GSE263333 archive, including both ATAC groups and all orthogonal modalities. Completed 2026-08-24; reference selection remains gated.
+8. Select and audit compatible fragment-level references before constructing any runnable real-spatial ShapeMix dataset.
+9. Expand real-spatial validation to additional sections or species only after the first reference-aligned section passes.
 
 The following gate must be satisfied before a source advances:
 

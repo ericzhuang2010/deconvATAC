@@ -1,0 +1,74 @@
+description: >-
+  Frozen one-factor-at-a-time PBMC diagnostic sensitivity campaign following
+  the negative protocol-v1 result. Exact source-cell pseudo-spot truth is used.
+benchmark_scope: secondary_one_donor_diagnostic_sensitivity
+protocol:
+  name: shapemix_full_evaluation
+  version: 1
+  frozen_date: "2026-08-24"
+  outer_split_seed: 1103
+  inner_mixture_seeds: [307, 401]
+  analysis_unit: outer_split_heldout_resampling
+  limitation: one donor; explanatory conditional resampling only
+run_group: shapemix_pbmc_stress_protocol_v1_cuda
+datasets:
+  - pbmc_shapemix_stress_v1_anchor_standard_mix_307
+  - pbmc_shapemix_stress_v1_depth_keep_0p25_mix_307
+  - pbmc_shapemix_stress_v1_depth_keep_0p50_mix_307
+  - pbmc_shapemix_stress_v1_depth_keep_0p75_mix_307
+  - pbmc_shapemix_stress_v1_cells_mean_2_mix_307
+  - pbmc_shapemix_stress_v1_cells_mean_5_mix_307
+  - pbmc_shapemix_stress_v1_cells_mean_20_mix_307
+  - pbmc_shapemix_stress_v1_rare_nk_fraction_0p001_mix_307
+  - pbmc_shapemix_stress_v1_rare_nk_fraction_0p005_mix_307
+  - pbmc_shapemix_stress_v1_rare_nk_fraction_0p010_mix_307
+  - pbmc_shapemix_stress_v1_features_peaks_1000_mix_307
+  - pbmc_shapemix_stress_v1_features_peaks_2500_mix_307
+  - pbmc_shapemix_stress_v1_subtype_broad3_mix_307
+  - pbmc_shapemix_stress_v1_subtype_cd4_related3_mix_307
+  - pbmc_shapemix_stress_v1_reference_support_per_type_50_mix_307
+  - pbmc_shapemix_stress_v1_reference_support_per_type_100_mix_307
+  - pbmc_shapemix_stress_v1_reference_support_per_type_250_mix_307
+  - pbmc_shapemix_stress_v1_reference_support_all_mix_307
+  - pbmc_shapemix_stress_v1_bins_two_mix_307
+  - pbmc_shapemix_stress_v1_bins_five_mix_307
+  - pbmc_shapemix_stress_v1_anchor_standard_mix_401
+  - pbmc_shapemix_stress_v1_depth_keep_0p25_mix_401
+  - pbmc_shapemix_stress_v1_depth_keep_0p50_mix_401
+  - pbmc_shapemix_stress_v1_depth_keep_0p75_mix_401
+  - pbmc_shapemix_stress_v1_cells_mean_2_mix_401
+  - pbmc_shapemix_stress_v1_cells_mean_5_mix_401
+  - pbmc_shapemix_stress_v1_cells_mean_20_mix_401
+  - pbmc_shapemix_stress_v1_rare_nk_fraction_0p001_mix_401
+  - pbmc_shapemix_stress_v1_rare_nk_fraction_0p005_mix_401
+  - pbmc_shapemix_stress_v1_rare_nk_fraction_0p010_mix_401
+  - pbmc_shapemix_stress_v1_features_peaks_1000_mix_401
+  - pbmc_shapemix_stress_v1_features_peaks_2500_mix_401
+  - pbmc_shapemix_stress_v1_subtype_broad3_mix_401
+  - pbmc_shapemix_stress_v1_subtype_cd4_related3_mix_401
+  - pbmc_shapemix_stress_v1_reference_support_per_type_50_mix_401
+  - pbmc_shapemix_stress_v1_reference_support_per_type_100_mix_401
+  - pbmc_shapemix_stress_v1_reference_support_per_type_250_mix_401
+  - pbmc_shapemix_stress_v1_reference_support_all_mix_401
+  - pbmc_shapemix_stress_v1_bins_two_mix_401
+  - pbmc_shapemix_stress_v1_bins_five_mix_401
+modalities: [atac]
+feature_sets:
+  atac: [highly_variable]
+method_runs:
+  - id: shapemix_length
+    method: shapemix
+    config: configs/methods/shapemix_cuda.yaml
+  - id: shapemix_count_only
+    method: shapemix
+    config: configs/methods/shapemix_count_only_cuda.yaml
+  - id: nnls
+    method: nnls
+    config: configs/methods/nnls.yaml
+evaluation_mode: exact_truth
+metrics: [rmse_v1, jsd_v2]
+output_root: results/sensitivity/shapemix_pbmc_stress_v1
+run_id_template: "{dataset}__{modality}__{feature_set}__{method_run_id}"
+skip_missing: false
+continue_on_error: true
+overwrite: false

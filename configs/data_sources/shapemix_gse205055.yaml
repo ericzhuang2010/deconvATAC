@@ -1,0 +1,118 @@
+schema_version: 1
+source_dataset_id: gse205055_spatial_epigenome_transcriptome
+accession: GSE205055
+provider: ncbi_geo
+organisms: [Mus musculus, Homo sapiens]
+raw_directory: data/raw/sources/ncbi_geo/GSE205055
+work_directory: data/work/downloads/gse205055
+processed_directory: data/processed/shapemix/gse205055_spatial
+archive:
+  filename: GSE205055_RAW.tar
+  role: complete_super_series_processed_supplementary_files
+  expected_bytes: 8177080320
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE205nnn/GSE205055/suppl/GSE205055_RAW.tar
+series_metadata:
+  - {accession: GSE205055, role: parent_super_series}
+  - {accession: GSE205051, role: mouse_cut_and_tag}
+  - {accession: GSE205052, role: mouse_atac}
+  - {accession: GSE205054, role: mouse_rna}
+  - {accession: GSE205180, role: human_atac}
+  - {accession: GSE205181, role: human_rna}
+  - {accession: GSE217091, role: mouse_spatial_cut_and_tag_replicates}
+  - {accession: GSE218593, role: mouse_rna_replicates}
+sample_groups:
+  - id: mouse_brain_p21_20um_primary
+    organism: Mus musculus
+    tissue: brain
+    stage: P21
+    resolution_um: 20
+    genome_build: mm10
+    atac: [GSM6204623]
+    rna: [GSM6204636]
+    validation_epigenome: [GSM6204621]
+    validation_epigenome_matrix: [GSM6204635]
+  - id: mouse_embryo_e13_25um
+    organism: Mus musculus
+    tissue: whole embryo
+    stage: E13
+    resolution_um: 25
+    genome_build: mm10
+    atac: [GSM6204624]
+    rna: [GSM6204637]
+    validation_epigenome: []
+  - id: mouse_brain_p21_20um_rep2
+    organism: Mus musculus
+    tissue: brain
+    stage: P21
+    resolution_um: 20
+    genome_build: mm10
+    atac: [GSM6758284]
+    rna: [GSM6753041]
+    validation_epigenome: [GSM6704977]
+    validation_epigenome_matrix: [GSM6753042]
+  - id: mouse_brain_p22_20um_100barcodes_rep2
+    organism: Mus musculus
+    tissue: brain
+    stage: P22
+    resolution_um: 20
+    genome_build: mm10
+    atac: [GSM6758285]
+    rna: [GSM6753043]
+    validation_epigenome: [GSM6704978, GSM6704979, GSM6704980]
+    validation_epigenome_matrix: [GSM6753044, GSM6753045, GSM6753046]
+  - id: mouse_embryo_e13_50um
+    organism: Mus musculus
+    tissue: whole embryo
+    stage: E13
+    resolution_um: 50
+    genome_build: mm10
+    atac: [GSM6801813]
+    rna: [GSM6799937]
+    validation_epigenome: []
+  - id: human_hippocampus_50um
+    organism: Homo sapiens
+    tissue: hippocampus
+    stage: adult
+    resolution_um: 50
+    genome_build: GRCh38
+    atac: [GSM6206884]
+    rna: [GSM6206885]
+    validation_epigenome: []
+reference_candidates:
+  mouse_brain:
+    accession: GSE246791
+    status: audit_only
+    caveat: processed per-sample H5AD objects retain raw mm10 fragments, but labels and parent-fragment semantics must pass a reference audit
+    fallback_accession: GSE111586
+    fallback_caveat: author processed matrices are mm9 and do not retain parent-fragment lengths; raw-read reconstruction and mm10 realignment are required
+  mouse_embryo_whole:
+    accession: GSE216371
+    status: audit_only
+    caveat: the E10.5-E13.5 whole-embryo atlas has cell-level labels and mm10 fragment BED files; pooled SPATAC barcode and parent-fragment semantics must pass a reference audit
+  human_hippocampus:
+    accession: GSE244618
+    status: audit_only
+    caveat: use a frozen hippocampal region/donor subset; validate labels and BEDPE parent-fragment semantics before acquisition
+preprocessing_policy:
+  raw_archive: retain byte-for-byte and extract only into the processed family tree
+  atac_only_for_shapemix: true
+  other_epigenome_assays: validation_only
+  normalize_fragments: BGZF plus tabix without modifying source archive
+  coordinate_system: zero-based half-open intervals as deposited; audit Tn5 endpoint convention separately
+  spatial_assets: safely extract images, scale factors, and tissue positions
+  rna: convert deposited pixel-by-gene matrices to sparse H5AD
+  cross_modality: compare canonical pixel identifiers using the declared barcode policy within each sample group
+  feature_axis: must come from a compatible frozen single-cell ATAC reference
+  truth_policy: no exact proportions; store orthogonal validation only
+barcode_policy:
+  fragment_terminal_suffix_to_strip: "-1"
+  canonical_form: deposited spatial-coordinate and matrix barcode without the terminal fragment suffix
+  require_suffix_on_every_fragment_barcode: true
+validation_gates:
+  - exact archive byte size and SHA-256
+  - complete tar stream and safe member paths
+  - complete gzip streams for every compressed member
+  - full fragment-schema, coordinate-order, assay, and barcode audit
+  - exact spatial coordinate and modality pixel reconciliation
+  - no non-ATAC fragment file may enter ShapeMix layers
+  - no runnable ShapeMix dataset before a compatible labeled reference passes

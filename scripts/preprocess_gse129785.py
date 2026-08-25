@@ -866,6 +866,62 @@ def external_modality_descriptor(
     }
 
 
+def physical_dilution_descriptor(
+    sample: Mapping[str, Any],
+    dataset_id: str,
+    reference_path: Path,
+    spatial_path: Path,
+    feature_path: Path,
+    nominal_path: Path,
+) -> dict[str, Any]:
+    """Return a runnable descriptor with nominal evidence outside exact truth."""
+    gsm = str(sample["gsm"])
+    quantitative = str(sample["family"]) == "cd4_memory_cd8_naive"
+    return {
+        "dataset_id": dataset_id,
+        "source": "GSE129785 physical dilution",
+        "description": (
+            "One physical scATAC dilution sample; proportions are nominal "
+            "sample-level inputs."
+        ),
+        "labels_key": "cell_type",
+        "spatial_key": "spatial",
+        "benchmark_scope": (
+            "external_validation_nominal"
+            if quantitative
+            else "exploratory_nominal_broad_validation"
+        ),
+        "shapemix_seeds": {
+            "outer_split_seed": 0,
+            "inner_mixture_seed": 0,
+        },
+        "physical_dilution": {
+            "gsm": gsm,
+            "family": sample["family"],
+            "components": list(sample["components"]),
+            "nominal_fractions": list(sample["fractions"]),
+            "evidence_limitation": (
+                "Nominal sample-level input proportions; sorting and cell-recovery "
+                "uncertainty remain."
+            ),
+        },
+        "validation": {
+            "nominal_broad_proportions": {
+                "path": str(nominal_path.relative_to(ROOT)),
+                "evidence_class": "nominal_sample_level",
+                "exact_truth": False,
+            }
+        },
+        "modalities": {
+            "atac": external_modality_descriptor(
+                reference_path,
+                spatial_path,
+                feature_path,
+            )
+        },
+    }
+
+
 def materialize_outputs(config: Mapping[str, Any], overwrite: bool = False) -> None:
     """Write the reference and all runnable physical evaluation datasets."""
     reference_samples = [
@@ -934,55 +990,16 @@ def materialize_outputs(config: Mapping[str, Any], overwrite: bool = False) -> N
             index=pd.Index([gsm], name="spot"),
             columns=list(sample["components"]),
         )
-        nominal.to_csv(validation_dir / "nominal_broad_proportions.csv")
-        quantitative = str(sample["family"]) == "cd4_memory_cd8_naive"
-        truth_record: Optional[dict[str, Any]] = None
-        if quantitative:
-            truth_dir = dataset_root / "truth"
-            truth_dir.mkdir(parents=True, exist_ok=True)
-            truth = pd.DataFrame(0.0, index=[gsm], columns=REFERENCE_TYPES)
-            truth.index.name = "spot"
-            truth.loc[gsm, "Memory CD4 T cells"] = float(sample["fractions"][0])
-            truth.loc[gsm, "Naive CD8 T cells"] = float(sample["fractions"][1])
-            truth_path = truth_dir / "proportions.csv"
-            truth.to_csv(truth_path)
-            truth_record = {
-                "path": str(truth_path.relative_to(ROOT)),
-                "cell_types": list(REFERENCE_TYPES),
-            }
-        modality = external_modality_descriptor(
-            reference_path, spatial_path, feature_path
+        nominal_path = validation_dir / "nominal_broad_proportions.csv"
+        nominal.to_csv(nominal_path)
+        descriptor = physical_dilution_descriptor(
+            sample,
+            dataset_id,
+            reference_path,
+            spatial_path,
+            feature_path,
+            nominal_path,
         )
-        if truth_record is not None:
-            modality["truth"] = truth_record
-        descriptor = {
-            "dataset_id": dataset_id,
-            "source": "GSE129785 physical dilution",
-            "description": (
-                "One physical scATAC dilution sample; proportions are nominal "
-                "sample-level inputs."
-            ),
-            "labels_key": "cell_type",
-            "spatial_key": "spatial",
-            "benchmark_scope": (
-                "external_validation" if quantitative else "exploratory_broad_truth"
-            ),
-            "shapemix_seeds": {
-                "outer_split_seed": 0,
-                "inner_mixture_seed": 0,
-            },
-            "physical_dilution": {
-                "gsm": gsm,
-                "family": sample["family"],
-                "components": list(sample["components"]),
-                "nominal_fractions": list(sample["fractions"]),
-                "truth_limitation": (
-                    "Nominal sample-level input proportions; sorting and cell-recovery "
-                    "uncertainty remain."
-                ),
-            },
-            "modalities": {"atac": modality},
-        }
         dump_yaml(dataset_root / "dataset.yaml", descriptor)
         registry[dataset_id] = {
             "config": str((dataset_root / "dataset.yaml").relative_to(ROOT))

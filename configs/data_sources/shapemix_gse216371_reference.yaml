@@ -1,0 +1,53 @@
+schema_version: 1
+source_dataset_id: shapemix_gse216371_whole_embryo_reference
+accession: GSE216371
+provider: ncbi_geo
+organism: Mus musculus
+tissue: whole embryo
+stages: [E10.5, E11.5, E12.5, E13.5]
+retained_stage: E13.5
+genome_build: mm10
+assay: SPATAC-seq
+raw_directory: data/raw/sources/ncbi_geo/GSE216371
+work_directory: data/work/downloads/gse216371_reference
+processed_directory: data/processed/shapemix/gse216371_embryo_reference
+standardized_reference_id: gse216371_mouse_embryo_e13_major_types_v1
+selection:
+  policy: retain every author-annotated E13.5 cell from all 68 combinatorial wells
+  label_resolution: frozen broad major-cell-type ontology derived from the author annotation workbook
+  rationale: matches the whole-embryo scope and stage of the real-spatial E13 sections
+resources:
+  - name: GSE216371_family.soft.gz
+    role: geo_family_metadata
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE216nnn/GSE216371/soft/GSE216371_family.soft.gz
+    expected_bytes: 8415
+    payload: gzip
+    destination: series_metadata/GSE216371_family.soft.gz
+  - name: GSE216371_Cell_annotation_and_cCREs_in_MOPA.xlsx
+    role: author_cell_annotations_and_candidate_ccres
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE216nnn/GSE216371/suppl/GSE216371_Cell_annotation_and_cCREs_in_MOPA.xlsx
+    expected_bytes: 120030035
+    payload: xlsx
+    destination: processed_downloads/GSE216371_Cell_annotation_and_cCREs_in_MOPA.xlsx
+  - name: GSE216371_RAW.tar
+    role: complete_author_fragment_bed_suite
+    url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE216nnn/GSE216371/suppl/GSE216371_RAW.tar
+    expected_bytes: 76141568000
+    payload: tar
+    destination: processed_downloads/GSE216371_RAW.tar
+preprocessing_policy:
+  immutable_source: retain byte-for-byte
+  extract_scope: stream the tar and retain E13.5 labeled-cell fragments only in derived caches
+  peak_selection: reference-only ranking from author cCREs
+  fragment_bins_bp: [[0, 100], [100, 250], [250, null]]
+  right_cut_offset: audit against the author accessibility matrix before freezing
+  truth_policy: reference labels are not spatial composition truth
+validation_gates:
+  - exact remote byte size and complete source stream
+  - safe complete tar traversal with exactly the GEO-declared BED members
+  - exact E13.5 annotation-to-fragment barcode mapping
+  - mm10 chromosome and coordinate validation
+  - positive parent-fragment lengths and frozen right-cut convention
+  - minimum broad-label support before feature selection
+  - nonnegative integer CSR layers whose sum equals X
+download_workers_max: 2

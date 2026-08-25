@@ -1,0 +1,25 @@
+schema_version: 1
+template_id: shapemix_gse194122_lodo_v1
+status: frozen_not_materialized
+source_manifest: configs/data_sources/shapemix_gse194122.yaml
+source_lock: configs/data_sources/shapemix_gse194122_lock.yaml
+builder: scripts/prepare_shapemix_gse194122.py
+experiment: configs/experiments/shapemix_gse194122_lodo.yaml
+reusable_root: data/processed/shapemix/gse194122_bmmc
+reference_root: data/processed/references
+dataset_root: data/processed/datasets
+registry: data/registry/datasets.yaml
+materialization:
+  outer_folds: 10
+  heldout_donors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  conditions: [observed_abundance, equal_celltype]
+  inner_mixture_seeds: [101, 211]
+  datasets: 40
+  exact_truth: true
+  selected_peaks_per_fold: 5000
+  no_overwrite: true
+stages:
+  - feature-axes
+  - fragment-caches
+  - fold-objects
+  - datasets

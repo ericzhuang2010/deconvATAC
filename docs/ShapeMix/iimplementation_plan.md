@@ -1,6 +1,6 @@
 # ShapeMix-ATAC implementation plan
 
-Status: active implementation roadmap; Steps 0 through 6 completed 2026-08-23
+Status: active implementation roadmap; Steps 0 through 6 completed 2026-08-23; all four planned external GEO source families acquired and source-preprocessed by 2026-08-24; full cross-dataset evaluation is planned in Section 13
 
 This document turns the ShapeMix concept into a repository-specific engineering and research plan and records the execution status of each step. The implementation preserves all current datasets and methods, creates new ShapeMix-specific data products, and makes the shape-aware versus peak-only comparison a controlled, reproducible ablation.
 
@@ -22,6 +22,8 @@ The minimum credible ShapeMix implementation is:
 Do not begin with variational inference, a spatial prior, motif footprints, learned reference signatures, or a large set of nuisance parameters. Those are gated extensions after the three-bin MAP model demonstrates that fragment length contributes useful information.
 
 No existing tracked file or current dataset should be deleted. In particular, preserve the current PBMC simulations even though they are unsuitable as the primary ShapeMix benchmark because their source-cell pool is also used as the deconvolution reference.
+
+The immediate priority after acquisition is now the full evaluation campaign in Section 13. It keeps the completed protocol-v1 PBMC result immutable, runs the already materialized GSE129785 evaluation first, builds leakage-free donor folds for GSE194122, and advances GSE205055/GSE263333 only after compatible labeled fragment-level references pass their own gates. GPU acceleration is an engineering prerequisite for that campaign, not a change to the statistical model.
 
 ## 2. Source documents and authority
 
@@ -772,7 +774,7 @@ Add cut-position, TSS, or motif-footprint layers only after fragment length succ
 
 #### 7F. External validation and hardening
 
-Add a second donor/dataset before making generalization claims. Real spatial ATAC validation should be qualitative unless independent cell-composition ground truth exists. Add `docs/ShapeMix/user_guide.md`, `docs/ShapeMix/results_interpretation.md`, profiling scripts, and README links only after the API and results stabilize.
+The external source acquisition originally anticipated here is complete for GSE129785, GSE194122, GSE205055, and GSE263333. Source acquisition is not identical to experiment readiness: GSE194122 still needs fold-specific shape layers and pseudo-spots, while the real-spatial families still require compatible labeled fragment-level references. Section 13 supersedes this subsection with the complete execution order, comparison matrix, GPU work, resource policy, and acceptance gates. Real spatial ATAC validation remains qualitative unless independent cell-composition ground truth exists.
 
 | Action | File | Planned change |
 |---|---|---|
@@ -788,7 +790,7 @@ Add a second donor/dataset before making generalization claims. Real spatial ATA
 ### Implemented additions through Step 6
 
 ```text
-docs/ShapeMix/implementation_plan.md          # created by this planning task
+docs/ShapeMix/iimplementation_plan.md         # active roadmap and execution record
 docs/ShapeMix/README.md
 docs/ShapeMix/model_specification.md
 docs/ShapeMix/benchmark_protocol.md
@@ -846,7 +848,7 @@ Gated extension files are excluded from the MVP list and should be added only wh
 .gitignore
 configs/data_sources/pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml
 docs/ShapeMix/README.md
-docs/ShapeMix/implementation_plan.md
+docs/ShapeMix/iimplementation_plan.md
 docs/ShapeMix/model_specification.md
 docs/recreate_data_directory (important).md
 
@@ -1001,3 +1003,322 @@ ShapeMix is ready for a first scientific conclusion when all of the following ar
 Execution status: **satisfied for the first one-donor conditional conclusion on 2026-08-23**. The conclusion is negative: the frozen fragment-length term did not improve the co-primary endpoints and generally degraded them. This milestone is not external validation and does not satisfy the separate requirement for a second donor or real-tissue generalization.
 
 Variational inference, spatial smoothing, motif footprints, and real-tissue maps are valuable follow-up work, but they are not required to answer the first ShapeMix research question.
+
+## 13. Full cross-dataset evaluation after source acquisition
+
+This section is the executable roadmap after completion of the four external acquisitions. It extends the completed one-donor protocol-v1 result; it does not replace, rerun, or reinterpret that frozen result. New configurations, datasets, and output groups require new IDs and hashes.
+
+The canonical path and lifecycle authority for every new artifact is [the ShapeMix file-organization specification](file_organization.md). If this section and that specification ever conflict, `file_organization.md` wins and the campaign must stop until the plan or implementation is corrected.
+
+### 13.1 Readiness is not the same as acquisition
+
+All planned GEO source families are present locally with pinned identities and source-ready preprocessing. They are at different analysis-readiness levels:
+
+| Family | Current state on 2026-08-24 | Experiment class | Remaining gate before fitting |
+|---|---|---|---|
+| Existing 10x PBMC | 20 primary datasets evaluated; fragment cache and five reference splits retained | Controlled mechanism and sensitivity | Materialize separately versioned stress datasets; do not alter protocol-v1 objects |
+| GSE129785 | Standardized nine-type reference plus 16 runner-readable datasets are registered; all physical ratios are validation-only and no descriptor declares exact truth | Seven quantitative nominal CD4-memory/CD8-naive dilutions; seven broad monocyte/T-cell dilutions; PBMC replicate and preparation robustness | Freeze the external experiment configuration and complete the all-descriptor runner preflight |
+| GSE194122 | All 13 fragment/index/metrics trios, 69,249 annotated cells, ten donor membership tables, and the processed Multiome object are validated | Quantitative leave-one-donor-out pseudo-spot evaluation | Freeze label support/harmonization, select peaks within each training fold, build shape layers and held-out-donor pseudo-spots, then register datasets |
+| GSE205055 | Complete source archive and related SubSeries are extracted; six matched ATAC/RNA spatial groups are aligned | Real-spatial validation without exact composition truth | Acquire and validate species/tissue/stage-compatible labeled scATAC or Multiome references and build shared feature axes |
+| GSE263333 | Complete source archive is extracted; two ATAC sections are aligned to RNA and available protein/histone evidence | Real-spatial multi-omic validation without exact composition truth | Acquire and validate compatible mouse embryo and adult/EAE-brain labeled fragment references and build shared feature axes |
+
+The last two rows are deliberately blocked from deconvolution until their reference gates pass. A spatial fragment file supplies the mixture but cannot by itself supply the fixed labeled cell-type signatures required by ShapeMix.
+
+### 13.2 Frozen comparison and evidence rules
+
+Every runnable dataset receives the same core three-method comparison:
+
+1. `shapemix_length`: total-count negative binomial plus the conditional fragment-length term;
+2. `shapemix_count_only`: the exact nested model with only the conditional length term disabled; and
+3. `nnls`: a fast collapsed-count baseline on the same reference and ordered feature axis.
+
+The two ShapeMix arms must use identical device, dtype, optimizer, initialization, restarts, convergence budget, signatures, spot ordering, and feature ordering. Only `use_shape` may differ. Cell2location, RCTD, and SpatialDWLS remain secondary baseline tracks: activate them only after their device/dependency pilots and frozen configurations pass. A missing optional baseline is reported as a gated limitation, never as an omitted or silently failed result.
+
+Evidence classes must remain separate:
+
+- Exact pseudo-spot truth supports `rmse_v1`, `jsd_v2`, per-type errors, correlations, and rare-cell detection metrics.
+- GSE129785 physical dilution ratios are nominal sample-level inputs. Report mixture-ratio error, monotonicity, calibration, and rare-component detection, but retain sorting and differential-recovery uncertainty.
+- Unlabelled PBMC/preparation cohorts support replicate stability and preparation sensitivity, not truth-based accuracy.
+- Real spatial sections support RNA/protein/histone/marker/anatomy concordance and map stability, not RMSE or JSD against a manufactured truth table.
+- The biological replication unit is the donor for GSE194122, the independently prepared sample/section where available for physical or spatial data, and never the spot, pixel, or repeated optimizer seed.
+
+### 13.3 Minimum core campaign matrix
+
+| Campaign | Materialized evaluation units | Frozen core design | Core jobs before optional baselines |
+|---|---:|---|---:|
+| Completed PBMC protocol v1 | 20 pseudo-spot datasets | Five outer cell splits × two inner mixtures × two abundance conditions | Already complete: 40 ShapeMix fits plus 20 NNLS fits |
+| GSE129785 external immune | 16 registered descriptors | Run both ShapeMix arms and NNLS on every descriptor; compare seven CD4-memory/CD8-naive samples with nominal validation evidence outside the runner truth contract | 48 |
+| GSE194122 BMMC | 40 planned pseudo-spot datasets | Ten held-out donors × two inner mixture seeds (`101`, `211`) × two conditions (`observed_abundance`, `equal_celltype`) | 120 |
+| GSE205055 real spatial | Six matched ATAC/RNA groups | One frozen compatible reference per species/tissue/stage track; run both ShapeMix arms and NNLS per section | 18 |
+| GSE263333 real spatial | Two ATAC-bearing multi-omic sections | Embryo and adult/EAE-brain reference tracks; run both ShapeMix arms and NNLS per section | 6 |
+
+The minimum new core is therefore 192 jobs, of which NNLS jobs should be short. This count excludes separately versioned PBMC stress datasets and optional Cell2location/RCTD/SpatialDWLS runs. Do not launch the 192-job campaign as one undifferentiated batch: each stage below has a fail-closed gate and its own summary.
+
+### 13.4 Ordered execution stages
+
+#### Evaluation stage E0 — Freeze the external protocol and preflight inputs
+
+- Add `docs/ShapeMix/full_evaluation_protocol.md` with immutable dataset roles, label universes, thresholds, endpoints, seeds, and analysis units.
+- Add tracked dataset reconstruction templates under `configs/datasets/` and separate experiment configurations under `configs/experiments/` for GSE129785, GSE194122, GSE205055, and GSE263333; do not place truth-bearing and qualitative datasets in one summary group.
+- Add a layout validator that enforces `file_organization.md` before promotion, registry mutation, campaign launch, and final summarization.
+- **Completed 2026-08-24:** migrated the seven GSE129785 CD4-memory/CD8-naive nominal ratio files out of the reserved `truth/` contract, removed their runner `truth` declarations, and updated the materializer so all 14 physical dilutions use `validation/nominal_broad_proportions.csv`.
+- Validate every registered dataset through `load_deconvolution_input`, exact shape-layer conservation, ordered-axis hashes, reference/test separation, and output-path collision checks.
+- Require project-relative authoritative paths; absolute paths may appear only as supplemental execution provenance.
+- Freeze harmonized label tables before fitting. Any later merge or exclusion creates a new protocol version and new dataset IDs.
+- Record a campaign inventory with planned, runnable, gated, successful, and failed units. A source-ready but non-runnable family must be shown as gated rather than absent.
+- Verify that the entire `results/` tree remains exposed to Git and that no data cache, download, or scratch artifact enters it.
+
+#### Evaluation stage E1 — Implement and qualify the CUDA backend
+
+Implement the GPU work in Sections 13.6–13.9 and pass CPU/CUDA parity, determinism, memory, and performance gates before external results are inspected. The development smoke dataset and one representative full-size protocol-v1 dataset are resource pilots only. They must be written outside the new external result roots and excluded from scientific summaries.
+
+#### Evaluation stage E2 — Run GSE129785
+
+This is first because all 16 descriptors and the standardized reference already exist.
+
+- Primary nominal-validation family: seven CD4-memory/CD8-naive ratios from 0.1/99.9 through 99.9/0.1. Read ratios from `validation/nominal_broad_proportions.csv`, never from the exact-truth loader contract. Report nominal-fraction RMSE/JSD descriptively, absolute error of the rare component, detection at 0.1%, 0.5%, and 1%, calibration slope/intercept, rank monotonicity across the series, and predicted off-target mass.
+- Exploratory physical family: seven monocyte/T-cell ratios. Score the broad monocyte-versus-total-T contrast only; do not present the broad ratios as subtype-level truth.
+- Unlabelled family: four PBMC replicates and three preparation conditions. Report replicate dispersion, preparation shifts, off-target mass, shape/count differences, reconstruction, and convergence without inventing truth.
+- Analyze one prepared sample as one sample. Barcodes aggregated within that preparation are not biological replicates.
+- Summarize the paired `length - count_only` effect separately for the quantitative-nominal, broad-nominal, and no-truth families.
+
+#### Evaluation stage E3 — Build and run GSE194122 donor-held-out evaluation
+
+For each of the ten Multiome donors:
+
+1. Exclude every occurrence of that donor across all sites before peak selection, signature estimation, smoothing, or tuning.
+2. Apply a frozen support rule to the 22 author labels. Produce one shared broad ontology for cross-donor summaries and retain original fine labels for secondary reporting. Fail a fold if a declared type lacks the predeclared training support; do not remove it after viewing predictions.
+3. Select 5,000 peaks from training donors only with the frozen count-only selector.
+4. Count three fragment-length layers for training and held-out cells on that exact axis and require their sum to equal collapsed counts.
+5. Create 1,024 held-out-donor pseudo-spots for each of two mixture seeds and each of the observed-abundance/equal-cell-type conditions. Record every source cell.
+6. Keep repeated sites for donor 1 and donor 3 on the held-out side together. Preserve site identity so within-donor site sensitivity can be reported without treating sites as extra donors.
+7. Run the three core methods, then summarize inner mixtures within donor before computing donor-level effects and intervals.
+
+Primary endpoints remain `rmse_v1` and `jsd_v2`; secondary endpoints include per-type error, rare-cell recovery, reconstruction, convergence, runtime, and site-stratified stability. This is the first campaign that can support donor-level biological generalization claims.
+
+#### Evaluation stage E4 — Run diagnostic PBMC stress tests
+
+Because protocol v1 was negative, stress tests are explanatory rather than a search for a favorable subset. Build one factor at a time from held-out cells, with the three-bin/5,000-peak/ten-cells-per-spot setting as the anchor:
+
+**Frozen 2026-08-24, pending guarded execution:** the exact levels, two
+evaluation seeds, alternate-bin edges, and controls are declared in
+`full_evaluation_protocol.md`. The design contains 40 unique datasets and 120
+core jobs. Its tracked reconstruction template, experiment config, builder,
+summarizer, and focused tests are present; no sensitivity prediction was read
+before the design was frozen.
+
+- fragment/cut-site depth retention;
+- cells per spot;
+- controlled rare-cell fraction;
+- closely related subtype mixtures;
+- reference training-cell support;
+- feasible peak-count levels after a source-universe audit; and
+- two-, three-, and five-bin representations.
+
+Run development seeds to validate each generator, then freeze the final factor levels and evaluation seeds before viewing paired accuracy. Do not run a complete factorial grid. Only a predeclared depth-by-rare-fraction interaction may follow the one-factor campaign.
+
+#### Evaluation stage E5 — Obtain references and run real-spatial sections
+
+Create three separately gated reference tracks rather than one universal atlas:
+
+- mouse embryo for the E13 sections;
+- adult mouse brain, with disease/protocol mismatch explicitly recorded for the five-month EAE section; and
+- adult human hippocampus for the human section.
+
+The frozen candidates are GSE246791 for adult mouse brain, a nine-sample GSE244618 hippocampal donor/region subset for human brain, and GSE216371 for E13-compatible whole mouse embryo. Candidate status is not approval: each source still requires acquisition, genome-build verification, labeled-cell support, parent-fragment semantics, and coordinate validation. Peak selection uses the reference only.
+
+For each section, freeze the reference, label universe, feature axis, and cross-modality alignment before fitting. Report:
+
+- ShapeMix-versus-count-only abundance-map correlation and absolute difference;
+- concordance with independently constructed RNA cell-type scores;
+- protein concordance where available;
+- histone/marker accessibility and anatomical-region enrichment;
+- replicate consistency for matched sections;
+- local spatial continuity and boundary preservation, reported descriptively because no spatial prior is used; and
+- off-reference mass or residual warnings rather than forcing every spatial signal into a known type.
+
+Do not tune labels, peaks, smoothing, or model parameters to maximize RNA/protein concordance on the same section later used for reporting.
+
+#### Evaluation stage E6 — Cross-family synthesis
+
+- Produce one summary per evidence class and a final cross-family table; never pool exact pseudo-truth, nominal physical truth, and qualitative spatial concordance into one effect estimate.
+- Treat GSE194122 donors as the population-level quantitative units. Present GSE129785 ratios and spatial sections individually because their small sample counts do not justify asymptotic uncertainty claims.
+- Relate gains or failures to depth, reference support, shape entropy/divergence, protocol mismatch, and residual diagnostics using predeclared analyses.
+- Report all failures, convergence exclusions, gated references, and unavailable baselines.
+- Preserve the negative protocol-v1 result and label all follow-up model changes as new versions.
+
+### 13.5 Canonical file organization for the new campaigns
+
+All generated files must follow [the canonical ShapeMix file-organization specification](file_organization.md). The paths below are normative for this campaign; scripts must not introduce parallel roots or source-specific synonyms. Authoritative paths written into YAML/JSON manifests are project-relative.
+
+#### Configuration and source identity
+
+```text
+configs/data_sources/<source_id>.yaml
+configs/datasets/<dataset_id>.yaml
+configs/experiments/<campaign_id>.yaml
+configs/methods/<method_or_variant>.yaml
+```
+
+Source identities for any newly acquired spatial reference remain under `configs/data_sources/`. Every generated runnable dataset also gets a tracked reconstruction template under `configs/datasets/`; the ignored realized descriptor remains `data/processed/datasets/<dataset_id>/dataset.yaml`. Experiment and method configs never belong inside `data/` or `results/` as their only copy.
+
+#### Staging, immutable source, and disposable work
+
+```text
+data/work/downloads/<source_id>/
+data/work/preprocessing/<family>/<job_id>/
+data/raw/sources/<provider>/<accession_or_release>/
+/tmp/deconvatac-<task>-<unique_id>/
+```
+
+Downloads enter `data/raw/sources/` only after identity, size, checksum, compression, and schema validation. Restartable intermediates stay in `data/work/preprocessing/`; per-process scratch stays under a unique `/tmp/deconvatac-*` directory. Neither class may be used as a registered benchmark input or copied into `results/`.
+
+#### Reusable preprocessing, references, and runnable datasets
+
+```text
+data/processed/shapemix/<family>/
+  source_audit/
+  normalized_fragments/
+  fragment_shape_cache/
+  labels/
+  feature_axes/
+  splits/
+  manifests/
+
+data/processed/references/<reference_id>/
+  reference.yaml
+  atac/reference.h5ad
+  rna/reference.h5ad                 # only when available
+
+data/processed/datasets/<dataset_id>/
+  dataset.yaml
+  atac/spatial.h5ad
+  atac/features/*.txt
+  truth/proportions.csv              # exact pseudo-spot truth only
+  simulation/source_cells_by_spot.jsonl
+  simulation/manifest.yaml
+  validation/                        # nominal or orthogonal evidence
+
+data/registry/datasets.yaml
+```
+
+GSE194122 fold products must use `data/processed/shapemix/gse194122_bmmc/{fragment_shape_cache,labels,feature_axes,splits,manifests}/`. Each held-out-donor reference gets an immutable versioned ID under `data/processed/references/`, and each split/condition/seed combination gets a distinct dataset ID under `data/processed/datasets/`. GSE205055/GSE263333 reference-source preprocessing follows the same reusable tree before standardized reference H5ADs are promoted to `data/processed/references/`.
+
+Only exact source-cell pseudo-spot composition belongs in `truth/proportions.csv`. GSE129785 physical ratios live at `validation/nominal_broad_proportions.csv` and are referenced as nominal validation evidence, including the seven CD4-memory/CD8-naive samples. The legacy `truth` declarations and directories were removed on 2026-08-24, and `scripts/preprocess_gse129785.py` was updated so regeneration cannot recreate them. RNA, protein, histone, marker, image, and anatomical evidence for real spatial data also stays under `validation/`.
+
+A dataset may enter `data/registry/datasets.yaml` only after its exact reference/spatial axes, fragment-shape contract, declared labels, evidence class, split disjointness, and provenance pass. IDs used by completed campaigns are append-free and never overwritten; a semantic change receives a new versioned reference, dataset, or campaign ID.
+
+#### Tracked result scopes
+
+```text
+results/development/shapemix_gpu_qualification_v1/
+results/sensitivity/shapemix_pbmc_stress_v1/
+results/external_validation/shapemix_gse129785_v1/
+results/external_validation/shapemix_gse194122_lodo_v1/
+results/real_spatial/shapemix_gse205055_v1/
+results/real_spatial/shapemix_gse263333_v1/
+results/external_validation/shapemix_full_evaluation_v1/
+```
+
+There is no `results/external/` or `results/summary/` root. Cross-family synthesis belongs in the versioned full-evaluation campaign above and records the hashes of the contributing campaign summaries. Every run directory retains `run.yaml`, `inputs.yaml`, `environment.txt`, `output_sha256.yaml`, standardized results, diagnostics, and raw method output. Each campaign root retains its resolved protocol, batch manifest, run/comparison/failure/resource tables, logs required to interpret failures, provenance hashes, and summary. Completed result directories are append-free and fully exposed to Git.
+
+Add `scripts/validate_shapemix_file_layout.py` and focused tests before materialization begins. The validator must reject noncanonical result scopes, absolute authoritative paths, raw-source mutation, references outside `data/processed/references/`, family caches inside runnable dataset roots, nominal/qualitative evidence under `truth/`, premature registry entries, missing per-run provenance, and writes into completed campaign IDs. Run it before promotion, before campaign launch, and during final result revalidation. Resume remains fail-closed: an existing run may be reused only when every declared input, configuration, code, and output hash matches.
+
+### 13.6 Why GPU acceleration is appropriate
+
+The observed host has an Intel i7-10700K (8 physical cores/16 threads) and one NVIDIA GeForce RTX 3080 with 10,353,442,816 bytes of VRAM. The installed environment is already CUDA-capable: PyTorch `2.11.0+cu130`, CUDA runtime 13.0, compute capability 8.6, and `torch.cuda.is_available() == True`.
+
+The current fitter does not use that device. `ShapeMixConfig` accepts only `device: cpu`; `map.py` rejects non-CPU dense tensors; fixed signatures, abundance parameters, and every count chunk are explicitly created on CPU. Each optimization step loops over spot/peak chunks twice—gradient plus complete-objective evaluation—and repeatedly converts SciPy slices to dense NumPy/Torch arrays. The historical full-size resource pilot took 1,268.645 seconds for one shape-aware fit, while the primary campaign required 40 ShapeMix fits. The streamed likelihood and gradient are therefore the first GPU target.
+
+GPU acceleration does not help every stage:
+
+| Workload | Device policy | Reason |
+|---|---|---|
+| Tabix fragment parsing, coordinate validation, BGZF/index work, H5AD I/O | CPU, bounded workers | Branch-heavy and I/O-bound; no useful tensor kernel |
+| Sparse reference aggregation, label/axis audits, SciPy NNLS initialization | CPU, one or two math threads | One-time work; preserve the validated algorithms first |
+| ShapeMix likelihood, gradient, Adam state, fixed signatures, abundance parameters | GPU | Repeated dense matrix products and elementwise `lgamma`/log operations dominate fit time |
+| Reconstruction summaries and CSV/H5AD output | CPU initially | One pass only; move later only if profiling shows it matters |
+| Cell2location, if activated | Same single GPU, separate scheduled job | It already has a GPU path but must not contend with ShapeMix |
+| RCTD/SpatialDWLS, if activated | CPU with explicit thread limits | Their maintained adapters are not CUDA workloads |
+
+### 13.7 CUDA implementation design
+
+Implement one backend, selected by an explicit device, rather than a separate scientific model:
+
+| File | Required change |
+|---|---|
+| `src/deconvatac/shapemix/config.py` | Accept `cpu` and explicit `cuda:<index>` devices; reject unavailable/malformed devices. Separate statistical-model hashing from execution hashing so device/chunk/cache choices do not masquerade as different likelihoods, while retaining the full resolved hash. Keep final campaigns explicit; `auto` is development-only if added at all. |
+| `src/deconvatac/shapemix/map.py` | Move `A`, `omega`, `raw_z`, and Adam state to the selected device. Add a count cache that materializes sparse bin layers blockwise into one dense `float32 [S,P,B]` CUDA tensor when it fits, with a bounded host-to-device streaming fallback. Remove hard-coded CPU devices. |
+| `src/deconvatac/shapemix/map.py` | Accumulate objective scalars on device and synchronize once per complete objective, not once per peak chunk. Defer finite-status synchronization to a safe step boundary. Preserve the same mathematical sum, restart seeds, and convergence rule. |
+| `src/deconvatac/methods/shapemix.py` | Record device identity, GPU name, compute capability, CUDA/runtime versions, peak allocated/reserved VRAM, cache mode, and CPU thread policy in diagnostics. |
+| `scripts/run_deconvolution.py` | Fail closed when a requested CUDA device is absent or already over the frozen memory threshold. Preserve one-process-per-GPU execution and campaign resume semantics. |
+| `scripts/profile_shapemix.py` | Benchmark CPU and CUDA on synthetic shapes, the smoke dataset, one 1,024 × 5,000 dataset, and one 10,000 × 5,000 spatial-shaped input; synchronize around timing and record peak VRAM/RSS. |
+| `configs/methods/shapemix_cuda.yaml` and `configs/methods/shapemix_count_only_cuda.yaml` | Freeze identical CUDA execution settings and differ only in `use_shape`. |
+| `tests/test_shapemix_gpu.py` | Cover availability failure, objective/gradient/output parity, chunk/cache parity, deterministic repeats on one device, OOM-safe fallback, diagnostics, and CPU backward compatibility. Skip hardware tests only when CUDA is genuinely unavailable. |
+
+For 5,000 selected peaks, even the largest current 10,000-pixel section needs about 600,000,000 bytes for the dense three-bin `float32` count cache. This is small enough for the 10 GB RTX 3080 while leaving room for likelihood intermediates, signatures, parameters, and the desktop. The implementation must calculate the requirement from `S × P × B × dtype_bytes` and actual free VRAM; it must not assume that every future dataset fits.
+
+Use this cache policy:
+
+1. Query currently free VRAM immediately before a fit.
+2. Reserve at least 25% of free VRAM for autograd workspaces, allocator fragmentation, and the display process.
+3. Use full GPU count caching only when the estimated cache plus a measured workspace margin fits below the remaining 75% budget.
+4. Otherwise cache one or more spot blocks and transfer each block once per restart, not once per optimization step.
+5. On CUDA OOM, cleanly discard the partial restart and retry the predeclared smaller cache/chunk level. Record the fallback; never silently change dtype or model parameters.
+
+Start with `float32` and `torch.set_float32_matmul_precision("highest")`. Do not enable autocast, `float16`, `bfloat16`, or TF32 in the scientific campaign until a separately versioned numerical-sensitivity study passes. The likelihood contains `lgamma`, low-count probabilities, and convergence comparisons for which reduced precision can change optimization behavior.
+
+PyTorch documents that CUDA execution is asynchronous, so timing must use `torch.cuda.synchronize()` or CUDA events; it also exposes `max_memory_allocated()` for peak device-memory reporting. Host-to-device copies may use `non_blocking=True` after measurement shows a benefit, but manual pinning is not assumed to be faster. See the official [CUDA semantics](https://docs.pytorch.org/docs/stable/notes/cuda.html), [CUDA peak-memory API](https://docs.pytorch.org/docs/stable/generated/torch.cuda.max_memory_allocated.html), and [transfer benchmark guidance](https://docs.pytorch.org/tutorials/intermediate/pinmem_nonblock.html).
+
+### 13.8 Reproducibility and CPU/CUDA qualification gates
+
+PyTorch explicitly warns that bitwise equality is not guaranteed between CPU and GPU or across releases/platforms. The campaign must therefore freeze the exact device/software stack and demonstrate numerical equivalence rather than claim cross-device byte identity. Follow the official [PyTorch reproducibility guidance](https://docs.pytorch.org/docs/stable/notes/randomness.html).
+
+Before CUDA becomes the production backend:
+
+1. Enable `torch.use_deterministic_algorithms(True)` with `warn_only=False`, retain the existing NumPy seed tuples, set the Torch seed, and record the deterministic policy. Set any cuBLAS workspace requirement before process start.
+2. Require CPU/CUDA agreement on toy objective components and gradients with predeclared absolute/relative tolerances.
+3. Require CPU/CUDA smoke proportions to agree within `1e-5` maximum absolute error and full-size development proportions within `1e-4`; require `rmse_v1` and `jsd_v2` to agree within `1e-5`. Any threshold change must occur before external predictions are inspected.
+4. Repeat the CUDA smoke and full-size pilot twice on the same hardware/software stack and require identical convergence status plus numerical agreement within `1e-7`.
+5. Verify cached and streamed CUDA modes agree within the same tolerances and produce the same declared spot/type axes.
+6. Benchmark synchronized end-to-end fit time, peak VRAM, peak RSS, average CPU utilization, and host-to-device time. Adopt CUDA for the full campaign only if it passes parity and is at least twice as fast on the representative full-size fit. Otherwise retain CPU and use the resource limits below while profiling the bottleneck.
+7. Use the same qualified backend for both arms of every pair. Never compare a CPU count-only fit with a CUDA shape-aware fit in the primary paired analysis.
+
+### 13.9 CPU-load containment and scheduling
+
+Co-tenant constraint, added 2026-08-24: another workload on this host may consume four to five physical cores. Treat that workload as higher priority and preserve at least one physical core of headroom. This constraint remains active until the user explicitly removes it.
+
+Only one deconvATAC process may run at a time, and only one fit process may own the RTX 3080. Do not overlap a GPU fit, NNLS baseline, preprocessing job, checksum pass, download, test suite, or summary job from this repository. Do not launch if `nvidia-smi` shows an unrelated compute process using the GPU; GPU sharing requires explicit approval.
+
+Before every job, record the one-minute load average, available RAM, and GPU process/memory state. On this eight-physical-core/16-logical-CPU host, do not start a new deconvATAC task while the one-minute load average is `>= 6.0`; leave it queued and recheck later. This is a conservative launch gate, not permission to interrupt either workload. A running job may finish, but no additional repository process starts while the gate is closed.
+
+All new fits and other material work must enter through the guarded launcher:
+
+```bash
+scripts/run_shapemix_low_impact.sh \
+  .venv/bin/python scripts/run_deconvolution.py --experiment-config <config>
+```
+
+The launcher holds a host-wide deconvATAC lock, enforces the load/GPU/worker gates, lowers CPU and I/O priority, and caps the common host math libraries before Python imports them. Bypassing it is not permitted while the co-tenant constraint is active.
+
+The runner must also call `torch.set_num_threads(1)` and `torch.set_num_interop_threads(1)` before fitting. GPU and CPU-only fits, including NNLS, are restricted to one host thread. The earlier two-thread GPU-input exception is disabled while the co-tenant constraint is active.
+
+Fragment counting, preprocessing, and downloads may use at most two workers (`--workers 2`) and must also run at lowered priority. Checksum scans use one process. If a stage cannot obey these limits, keep it gated rather than increasing parallelism. Never automatically fall back from CUDA to an unconstrained CPU fit.
+
+Use one sequential GPU shard per campaign and resume by completed, hash-verified run. Record the launch-gate measurements, priority, worker/thread caps, wall time, CPU time, peak RSS, peak allocated/reserved VRAM, device-utilization samples, and any cache/chunk fallback. A load, temperature, memory-pressure, or GPU-occupancy monitor pauses launching the next run but does not terminate or rewrite a completed result.
+
+### 13.10 Full-evaluation acceptance criteria
+
+The full campaign is complete only when:
+
+- every source family is classified as completed or explicitly gated, with no silent omission;
+- all core runnable units have paired ShapeMix arms on the same qualified device and an NNLS baseline;
+- GSE194122 has no donor leakage and is summarized at the donor level;
+- all GSE129785 conclusions respect nominal versus absent truth, with no nominal or qualitative evidence stored under `truth/`;
+- GSE205055/GSE263333 use audited compatible references and make no exact-composition claim;
+- CPU/CUDA parity, repeated-CUDA determinism, memory fallback, and performance gates pass and are retained under `results/development/`;
+- resource manifests prove that only one deconvATAC process ran at a time, every fit used one host thread, preprocessing used at most two workers, and every launch passed the co-tenant load/GPU gate;
+- failed runs and optional-baseline gates remain visible in summaries;
+- the canonical layout validator passes for configs, work paths, reusable products, references, runnable datasets, registry entries, result scopes, and per-run provenance;
+- all result groups, configs, code/input hashes, and environment metadata revalidate; and
+- the final report presents negative, null, or positive outcomes under the same predeclared rules.

@@ -95,6 +95,23 @@ class FitRecord:
     restarts: Tuple[RestartRecord, ...]
     nonfinite_events: Tuple[str, ...] = ()
     runtime_seconds: Optional[float] = None
+    count_cache_mode: str = "streamed_host_chunks"
+    count_cache_bytes: int = 0
+    count_cache_requested_bytes: int = 0
+    device_total_memory_bytes: Optional[int] = None
+    device_free_memory_bytes_before_cache: Optional[int] = None
+    cuda_workspace_margin_bytes: Optional[int] = None
+    device_index: Optional[int] = None
+    device_name: Optional[str] = None
+    device_compute_capability: Optional[str] = None
+    torch_version: Optional[str] = None
+    cuda_runtime_version: Optional[str] = None
+    deterministic_algorithms: Optional[bool] = None
+    float32_matmul_precision: Optional[str] = None
+    torch_num_threads: Optional[int] = None
+    torch_num_interop_threads: Optional[int] = None
+    peak_device_memory_allocated_bytes: Optional[int] = None
+    peak_device_memory_reserved_bytes: Optional[int] = None
 
     @property
     def selected_restart_record(self) -> Optional[RestartRecord]:
@@ -134,6 +151,33 @@ class FitRecord:
             "restarts": [record.to_dict() for record in self.restarts],
             "nonfinite_events": [str(value) for value in self.nonfinite_events],
             "runtime_seconds": _json_float(self.runtime_seconds),
+            "execution": {
+                "count_cache_mode": str(self.count_cache_mode),
+                "count_cache_bytes": int(self.count_cache_bytes),
+                "count_cache_requested_bytes": int(
+                    self.count_cache_requested_bytes
+                ),
+                "device_total_memory_bytes": self.device_total_memory_bytes,
+                "device_free_memory_bytes_before_cache": (
+                    self.device_free_memory_bytes_before_cache
+                ),
+                "cuda_workspace_margin_bytes": self.cuda_workspace_margin_bytes,
+                "device_index": self.device_index,
+                "device_name": self.device_name,
+                "device_compute_capability": self.device_compute_capability,
+                "torch_version": self.torch_version,
+                "cuda_runtime_version": self.cuda_runtime_version,
+                "deterministic_algorithms": self.deterministic_algorithms,
+                "float32_matmul_precision": self.float32_matmul_precision,
+                "torch_num_threads": self.torch_num_threads,
+                "torch_num_interop_threads": self.torch_num_interop_threads,
+                "peak_device_memory_allocated_bytes": (
+                    self.peak_device_memory_allocated_bytes
+                ),
+                "peak_device_memory_reserved_bytes": (
+                    self.peak_device_memory_reserved_bytes
+                ),
+            },
         }
 
 

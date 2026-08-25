@@ -68,6 +68,19 @@ def _write_toy_dataset(tmp_path: Path, *, declare_cell_types: bool = True) -> Pa
     return registry_path
 
 
+def _write_toy_dataset_without_truth(tmp_path: Path) -> Path:
+    registry_path = _write_toy_dataset(tmp_path)
+    config_path = tmp_path / "toy.yaml"
+    dataset_config = yaml.safe_load(config_path.read_text())
+    modality_config = dataset_config["modalities"]["atac"]
+    modality_config.pop("truth")
+    modality_config["cell_types"] = ["A", "B"]
+    config_path.write_text(
+        yaml.safe_dump(dataset_config, sort_keys=False)
+    )
+    return registry_path
+
+
 def test_shapemix_environment_metadata_is_plain_yaml_safe_versions():
     environment = collect_environment("shapemix")
     assert {"torch", "pysam"}.issubset(environment["packages"])
@@ -125,6 +138,46 @@ def test_run_experiment_writes_batch_comparison(tmp_path):
     metadata = yaml.safe_load((run_dir / "run.yaml").read_text())
     assert metadata["method"] == "nnls"
     assert metadata["method_run_id"] == "nnls"
+
+
+def test_prediction_only_experiment_writes_predictions_without_truth_metrics(tmp_path):
+    registry_path = _write_toy_dataset_without_truth(tmp_path)
+    experiment_path = tmp_path / "prediction_only.yaml"
+    experiment_path.write_text(
+        yaml.safe_dump(
+            {
+                "run_group": "prediction_only",
+                "datasets": ["toy"],
+                "modalities": ["atac"],
+                "feature_sets": ["all"],
+                "methods": ["nnls"],
+                "method_configs": {"nnls": {"method": "nnls", "params": {}}},
+                "evaluation_mode": "prediction_only",
+                "metrics": [],
+            }
+        )
+    )
+
+    comparison_path = run_experiment(
+        experiment_path,
+        registry=registry_path,
+        output_root_override=tmp_path / "results",
+    )
+    batch_dir = comparison_path.parent
+    run_dir = batch_dir / "toy__atac__all__nnls"
+    comparison = pd.read_csv(comparison_path)
+    metadata = yaml.safe_load((run_dir / "run.yaml").read_text())
+    inputs = yaml.safe_load((run_dir / "inputs.yaml").read_text())
+
+    assert comparison.loc[0, "status"] == "success"
+    assert comparison.loc[0, "evaluation_mode"] == "prediction_only"
+    assert pd.isna(comparison.loc[0, "metric"])
+    assert pd.isna(comparison.loc[0, "value"])
+    assert not (run_dir / "results" / "truth.csv").exists()
+    assert "truth" not in inputs
+    assert metadata["proportion_evaluation"]["evidence"] == "prediction_only"
+    batch_manifest = yaml.safe_load((batch_dir / "batch_manifest.yaml").read_text())
+    assert batch_manifest["metrics"] == []
 
 
 def test_named_method_runs_have_distinct_directories_and_full_provenance(tmp_path):

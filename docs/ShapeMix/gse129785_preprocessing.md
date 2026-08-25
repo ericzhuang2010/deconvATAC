@@ -107,7 +107,8 @@ Completion requires:
 - identical ordered 5,000-peak axes in every reference and mixture;
 - nonnegative integer CSR layers whose elementwise sum equals `.X`;
 - a valid standardized reference label universe; and
-- runner-readable dataset descriptors with nominal-truth limitations stated explicitly.
+- runner-readable dataset descriptors with nominal-evidence limitations stated explicitly
+  and no nominal ratios declared through the exact-truth contract.
 
 ## Final observed results
 
@@ -115,5 +116,5 @@ Completion requires:
 - The 30 fragment files contain 3,112,258,770 rows and retain 497,297 sample barcodes/cells. By role: physical dilutions retain 442,270, sorted references 14,688, PBMC replicates 21,570, and preparation samples 18,769. All full scans report zero invalid rows.
 - Twenty-nine fragment sources are retained as hard links and GSM3722026 is retained as an atomically recompressed derived BGZF. All 30 normalized fragments have tabix indexes and all 30 samples have validated 5,000-peak ShapeMix caches.
 - The standardized reference contains 14,688 author-called cells across nine ordered immune types and 5,000 reference-only peaks. The coordinate audit exactly reproduced 9,528 published counts with offset `-1`.
-- Sixteen runner-readable datasets were materialized and validated through `load_deconvolution_input`: 14 physical dilutions, one four-replicate PBMC cohort, and one three-preparation cohort. Seven CD4-memory/CD8-naive dilutions have quantitative nominal truth; the other nine datasets remain explicitly no-truth.
+- Sixteen runner-readable datasets were materialized and validated through `load_deconvolution_input`: 14 physical dilutions, one four-replicate PBMC cohort, and one three-preparation cohort. All 14 physical dilutions carry nominal sample-level ratios under `validation/nominal_broad_proportions.csv`; none declares exact truth. The two cohort datasets also remain explicitly no-truth.
 - Retained processed products occupy 33,270,269,157 bytes (30.985 GiB): 33,208,206,654 bytes in the reusable family tree plus 62,062,503 bytes for the standardized reference and runnable datasets. Because 29 raw fragments are hard-linked, processed products add only 0.968 GiB while raw paths remain. Removing raw paths later would free about 7.302 GiB and leave the 30.985 GiB retained processed set; no raw file was removed in this run.
