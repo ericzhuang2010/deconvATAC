@@ -518,18 +518,23 @@ def build_deck():
         align=PP_ALIGN.CENTER,
     )
     # two panels
-    for x, title, vals in [(0.76, "Cell type A", [7, 3, 2]), (6.78, "Cell type B", [2, 4, 6])]:
+    for x, title, fragment_counts in [(0.76, "Cell type A", [7, 3, 2]), (6.78, "Cell type B", [2, 4, 6])]:
         add_card(slide, x, 1.82, 5.78, 3.34, fill=PALE, line=MID)
         add_text(slide, title, x + 0.26, 2.07, 2.0, 0.34, size=19, color=NAVY, bold=True)
-        add_pill(slide, "12 cut sites in this peak", x + 3.03, 2.03, 2.20, 0.37, NAVY, size=10.5)
-        colors = [TEAL] * vals[0] + [GOLD] * vals[1] + [CORAL] * vals[2]
-        widths = [0.34] * vals[0] + [0.72] * vals[1] + [1.18] * vals[2]
+        cut_site_counts = [2 * count for count in fragment_counts]
+        add_pill(slide, f"{sum(cut_site_counts)} cut sites in this peak", x + 3.03, 2.03, 2.20, 0.37, NAVY, size=10.5)
+        colors = [TEAL] * fragment_counts[0] + [GOLD] * fragment_counts[1] + [CORAL] * fragment_counts[2]
+        widths = [0.30] * fragment_counts[0] + [0.50] * fragment_counts[1] + [0.70] * fragment_counts[2]
+        # Center each fragment in a fixed-width cell. Keeping the longest glyph
+        # narrower than the 0.82-inch pitch prevents adjacent red fragments from
+        # merging into one continuous bar while preserving the 6-by-2 count grid.
         for i, (color, width) in enumerate(zip(colors, widths)):
             row = i // 6
             col = i % 6
-            add_fragment(slide, x + 0.43 + col * 0.82, 2.91 + row * 0.70, width, color, line_width=4, cut_color=INK)
-        add_stacked_bar(slide, x + 0.42, 4.47, 4.90, 0.38, vals, [TEAL, GOLD, CORAL])
-    add_text(slide, "Count-only model sees: 12 = 12", 1.70, 5.40, 4.70, 0.38, size=17, color=SLATE, bold=True, align=PP_ALIGN.CENTER)
+            cell_center = x + 0.84 + col * 0.82
+            add_fragment(slide, cell_center - width / 2, 2.91 + row * 0.70, width, color, line_width=4, cut_color=INK)
+        add_stacked_bar(slide, x + 0.42, 4.47, 4.90, 0.38, cut_site_counts, [TEAL, GOLD, CORAL])
+    add_text(slide, "Count-only model sees: 24 = 24", 1.70, 5.40, 4.70, 0.38, size=17, color=SLATE, bold=True, align=PP_ALIGN.CENTER)
     add_text(slide, "ShapeMix also sees: the color pattern differs", 6.67, 5.40, 5.72, 0.38, size=17, color=TEAL_DARK, bold=True, align=PP_ALIGN.CENTER)
     # bins
     bins = [
@@ -544,7 +549,7 @@ def build_deck():
         add_text(slide, cutoff, x + 1.18, 6.08, 2.34, 0.22, size=12.5, color=NAVY, bold=True)
         add_text(slide, note, x + 1.18, 6.40, 2.34, 0.19, size=9.5, color=SLATE)
     add_footer(slide, "Sources: Buenrostro et al. (2013); Martens et al., Nature Methods (2024). Diagram is conceptual.")
-    add_notes(slide, "This is the project’s central idea. Ordinary deconvolution collapses all fragments in a peak into one count. ShapeMix keeps the same count and also records whether the fragments are short, middle-length, or long. The biological labels for bins are useful approximations, not perfect one-to-one assignments.")
+    add_notes(slide, "This is the project’s central idea. Each panel shows 12 fragments, and this conceptual example assigns both Tn5 cut sites from every fragment to the same peak, for 24 cut sites total. Cell type A allocates those cuts 14 short, 6 middle, and 4 long; cell type B allocates them 4 short, 8 middle, and 12 long. Ordinary deconvolution keeps only the total. ShapeMix also records the parent-fragment length pattern. The biological labels for bins are useful approximations, not perfect one-to-one assignments.")
 
     # 6 — Algorithm
     slide = prs.slides.add_slide(blank)
