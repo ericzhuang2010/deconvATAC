@@ -130,8 +130,15 @@ def source_archive(config: Mapping[str, Any]) -> Path:
     )
 
 
+def preprocessing_work_root(config: Mapping[str, Any]) -> Path:
+    family = Path(str(config["processed_directory"])).name
+    if not family or family in {".", ".."}:
+        raise ValueError(f"Invalid processed family name: {family!r}")
+    return ROOT / "data" / "work" / "preprocessing" / family / "source_preprocessing_v1"
+
+
 def extracted_root(config: Mapping[str, Any]) -> Path:
-    return project_path(str(config["processed_directory"])) / "extracted_payload"
+    return preprocessing_work_root(config) / "extracted_payload"
 
 
 def iter_payloads(config: Mapping[str, Any]) -> tuple[Path, ...]:
@@ -306,9 +313,9 @@ def normalize_one_fragment(path: Path, role: str, config: Mapping[str, Any], ove
     assay = fragment_assay(role)
     family_root = project_path(str(config["processed_directory"]))
     if assay == "atac":
-        output_root = family_root / "normalized_atac_fragments" / gsm
+        output_root = family_root / "normalized_fragments" / gsm
     else:
-        output_root = family_root / "validation_modalities/epigenome" / gsm / assay
+        output_root = preprocessing_work_root(config) / "validation_modalities/epigenome" / gsm / assay
     output_root.mkdir(parents=True, exist_ok=True)
     destination = output_root / path.name
     temporary = destination.with_name(f".{destination.name}.bgzf.tmp")
@@ -490,7 +497,7 @@ def preprocess_spatial_assets(config: Mapping[str, Any], overwrite: bool = False
         if classify_payload(path, config) != "spatial":
             continue
         gsm = accession_from_filename(path)
-        target = family_root / "spatial_coordinates" / gsm / "deposited"
+        target = preprocessing_work_root(config) / "spatial_coordinates" / gsm / "deposited"
         files = extract_nested_archive(path, target, overwrite)
         positions = [candidate for candidate in files if candidate.name == "tissue_positions_list.csv"]
         scales = [candidate for candidate in files if candidate.name == "scalefactors_json.json"]
@@ -499,7 +506,7 @@ def preprocess_spatial_assets(config: Mapping[str, Any], overwrite: bool = False
         frame = parse_positions(positions[0])
         with scales[0].open() as handle:
             scale_factors = json.load(handle)
-        canonical = family_root / "spatial_coordinates" / gsm / "coordinates.csv"
+        canonical = preprocessing_work_root(config) / "spatial_coordinates" / gsm / "coordinates.csv"
         frame.to_csv(canonical, index=False)
         records.append(
             {
@@ -606,15 +613,15 @@ def preprocess_matrices(config: Mapping[str, Any], overwrite: bool = False) -> N
         gsm = accession_from_filename(path)
         if role == "protein_matrix_bundle":
             modality = "protein"
-            output_root = family_root / "validation_modalities/protein" / gsm
+            output_root = preprocessing_work_root(config) / "validation_modalities/protein" / gsm
             output_name = "protein.h5ad"
         elif role in {"rna_dense_matrix", "rna_matrix_bundle"}:
             modality = "rna"
-            output_root = family_root / "validation_modalities/rna" / gsm
+            output_root = preprocessing_work_root(config) / "validation_modalities/rna" / gsm
             output_name = "rna.h5ad"
         else:
             modality = role.removesuffix("_dense_matrix")
-            output_root = family_root / "validation_modalities/epigenome" / gsm / modality
+            output_root = preprocessing_work_root(config) / "validation_modalities/epigenome" / gsm / modality
             output_name = "matrix.h5ad"
         output_root.mkdir(parents=True, exist_ok=True)
         if role.endswith("_dense_matrix"):
@@ -690,24 +697,24 @@ def canonical_fragment_barcodes(values: set[str], config: Mapping[str, Any]) -> 
 
 
 def barcode_sources_for_gsm(
-    family_root: Path, gsm: str, config: Mapping[str, Any]
+    family_root: Path, preprocessing_root: Path, gsm: str, config: Mapping[str, Any]
 ) -> dict[str, set[str]]:
     sources: dict[str, set[str]] = {}
     for path in sorted((family_root / "source_audit/barcodes").glob(f"{gsm}__*.txt")):
         sources[f"fragments:{path.name}"] = canonical_fragment_barcodes(
             read_lines(path), config
         )
-    coordinate_path = family_root / "spatial_coordinates" / gsm / "coordinates.csv"
+    coordinate_path = preprocessing_root / "spatial_coordinates" / gsm / "coordinates.csv"
     if coordinate_path.exists():
         frame = pd.read_csv(coordinate_path, dtype={"barcode": str})
         sources["coordinates"] = set(frame["barcode"])
     for modality in ("rna", "protein"):
-        matrix_path = family_root / "validation_modalities" / modality / gsm / f"{modality}.h5ad"
+        matrix_path = preprocessing_root / "validation_modalities" / modality / gsm / f"{modality}.h5ad"
         if matrix_path.exists():
             matrix = ad.read_h5ad(matrix_path, backed="r")
             sources[f"matrix:{modality}"] = set(map(str, matrix.obs_names))
             matrix.file.close()
-    epigenome_root = family_root / "validation_modalities/epigenome" / gsm
+    epigenome_root = preprocessing_root / "validation_modalities/epigenome" / gsm
     for matrix_path in sorted(epigenome_root.glob("*/matrix.h5ad")):
         matrix = ad.read_h5ad(matrix_path, backed="r")
         sources[f"matrix:epigenome:{matrix_path.parent.name}"] = set(map(str, matrix.obs_names))
@@ -717,7 +724,8 @@ def barcode_sources_for_gsm(
 
 def align_modalities(config: Mapping[str, Any]) -> None:
     family_root = project_path(str(config["processed_directory"]))
-    output_root = family_root / "cross_modality_alignment"
+    preprocessing_root = preprocessing_work_root(config)
+    output_root = family_root / "manifests" / "cross_modality_alignment"
     output_root.mkdir(parents=True, exist_ok=True)
     summaries = []
     for group in config["sample_groups"]:
@@ -733,7 +741,7 @@ def align_modalities(config: Mapping[str, Any]) -> None:
         gsms = list(dict.fromkeys(gsms))
         sources: dict[str, set[str]] = {}
         for gsm in gsms:
-            for label, values in barcode_sources_for_gsm(family_root, gsm, config).items():
+            for label, values in barcode_sources_for_gsm(family_root, preprocessing_root, gsm, config).items():
                 sources[f"{gsm}:{label}"] = values
         intersections = []
         labels = sorted(sources)

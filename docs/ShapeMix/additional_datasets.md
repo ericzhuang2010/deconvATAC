@@ -287,12 +287,12 @@ configs/data_sources/shapemix_gse194122.yaml
 
 data/processed/shapemix/gse194122_bmmc/
   source_audit/
-  source_object/
+  source_audit/source_objects/
   normalized_fragments/GRCh38/<sample_key>/
   fragment_shape_cache/
-  harmonized_labels/
+  labels/source_broad7_v1/
   feature_axes/
-  leave_one_donor_out/<heldout_donor>/
+  splits/broad7_lodo_v1/<heldout_donor>/
 
 data/processed/references/gse194122_bmmc_lodo_<heldout_donor>/atac/reference.h5ad
 

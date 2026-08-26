@@ -39,7 +39,8 @@ ROOT = Path(__file__).resolve().parents[1]
 FAMILY_ROOT = ROOT / "data" / "processed" / "shapemix" / "gse194122_bmmc"
 SOURCE_H5AD = (
     FAMILY_ROOT
-    / "source_object"
+    / "source_audit"
+    / "source_objects"
     / "GSE194122_openproblems_neurips2021_multiome_BMMC_processed.h5ad"
 )
 LABELS_PATH = FAMILY_ROOT / "labels" / "source_broad7_v1" / "cells.tsv.gz"

@@ -41,12 +41,12 @@ Reusable products are stored under:
 
 ```text
 data/processed/shapemix/gse194122_bmmc/
-  source_object/GSE194122_openproblems_neurips2021_multiome_BMMC_processed.h5ad
+  source_audit/source_objects/GSE194122_openproblems_neurips2021_multiome_BMMC_processed.h5ad
   source_audit/
   normalized_fragments/GRCh38/<sample_key>/
-  harmonized_labels/cells.tsv.gz
-  feature_axes/features.tsv.gz
-  leave_one_donor_out/donor_<N>/cells.tsv.gz
+  labels/source_broad7_v1/cells.tsv.gz
+  feature_axes/source_axis_v1/features.tsv.gz
+  splits/broad7_lodo_v1/donor_<N>/cells.tsv.gz
 ```
 
 The normalized fragment, index, and metrics paths are hard links to the verified immutable downloads. This preserves exact provider bytes and keeps the processed products usable if raw path names are later removed, without consuming a second 31.7 GB of disk blocks.
@@ -108,7 +108,7 @@ H5AD cell ID
   -> fragment column 4
 ```
 
-The mapping must be one-to-one within sample, every processed H5AD cell must be an author-called Cell Ranger cell, and no two processed cells may map to the same common fragment barcode. The fragment barcode, separate ATAC-library barcode, and author fragment/cut-site metrics are retained in `harmonized_labels/cells.tsv.gz`.
+The mapping must be one-to-one within sample, every processed H5AD cell must be an author-called Cell Ranger cell, and no two processed cells may map to the same common fragment barcode. The fragment barcode, separate ATAC-library barcode, and author fragment/cut-site metrics are retained in `labels/source_broad7_v1/cells.tsv.gz`.
 
 ## Fragment and count semantics
 
@@ -120,7 +120,7 @@ Each deduplicated fragment row contributes one left cut and one right cut; `read
 
 ## Leave-one-donor-out indices
 
-Ten fold tables are written under `leave_one_donor_out/`. Each preserves the complete H5AD cell axis and marks each cell as `training` or `heldout` for that donor. Donor 1's four sites and donor 3's two sites always stay on the same side of the split. These are cell-membership indices only; no peaks or signatures are learned at this stage.
+Ten fold tables are written under `splits/broad7_lodo_v1/`. Each preserves the complete H5AD cell axis and marks each cell as `training` or `heldout` for that donor. Donor 1's four sites and donor 3's two sites always stay on the same side of the split. These are cell-membership indices only; no peaks or signatures are learned at this stage.
 
 ## Completion gates
 

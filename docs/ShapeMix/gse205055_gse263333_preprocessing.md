@@ -36,7 +36,16 @@ data/processed/shapemix/gse205055_spatial/
 data/processed/shapemix/gse263333_spatial_mux/
 ```
 
-Each processed tree contains `source_audit/`, `extracted_payload/`, `normalized_atac_fragments/`, `validation_modalities/`, `spatial_coordinates/`, `cross_modality_alignment/`, and `manifests/`. Normalized ATAC fragments are never mixed with histone/CUT&Tag fragments. RNA, protein, and histone matrices are validation evidence, not composition truth.
+Each persistent processed tree contains `source_audit/`, `normalized_fragments/`, and `manifests/`. Normalized ATAC fragments are never mixed with histone/CUT&Tag fragments. Restartable source extraction, spatial-coordinate normalization, and orthogonal modality conversion live under:
+
+```text
+data/work/preprocessing/<family>/source_preprocessing_v1/
+  extracted_payload/
+  spatial_coordinates/
+  validation_modalities/
+```
+
+The cross-modality alignment records are persistent manifests under `manifests/cross_modality_alignment/`. When a runnable dataset is promoted, its required coordinate, RNA, protein, histone, marker, and image evidence is copied or hard-linked into that dataset's `validation/` directory. RNA, protein, and histone matrices are validation evidence, not composition truth.
 
 The reproducible entry points are:
 

@@ -62,7 +62,7 @@ def source_h5ad(config: Mapping[str, Any]) -> Path:
     filename = str(config["processed_object"]["filename"])
     if not filename.endswith(".gz"):
         raise ValueError("processed_object filename must end in .gz")
-    return processed_root(config) / "source_object" / filename.removesuffix(".gz")
+    return processed_root(config) / "source_audit" / "source_objects" / filename.removesuffix(".gz")
 
 
 def hash_file(path: Path, algorithm: str = "sha256") -> str:
@@ -395,7 +395,7 @@ def normalize_fragment_suite(
     config: Mapping[str, Any], sample_keys: Optional[set[str]] = None
 ) -> None:
     root = processed_root(config)
-    labels_path = root / "harmonized_labels/cells.tsv.gz"
+    labels_path = root / "labels/source_broad7_v1/cells.tsv.gz"
     if not labels_path.is_file():
         raise FileNotFoundError(f"Run metadata preprocessing first: {labels_path}")
     cells = pd.read_csv(labels_path, sep="\t", low_memory=False)
@@ -463,7 +463,7 @@ def normalize_fragment_suite(
     if complete and reconciled["fragment_barcode"].isna().any():
         raise ValueError("Complete fragment normalization left cells without barcodes")
     atomic_tsv_gzip(reconciled, labels_path)
-    write_lodo_folds(reconciled, root / "leave_one_donor_out")
+    write_lodo_folds(reconciled, root / "splits/broad7_lodo_v1")
     summary = {
         "schema_version": 1,
         "accession": config["accession"],
@@ -541,8 +541,8 @@ def count_cut_sites(
 
 def audit_pilot_matrix(config: Mapping[str, Any]) -> None:
     root = processed_root(config)
-    cells = pd.read_csv(root / "harmonized_labels/cells.tsv.gz", sep="\t", low_memory=False)
-    features = pd.read_csv(root / "feature_axes/features.tsv.gz", sep="\t")
+    cells = pd.read_csv(root / "labels/source_broad7_v1/cells.tsv.gz", sep="\t", low_memory=False)
+    features = pd.read_csv(root / "feature_axes/source_axis_v1/features.tsv.gz", sep="\t")
     pilot = next(
         record
         for record in config["openproblems_fragments"]["files"]
@@ -644,11 +644,11 @@ def preprocess_metadata(config: Mapping[str, Any]) -> None:
     finally:
         adata.file.close()
     root = processed_root(config)
-    labels_path = root / "harmonized_labels/cells.tsv.gz"
-    features_path = root / "feature_axes/features.tsv.gz"
+    labels_path = root / "labels/source_broad7_v1/cells.tsv.gz"
+    features_path = root / "feature_axes/source_axis_v1/features.tsv.gz"
     atomic_tsv_gzip(cells, labels_path)
     atomic_tsv_gzip(features, features_path)
-    write_lodo_folds(cells, root / "leave_one_donor_out")
+    write_lodo_folds(cells, root / "splits/broad7_lodo_v1")
     modality_counts = features["feature_type"].value_counts().sort_index()
     summary = {
         "schema_version": 1,
@@ -673,7 +673,7 @@ def preprocess_metadata(config: Mapping[str, Any]) -> None:
         "outputs": {
             "labels": str(labels_path.relative_to(ROOT)),
             "features": str(features_path.relative_to(ROOT)),
-            "lodo_root": str((root / "leave_one_donor_out").relative_to(ROOT)),
+            "lodo_root": str((root / "splits/broad7_lodo_v1").relative_to(ROOT)),
         },
     }
     atomic_yaml(root / "source_audit/processed_h5ad.yaml", summary)
@@ -718,7 +718,7 @@ def pilot_bam_path(config: Mapping[str, Any]) -> Path:
 
 def reconstruct_pilot(config: Mapping[str, Any], overwrite: bool = False) -> None:
     root = processed_root(config)
-    labels_path = root / "harmonized_labels/cells.tsv.gz"
+    labels_path = root / "labels/source_broad7_v1/cells.tsv.gz"
     if not labels_path.is_file():
         raise FileNotFoundError(f"Run metadata preprocessing first: {labels_path}")
     cells = pd.read_csv(labels_path, sep="\t", dtype=str)

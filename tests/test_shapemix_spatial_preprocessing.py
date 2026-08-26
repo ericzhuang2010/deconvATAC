@@ -3,12 +3,14 @@ from pathlib import Path
 
 import numpy as np
 
+from scripts.migrate_shapemix_spatial_layout import replacements, rewrite_value
 from scripts.preprocess_shapemix_spatial import (
     canonical_fragment_barcodes,
     classify_payload,
     expected_supplementary_basenames,
     parse_positions,
     read_dense_gene_by_pixel,
+    preprocessing_work_root,
     safe_member_name,
 )
 
@@ -98,3 +100,31 @@ def test_dense_gene_by_pixel_parser_builds_sparse_transposed_matrix(tmp_path: Pa
     assert matrix.obs_names.tolist() == ["pixel_a", "pixel_b"]
     assert matrix.var_names.tolist() == ["Gene1", "Gene1-1"]
     np.testing.assert_array_equal(matrix.X.toarray(), [[0, 3], [2, 0]])
+
+
+def test_spatial_preprocessing_intermediates_use_canonical_work_root():
+    config = {
+        "processed_directory": "data/processed/shapemix/gse205055_spatial",
+    }
+    assert preprocessing_work_root(config) == (
+        Path(__file__).resolve().parents[1]
+        / "data/work/preprocessing/gse205055_spatial/source_preprocessing_v1"
+    )
+
+
+def test_spatial_layout_mapping_rewrites_nested_authoritative_paths():
+    mapping = replacements("gse205055_spatial")
+    value = {
+        "files": [
+            {
+                "path": (
+                    "data/processed/shapemix/gse205055_spatial/"
+                    "normalized_atac_fragments/GSM1/fragments.tsv.gz"
+                )
+            }
+        ]
+    }
+    updated, changes = rewrite_value(value, mapping)
+    assert updated["files"][0]["path"] == (
+        "data/processed/shapemix/gse205055_spatial/"
+        "normalized_fragments/GSM1/fragments.tsv.gz"
