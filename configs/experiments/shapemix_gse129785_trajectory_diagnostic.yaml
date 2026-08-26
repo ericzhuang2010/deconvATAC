@@ -1,0 +1,28 @@
+description: >-
+  Development-only optimizer-trajectory diagnostic using the exact NNLS
+  restart, one representative frozen external input, and no biological-ratio
+  based selection.
+benchmark_scope: development_optimizer_trajectory_diagnostic
+protocol:
+  name: shapemix_gse129785_trajectory_diagnostic
+  version: 1
+  frozen_date: "2026-08-25"
+run_group: shapemix_gse129785_trajectory_diagnostic_v1
+datasets:
+  - gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - selected_reference_peaks
+method_runs:
+  - id: shapemix_length_exact_nnls_trajectory
+    method: shapemix
+    config: configs/methods/shapemix_gse129785_trajectory_diagnostic.yaml
+evaluation_mode: prediction_only
+metrics: []
+output_root: results/development/shapemix_gse129785_convergence_v1
+run_id_template: "{dataset}__{modality}__{feature_set}__{method_run_id}"
+skip_missing: false
+continue_on_error: true
+overwrite: false

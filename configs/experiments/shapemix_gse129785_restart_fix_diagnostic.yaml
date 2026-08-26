@@ -1,0 +1,31 @@
+description: >-
+  Development-only validation of the scale-safe exact-NNLS restart on one
+  representative GSE129785 physical dilution. Biological ratios are not used
+  for implementation selection.
+benchmark_scope: development_restart_fix_diagnostic
+protocol:
+  name: shapemix_gse129785_restart_fix_diagnostic
+  version: 1
+  frozen_date: "2026-08-25"
+run_group: shapemix_gse129785_restart_fix_diagnostic_v1
+datasets:
+  - gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - selected_reference_peaks
+method_runs:
+  - id: shapemix_length_restart_fix
+    method: shapemix
+    config: configs/methods/shapemix.yaml
+  - id: shapemix_count_only_restart_fix
+    method: shapemix
+    config: configs/methods/shapemix_count_only.yaml
+evaluation_mode: prediction_only
+metrics: []
+output_root: results/development/shapemix_gse129785_convergence_v1
+run_id_template: "{dataset}__{modality}__{feature_set}__{method_run_id}"
+skip_missing: false
+continue_on_error: false
+overwrite: false

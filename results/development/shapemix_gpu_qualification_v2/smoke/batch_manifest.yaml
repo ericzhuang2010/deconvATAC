@@ -1,0 +1,235 @@
+schema_version: 1
+run_group: smoke
+status: completed
+metrics:
+- rmse_v1
+- jsd_v2
+execution_provenance:
+  schema_version: 1
+  experiment_config:
+    path: configs/experiments/shapemix_cuda_smoke_qualification_v2.yaml
+    source_sha256: 45849c03cc8a28614f4d94661a7eb777f50095d598c40840fb5c3d86757b6d1b
+    resolved_sha256: 2482e21a88aff77a0ee41654931769cc113f6dfa38cb002b123946330112a1ff
+    resolved_hash_encoding: canonical_json_sorted_keys_compact_utf8
+  benchmark_protocol:
+    path: docs/ShapeMix/benchmark_protocol.md
+    source_sha256: bac408f631922efa884adcb2a5a94131106bb9bfcbf81e4c6525ba1623ffe79c
+  registry:
+    path: /home/ericzhuang2010/hd1t/VscodeProjects/deconvATAC/data/registry/datasets.yaml
+    source_sha256: 84d1424be310cefcca586a4b27d71c57b5a8e0a92ebc956049e4f4dc331836f6
+  code:
+    git_commit: 94a3c6feabb4c87ea9557e98ea76d2bd2c4958c3
+    git_worktree_dirty: true
+    git_status:
+    - M configs/experiments/shapemix_gse129785_external.yaml
+    - ' M configs/methods/shapemix.yaml'
+    - ' M configs/methods/shapemix_count_only.yaml'
+    - ' M docs/ShapeMix/full_evaluation_protocol.md'
+    - ' M docs/ShapeMix/iimplementation_plan.md'
+    - ' M scripts/__pycache__/evaluate_runs.cpython-311.pyc'
+    - ' M scripts/__pycache__/run_deconvolution.cpython-311.pyc'
+    - ' M scripts/run_deconvolution.py'
+    - ' M scripts/run_shapemix_low_impact.sh'
+    - ' M scripts/summarize_shapemix_cuda_qualification.py'
+    - ' M scripts/summarize_shapemix_gse129785.py'
+    - ' M src/deconvatac/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/data/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/data/__pycache__/loaders.cpython-311.pyc'
+    - ' M src/deconvatac/data/__pycache__/registry.cpython-311.pyc'
+    - ' M src/deconvatac/data/__pycache__/schemas.cpython-311.pyc'
+    - ' M src/deconvatac/data/__pycache__/validators.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/base.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/cell2location.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/destvi.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/nnls.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/rctd.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/registry.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/spatialdwls.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/tangram.cpython-311.pyc'
+    - ' M src/deconvatac/metrics/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/metrics/__pycache__/proportions.cpython-311.pyc'
+    - ' M src/deconvatac/pp/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/pp/__pycache__/feature_selection.cpython-311.pyc'
+    - ' M src/deconvatac/pp/__pycache__/fragment_shapes.cpython-311.pyc'
+    - ' M src/deconvatac/pp/__pycache__/reads_to_fragments.cpython-311.pyc'
+    - ' M src/deconvatac/shapemix/map.py'
+    - ' M src/deconvatac/tl/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/cell2location.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/destvi.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/metrics.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/rctd.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/simulate.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/spatialdwls.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/tangram.cpython-311.pyc'
+    - ?? configs/experiments/shapemix_cuda_full_qualification_v2.yaml
+    - ?? configs/experiments/shapemix_cuda_smoke_qualification_v2.yaml
+    - ?? configs/experiments/shapemix_gse129785_convergence_diagnostic.yaml
+    - ?? configs/experiments/shapemix_gse129785_external_v2.yaml
+    - ?? configs/experiments/shapemix_gse129785_log_parameterization_diagnostic.yaml
+    - ?? configs/experiments/shapemix_gse129785_restart_fix_diagnostic.yaml
+    - ?? configs/experiments/shapemix_gse129785_trajectory_diagnostic.yaml
+    - ?? configs/methods/shapemix_count_only_gse129785_convergence_diagnostic.yaml
+    - ?? configs/methods/shapemix_gse129785_convergence_diagnostic.yaml
+    - ?? configs/methods/shapemix_gse129785_trajectory_diagnostic.yaml
+    - ?? scripts/__pycache__/audit_shapemix_signal.cpython-311.pyc
+    - ?? scripts/__pycache__/diagnose_shapemix_initialization.cpython-311.pyc
+    - ?? scripts/__pycache__/download_gse129785.cpython-311.pyc
+    - ?? scripts/__pycache__/download_gse194122.cpython-311.pyc
+    - ?? scripts/__pycache__/download_shapemix_spatial.cpython-311.pyc
+    - ?? scripts/__pycache__/prepare_shapemix_gse194122.cpython-311.pyc
+    - ?? scripts/__pycache__/prepare_shapemix_pbmc.cpython-311.pyc
+    - ?? scripts/__pycache__/prepare_shapemix_pbmc_sensitivity.cpython-311.pyc
+    - ?? scripts/__pycache__/preprocess_gse129785.cpython-311.pyc
+    - ?? scripts/__pycache__/preprocess_gse194122.cpython-311.pyc
+    - ?? scripts/__pycache__/preprocess_shapemix_spatial.cpython-311.pyc
+    - ?? scripts/__pycache__/regenerate_shapemix_pbmc_simulations.cpython-311.pyc
+    - ?? scripts/__pycache__/run_shapemix_negative_controls.cpython-311.pyc
+    - ?? scripts/__pycache__/shapemix_provenance.cpython-311.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_benchmark.cpython-311.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_cuda_qualification.cpython-312.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_gse129785.cpython-311.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_gse129785.cpython-312.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_gse194122.cpython-311.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_pbmc_sensitivity.cpython-311.pyc
+    - ?? scripts/__pycache__/validate_shapemix_file_layout.cpython-311.pyc
+    - ?? scripts/diagnose_shapemix_initialization.py
+    - ?? src/deconvatac/methods/__pycache__/shapemix.cpython-311.pyc
+    - ?? src/deconvatac/shapemix/__pycache__/
+    manifest_sha256: 60db061d7322b164f82c2f1e58da31661fc713a4dc3789b9cd67d81dad8daa00
+    manifest_hash_encoding: canonical_json_sorted_keys_compact_utf8
+    selection:
+    - scripts/*.py
+    - src/deconvatac/**/*.py
+    files:
+      scripts/audit_shapemix_signal.py: 28540e61febf833effa0ce0be13bb9a8fed23e58a6573587c59f01009205a349
+      scripts/diagnose_shapemix_initialization.py: 73fff3ad99915391d2555c7f50b6836f23ee035f46bed849f5eaa6bf7e795e93
+      scripts/download_gse129785.py: 01dd03f3cbef7d5ca50f772b57e784b3d0bd56ea9dccced7cc54aaa71bda1857
+      scripts/download_gse194122.py: e78a8c55865f2672ab233438b26ff37cb657821c75b88eb106c71ffd75b05981
+      scripts/download_shapemix_spatial.py: 2fa8e46236c27c0753bf133755a42c052147ede0e242f1053e1711d5200db32d
+      scripts/evaluate_runs.py: 9296574a18069086c3fe80ddfbdf66b9c7595545f00861638d077040a284efc0
+      scripts/migrate_legacy_results.py: bf36efb886a76eed938fc7b969fc6914ddc952940b0c5053c9f136ba70329efa
+      scripts/prepare_feature_annotations.py: 94d8087570d4ef6559c23d9d5218f6e2a922d811ebdb31fa521cf5391b08eb0d
+      scripts/prepare_pbmc_multiome_labels.py: 160498e0bc44d4dde2f24701788d358f152827fc7119ca4e8dd197ffb336028e
+      scripts/prepare_pbmc_multiome_references.py: 273748cef15f6aa154278aabb976f8aa9f1b42fedb531dbe1642dfc0c58cd322
+      scripts/prepare_shapemix_gse194122.py: a6a5c4bb1c72893a8d2c4e92977bbbec0305f124f5f9e52335d874720802f68c
+      scripts/prepare_shapemix_pbmc.py: da617ef98f48ea6e7f14407f4586417a45d209bc24144466088fcbdeb9c693ca
+      scripts/prepare_shapemix_pbmc_sensitivity.py: d7e8b1b9d2038def70d217384b9ac89751063f2bce392e417150dd0038017cfd
+      scripts/prepare_shared_feature_sets.py: 1b570814c28135e42657d5052daf28a4f15bc8a0d2e5a53455fba8a33079302c
+      scripts/preprocess_gse129785.py: e9f1d0cd6bbb8c534552333e77ed58ab630c9f5b65b718c569c767fdfd1e4b46
+      scripts/preprocess_gse194122.py: 693b59b03fb0c0107b45ee276878ac6b7958857580f7d79270ad98e29a48d50b
+      scripts/preprocess_shapemix_spatial.py: e59412a98f0908d423455f56768461d3e047bff86ed7a6b05f9351fc630a0a5f
+      scripts/regenerate_heart_simulations.py: 947e7f9b49075dcc57a4e6df3b5fe0d5d73f462487470c32f8b33fc471969266
+      scripts/regenerate_pbmc_simulations.py: 89410abbb7dbf2b73e0638da314d040ab11a1a0fba34b735d39101f99aeaa102
+      scripts/regenerate_shapemix_pbmc_simulations.py: c6c1193f46f51715480360889c68417554a2fabb0e34cf25bead2a059cbec4c0
+      scripts/run_deconvolution.py: 819e53b05268699adcf1c1e373ae3a8f5c94c4eb9a13c492d902053df060172c
+      scripts/run_shapemix_negative_controls.py: 69e7040f40287e77078a83695f5e0af89bac8c72778367d7e55814fe7c0f60fa
+      scripts/shapemix_provenance.py: bd051d96c8a453b14df29e043fec96c3bc8ac9eeb9be978a9f9dc621751a1376
+      scripts/summarize_shapemix_benchmark.py: edb7230a54d54bc5c000058ce6ba0a40a53d7e3a5bb9c88ae9078eb2e0ec6b1b
+      scripts/summarize_shapemix_cuda_qualification.py: f955c63dc55fc040a698e1ea769e24591ec8bbf2ccc2bb38ead306dc3ce5934b
+      scripts/summarize_shapemix_gse129785.py: f36518ccc51cb65f5291ce110814000b5b675901afd26c67f4c2c59e62f07680
+      scripts/summarize_shapemix_gse194122.py: 43e967fe422da5af63d3cde8c23e9c4c1d6fa16d8e8cb668891de0844c608611
+      scripts/summarize_shapemix_pbmc_sensitivity.py: 83536d0e348d786eb5038c4dfb6b3a9384387f6a60867e2532255f617fb8dccb
+      scripts/validate_shapemix_file_layout.py: 7eaab8fedc1fa3f93957ac9ca26461546fe18b3d4ea0d48555f101152e4bdd44
+      scripts/validate_shapemix_step3.py: 7eb297610a7b6732b54f5ff5a601e9b3782952f650c60f4256ed77e84d209e42
+      src/deconvatac/__init__.py: 9ddebe455b5e5a29af92b2cf66cc585e7d7ec5c37d0a70eac2ad03f06204c02c
+      src/deconvatac/data/__init__.py: 5789b3ef935b56c908c4aecabb01ea65a5e1a56660b8f320ff3aad6a15f32bf5
+      src/deconvatac/data/loaders.py: be4d3ad2a1a67a70efa0f4ed2c5047c812106eaf922976ef40b546635f9bb24b
+      src/deconvatac/data/registry.py: fad6e2db43babfb453f6ed1b8044c7006c4d591981be99b6a7827688acc426dd
+      src/deconvatac/data/schemas.py: a0a9ebf5762ceb5295ed75d5fbf8aa96fb300e91a5fa0df24d69a809d089bb80
+      src/deconvatac/data/validators.py: 736fb94af18b140da9b6851b5756af138610b0baca3f7e01460583f12c0f1c95
+      src/deconvatac/methods/__init__.py: 9ae32e7211f6b92fff7aa752165d475ebbc9fc4dd16710b1b6fb6701093d3d34
+      src/deconvatac/methods/base.py: d24c3077008c20920b7ff4db230205e471776a07ce0d3fe20fc6cf1faa4b32f2
+      src/deconvatac/methods/cell2location.py: 33cefff29f029b8af2aff9d87e5f902537b8175ce3057228acf5e6a3ec1afe17
+      src/deconvatac/methods/destvi.py: 41c04546f1113f10ead9595112468668cab5abb06787e0c3b8f6cb039cbc3dd0
+      src/deconvatac/methods/nnls.py: eed85044c56e8574ed2a31f7499f41ff7dee2f204fbf5b28cae7a955b6cf0ed7
+      src/deconvatac/methods/rctd.py: 2ed4cd17a84df8a7f11ae8dd7ae9c4efdcb8dd5633c9efad5b96bf54bb09660f
+      src/deconvatac/methods/registry.py: 7907c9a435f9eac4ae91497a2cb67e12b35465f731e3af64f94d5edf531dd7de
+      src/deconvatac/methods/shapemix.py: adf674bcd99e22ec3b241479d818f29b5a6a4e66d43238b4e2b9e485f7437ddc
+      src/deconvatac/methods/spatialdwls.py: 182b30d9ba6ac3131eeba573026041a1ed3fd4d7eb69845811950412949a94f7
+      src/deconvatac/methods/tangram.py: 648142bb46f71f25fb29792171a6349deadc906c9969a8b0c5cf723c6131530c
+      src/deconvatac/metrics/__init__.py: 30b3b4abeac1bd24517f5cfe49f70c16dbe5207f176e02f39c21290eebe12982
+      src/deconvatac/metrics/proportions.py: 505e2af7ca07cc0b866fb0975aa810a580c59f6c7bca11b4baafa801f211259e
+      src/deconvatac/pp/__init__.py: a0a3c8ecbe36731f92e4d89bc8a7a18b2410f0b37c137e66e03da0bdeccf584d
+      src/deconvatac/pp/feature_selection.py: ce4b4e042512a116e9d105b13d4b143f3f570efdbd8e78f69d5bcb9ae2c25dad
+      src/deconvatac/pp/fragment_shapes.py: de0b235b4a0a7bc860a885c56ea1c6cc9726cef4bfbc6b30cb3356e72e7fa4ff
+      src/deconvatac/pp/reads_to_fragments.py: b12da50e0cbea919fc2dae77526971589a6e41f6fb0b20005e180ab3e7416768
+      src/deconvatac/shapemix/__init__.py: 818ed6593a0378ee5cfbfaf83400fc98161190dcb367173cda1a6a683d12523b
+      src/deconvatac/shapemix/config.py: 5d74d0a3690760ace6323e9d20d097e4991b2615295c12a7eafbb2c9eb5ce678
+      src/deconvatac/shapemix/diagnostics.py: dc416828a63a85de83e5139244bc15d236beb900a40a619ee1fa2becc3b72516
+      src/deconvatac/shapemix/likelihood.py: 9dbb9e78589562375b234f9b69c6766cda8c5010b856373d9ae218a4930f6873
+      src/deconvatac/shapemix/map.py: 244c306b01f56c59834fceb6a947297dac70a1a3c26f37e1abebbd7a94d6d8be
+      src/deconvatac/shapemix/signatures.py: ebae1bb0edfdc4681e4fb5046643dd5b2b434bd5552564294091e4f8a82c7356
+      src/deconvatac/tl/__init__.py: 09c2e4d934ba5d4bc7313bb81e946e1aa081c21aa7279f8f3fe7d70899f107e3
+      src/deconvatac/tl/cell2location.py: e291022429e5591f5a60428250ff73520a1e743784d45c14ce2bde5700df29e9
+      src/deconvatac/tl/destvi.py: 5de96bd1d488c3eaa47e2555c579c1ca9c86652722193b10811a0548ca355236
+      src/deconvatac/tl/metrics.py: bf0961411eb21e80a98ccdc60ad8102d96e357bcd5faed5a9a8a7b2fd8abe73b
+      src/deconvatac/tl/rctd.py: 5693368795ba1f24faea09a2be7c23800650f32c7c51124cd16e7eab59c0bd79
+      src/deconvatac/tl/simulate.py: a11c447770a9ae6715586c20af461d2abaad50eed98119398d8f3c417420e429
+      src/deconvatac/tl/spatialdwls.py: 99bcd462b75b3791f81b1b42701f3a60d81c9c0c1499e4a581e74cfb0cf58b3f
+      src/deconvatac/tl/tangram.py: d919a3a9280d44610fff186fe4e2624c42ce1f15a7de292fa2aae9511a314ad7
+  compute_environment:
+    thread_environment:
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      VECLIB_MAXIMUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    logical_cpu_count: 16
+    physical_cpu_count: 8
+    cpu_affinity:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    torch_num_threads: 1
+    torch_num_interop_threads: 8
+runs:
+- run_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke__atac__highly_variable__shapemix_length_cpu
+  method: shapemix
+  method_run_id: shapemix_length_cpu
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/development/shapemix_gpu_qualification_v2/smoke/pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke__atac__highly_variable__shapemix_length_cpu
+  output_manifest_sha256: 9bbe622f6d7ead178882e715c9067147d0065ff432da8af382be11df922d52c1
+  wall_runtime_seconds: 5.314036762982141
+  peak_rss_bytes: 1056866304
+- run_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke__atac__highly_variable__shapemix_length_cuda_cached
+  method: shapemix
+  method_run_id: shapemix_length_cuda_cached
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/development/shapemix_gpu_qualification_v2/smoke/pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke__atac__highly_variable__shapemix_length_cuda_cached
+  output_manifest_sha256: 679451fb6ad89857b51596231ab2486de79a849c6f909f5458a0a1a34dd053f3
+  wall_runtime_seconds: 4.962866715970449
+  peak_rss_bytes: 1708015616
+- run_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke__atac__highly_variable__shapemix_length_cuda_cached_repeat
+  method: shapemix
+  method_run_id: shapemix_length_cuda_cached_repeat
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/development/shapemix_gpu_qualification_v2/smoke/pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke__atac__highly_variable__shapemix_length_cuda_cached_repeat
+  output_manifest_sha256: abd9bde93e7c570761d5d62adfe916d5652394062f0363bc33c38c3a33f27ac1
+  wall_runtime_seconds: 4.454222076048609
+  peak_rss_bytes: 1725644800
+- run_id: pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke__atac__highly_variable__shapemix_length_cuda_streamed
+  method: shapemix
+  method_run_id: shapemix_length_cuda_streamed
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/development/shapemix_gpu_qualification_v2/smoke/pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_000_mix_000_smoke__atac__highly_variable__shapemix_length_cuda_streamed
+  output_manifest_sha256: 51ea237fbf49aee81bf58652a149c3b87fcdde5c2cf1ac29703a2e6d5ea5d7b4
+  wall_runtime_seconds: 5.041658583038952
+  peak_rss_bytes: 1727762432

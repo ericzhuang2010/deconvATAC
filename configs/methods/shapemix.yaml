@@ -23,4 +23,5 @@ params:
   peak_chunk_size: 512
   seed: 0
   device: cpu
+  cuda_count_cache: auto
   dtype: float32

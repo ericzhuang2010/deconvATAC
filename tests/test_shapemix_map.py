@@ -8,7 +8,9 @@ from scipy import sparse
 
 from deconvatac.shapemix.config import ShapeMixConfig
 from deconvatac.shapemix.map import (
+    ABUNDANCE_EPSILON,
     MAPOptimizationError,
+    _seeded_restart,
     fit_shapemix_map,
 )
 
@@ -16,6 +18,21 @@ from deconvatac.shapemix.map import (
 SPOT_NAMES = ("spot_b", "spot_a", "spot_c")
 FEATURE_NAMES = ("peak_3", "peak_1", "peak_5", "peak_0", "peak_4", "peak_2")
 CELL_TYPES = ("type_0", "type_1")
+
+
+def test_restart_zero_is_exact_nnls_and_later_restarts_are_perturbed() -> None:
+    initial = np.asarray([[0.05, 25.0, 4566.895409590894]], dtype=np.float64)
+    exact_raw = _seeded_restart(initial, (20260822, 0, 0, 0, 0))
+    perturbed_raw = _seeded_restart(initial, (20260822, 0, 0, 0, 1))
+    exact = np.exp(exact_raw) + ABUNDANCE_EPSILON
+    perturbed = np.exp(perturbed_raw) + ABUNDANCE_EPSILON
+
+    np.testing.assert_allclose(exact, initial, rtol=0.0, atol=5.0e-12)
+    assert not np.array_equal(perturbed, initial)
+    np.testing.assert_array_equal(
+        perturbed_raw,
+        _seeded_restart(initial, (20260822, 0, 0, 0, 1)),
+    )
 
 
 def _test_config(use_shape: bool, *, restarts: int = 3) -> ShapeMixConfig:

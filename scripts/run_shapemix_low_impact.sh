@@ -153,6 +153,9 @@ export OPENBLAS_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 export BLIS_NUM_THREADS=1
+export RAYON_NUM_THREADS=1
+export POLARS_MAX_THREADS=1
 export PYTHONPATH="$project_root/src${PYTHONPATH:+:$PYTHONPATH}"
 
+export DECONVATAC_RESOURCE_GUARD=1
 exec nice -n 10 ionice -c 2 -n 7 "${arguments[@]}"

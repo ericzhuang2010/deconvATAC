@@ -339,6 +339,33 @@ def test_coordinate_validation_requires_matrix_match_field() -> None:
     with pytest.raises(ValueError, match="missing required fields: matrix_match"):
         validate_deconvolution_input(data)
 
+def test_coordinate_validation_accepts_exact_strand_aware_bedpe_semantics() -> None:
+    data = _shape_input()
+    semantic_validation = {
+        "selected_right_cut_offset": 0,
+        "matrix_match": "not_available",
+        "validation_method": "deposited_strand_aware_bedpe_5prime",
+        "semantic_match": "exact",
+    }
+    for adata in (data.reference, data.spatial):
+        adata.uns["fragment_shape"]["coordinate_validation"] = semantic_validation.copy()
+
+    validate_deconvolution_input(data)
+
+
+def test_multisample_fragment_source_hashes_preserve_source_names() -> None:
+    data = _shape_input()
+    multisample_sources = {
+        "GSM1_sample.fragments.tsv.gz": "0" * 64,
+        "GSM1_sample.fragments.tsv.gz.tbi": "1" * 64,
+        "GSM2_sample.bedpe.gz": "2" * 64,
+        "cell_annotations.tsv.gz": "3" * 64,
+    }
+    for adata in (data.reference, data.spatial):
+        adata.uns["fragment_shape"]["source_sha256"] = multisample_sources.copy()
+
+    validate_deconvolution_input(data)
+
 
 def test_preprocessing_counters_require_every_qc_field() -> None:
     data = _shape_input()

@@ -14,6 +14,7 @@ from scripts.prepare_shapemix_gse194122 import (
     _fragment_records,
     _load_labels,
     _rank_fold,
+    _repository_path,
 )
 
 
@@ -74,3 +75,18 @@ def test_gse194122_fragment_records_bind_all_source_hashes() -> None:
     assert len(records) == 13
     assert len({record["sample_key"] for record in records}) == 13
     assert all(len(record["sha256"]) == 64 for record in records)
+
+
+def test_repository_path_preserves_lexical_path_through_symlink(
+    tmp_path, monkeypatch
+) -> None:
+    repository = tmp_path / "repository"
+    storage = tmp_path / "storage"
+    repository.mkdir()
+    storage.mkdir()
+    (repository / "data").symlink_to(storage, target_is_directory=True)
+    monkeypatch.setattr("scripts.prepare_shapemix_gse194122.ROOT", repository)
+
+    assert _repository_path(repository / "data" / "artifact.h5ad") == (
+        "data/artifact.h5ad"
+    )

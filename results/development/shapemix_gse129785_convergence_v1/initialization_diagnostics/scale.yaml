@@ -1,0 +1,74 @@
+schema_version: 1
+diagnostic: shapemix_initialization_scale_without_map_optimization
+dataset_id: gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive
+feature_set: selected_reference_peaks
+dimensions:
+  spots: 1
+  peaks: 5000
+  bins: 3
+  cell_types: 9
+observed_total_cut_sites: 7408072.0
+nnls_abundance:
+  minimum: 0.05
+  median: 0.05
+  maximum: 4566.895409590894
+  sum: 5192.999689691514
+nnls_fallback_spots: []
+deterministic_restarts:
+- restart_index: 0
+  seed_tuple:
+  - 20260822
+  - 0
+  - 0
+  - 0
+  - 0
+  abundance:
+    minimum: 0.04999999999999998
+    median: 0.07208024142359637
+    maximum: 4797.225826868979
+    sum: 5393.959506057202
+  relative_to_nnls:
+    minimum: 0.8932606433881484
+    median: 1.0804193164121287
+    maximum: 1.5043900770138745
+    sum: 10.65017296342776
+  maximum_absolute_displacement: 230.3304172780854
+- restart_index: 1
+  seed_tuple:
+  - 20260822
+  - 0
+  - 0
+  - 0
+  - 1
+  abundance:
+    minimum: 0.04999999999999998
+    median: 0.05402314172942981
+    maximum: 4161.2863975317005
+    sum: 4750.222572009604
+  relative_to_nnls:
+    minimum: 0.9111849570263033
+    median: 0.9999999999999996
+    maximum: 1.0804628345885963
+    sum: 8.973323168029193
+  maximum_absolute_displacement: 405.60901205919345
+- restart_index: 2
+  seed_tuple:
+  - 20260822
+  - 0
+  - 0
+  - 0
+  - 2
+  abundance:
+    minimum: 0.04999999999999998
+    median: 0.07011222168436387
+    maximum: 4237.822356121311
+    sum: 4795.509813604053
+  relative_to_nnls:
+    minimum: 0.8334009732269521
+    median: 0.9999999999999996
+    maximum: 1.4022444336872775
+    sum: 9.582149591256641
+  maximum_absolute_displacement: 329.0730534695831
+method_config: configs/methods/shapemix.yaml
+method_config_sha256: 83ab4ffb41f2f8c1c0cff66fc9e0057b13df6acae1efb04f744c61553162e158
+map_optimization_performed: false

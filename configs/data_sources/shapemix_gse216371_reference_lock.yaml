@@ -1,0 +1,38 @@
+schema_version: 1
+source_dataset_id: shapemix_gse216371_whole_embryo_reference
+accession: GSE216371
+completed_at: '2026-08-26T16:29:20.551442+00:00'
+config: configs/data_sources/shapemix_gse216371_reference.yaml
+resources: 3
+total_bytes: 76261606450
+files:
+- name: GSE216371_family.soft.gz
+  role: geo_family_metadata
+  accession: GSE216371
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE216nnn/GSE216371/soft/GSE216371_family.soft.gz
+  path: data/raw/sources/ncbi_geo/GSE216371/series_metadata/GSE216371_family.soft.gz
+  bytes: 8415
+  remote_etag: null
+  sha256: de31984aa42c2da15f4b24b039d8b06b50da6a9f09ab9d20369d11dc2f3cdc86
+  integrity: passed_full_gzip_stream_and_schema
+  tar_members: null
+- name: GSE216371_Cell_annotation_and_cCREs_in_MOPA.xlsx
+  role: author_cell_annotations_and_candidate_ccres
+  accession: GSE216371
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE216nnn/GSE216371/suppl/GSE216371_Cell_annotation_and_cCREs_in_MOPA.xlsx
+  path: data/raw/sources/ncbi_geo/GSE216371/processed_downloads/GSE216371_Cell_annotation_and_cCREs_in_MOPA.xlsx
+  bytes: 120030035
+  remote_etag: null
+  sha256: 0f4ae296de2b4a369d3d2830a042be64e6af10e96265a848f4aee711d0cf3d04
+  integrity: passed_xlsx_zip_crc_and_manifest
+  tar_members: null
+- name: GSE216371_RAW.tar
+  role: complete_author_fragment_bed_suite
+  accession: GSE216371
+  url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE216nnn/GSE216371/suppl/GSE216371_RAW.tar
+  path: data/raw/sources/ncbi_geo/GSE216371/processed_downloads/GSE216371_RAW.tar
+  bytes: 76141568000
+  remote_etag: null
+  sha256: 0db7906e74767a650942b0a8b357f408cd6d47f85ca6a914bfb63fc113658a5e
+  integrity: passed_tar_stream_and_safe_member_audit
+  tar_members: 68

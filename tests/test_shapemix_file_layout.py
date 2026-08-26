@@ -38,12 +38,13 @@ def test_frozen_spatial_reference_manifests_follow_canonical_lifecycle():
 
 def test_gse129785_campaign_passes_layout_and_truth_contract():
     batch = validate_experiment(
-        ROOT / "configs/experiments/shapemix_gse129785_external.yaml",
+        ROOT / "configs/experiments/shapemix_gse129785_external_v2.yaml",
         ROOT / "data/registry/datasets.yaml",
+        allow_existing_results=True,
     )
     assert batch.relative_to(ROOT) == Path(
-        "results/external_validation/shapemix_gse129785_v1/"
-        "shapemix_gse129785_external_protocol_v1_cuda"
+        "results/external_validation/shapemix_gse129785_v2/"
+        "shapemix_gse129785_external_protocol_v2_cpu_log_abundance"
     )
 
 
@@ -67,4 +68,8 @@ def test_prediction_only_campaign_rejects_truth_descriptor(tmp_path: Path):
     destination.write_text(yaml.safe_dump(config, sort_keys=False))
 
     with pytest.raises(LayoutError, match="declares truth"):
-        validate_experiment(destination, ROOT / "data/registry/datasets.yaml")
+        validate_experiment(
+            destination,
+            ROOT / "data/registry/datasets.yaml",
+            allow_existing_results=True,
+        )

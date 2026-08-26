@@ -49,6 +49,16 @@ def _config(device: str, cuda_count_cache: str = "auto") -> ShapeMixConfig:
     )
 
 
+def _protocol_config(device: str) -> ShapeMixConfig:
+    return ShapeMixConfig(
+        use_shape=True,
+        restarts=1,
+        spot_batch_size=2,
+        peak_chunk_size=3,
+        device=device,
+    )
+
+
 def test_cuda_objective_and_gradient_match_cpu() -> None:
     counts, accessibility, omega = _toy()
     raw_cpu = torch.tensor([[1.5, 0.5], [0.5, 1.5]], requires_grad=True)
@@ -89,16 +99,31 @@ def test_cuda_map_matches_cpu_and_repeats_deterministically() -> None:
         "cell_types": ("type_0", "type_1"),
     }
     cpu = fit_shapemix_map(
-        counts, accessibility, omega, 100.0, config=_config("cpu"), **common
+        counts, accessibility, omega, 100.0, config=_protocol_config("cpu"), **common
     )
     cuda = fit_shapemix_map(
-        counts, accessibility, omega, 100.0, config=_config("cuda:0"), **common
+        counts,
+        accessibility,
+        omega,
+        100.0,
+        config=_protocol_config("cuda:0"),
+        **common,
     )
     repeat = fit_shapemix_map(
-        counts, accessibility, omega, 100.0, config=_config("cuda:0"), **common
+        counts,
+        accessibility,
+        omega,
+        100.0,
+        config=_protocol_config("cuda:0"),
+        **common,
     )
 
-    np.testing.assert_allclose(cuda.proportions, cpu.proportions, rtol=0.0, atol=1.0e-4)
+    # CPU and CUDA can select adjacent checkpoints on the same flat,
+    # deterministic convergence path because their transcendental kernels
+    # round differently. Keep the toy-map numerical bound narrow while also
+    # requiring the restart and convergence length to agree exactly.
+    np.testing.assert_allclose(cuda.proportions, cpu.proportions, rtol=0.0, atol=2.0e-5)
+    assert cuda.restart_diagnostics[0].steps == cpu.restart_diagnostics[0].steps
     np.testing.assert_allclose(repeat.proportions, cuda.proportions, rtol=0.0, atol=1.0e-7)
     assert repeat.selected_restart == cuda.selected_restart
     execution = cuda.to_diagnostics_dict()["execution"]

@@ -1,0 +1,81 @@
+dataset_id: gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive
+modality: atac
+feature_set: selected_reference_peaks
+registry: /home/ericzhuang2010/VscodeProjects/deconvATAC/data/registry/datasets.yaml
+dataset_config:
+  dataset_id: gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive
+  source: GSE129785 physical dilution
+  description: One physical scATAC dilution sample; proportions are nominal sample-level
+    inputs.
+  labels_key: cell_type
+  spatial_key: spatial
+  benchmark_scope: external_validation_nominal
+  shapemix_seeds:
+    outer_split_seed: 0
+    inner_mixture_seed: 0
+  physical_dilution:
+    gsm: GSM3722018
+    family: cd4_memory_cd8_naive
+    components:
+    - CD4 Memory
+    - CD8 Naive
+    nominal_fractions:
+    - 0.5
+    - 0.5
+    evidence_limitation: Nominal sample-level input proportions; sorting and cell-recovery
+      uncertainty remain.
+  validation:
+    nominal_broad_proportions:
+      path: data/processed/datasets/gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive/validation/nominal_broad_proportions.csv
+      evidence_class: nominal_sample_level
+      exact_truth: false
+  modalities:
+    atac:
+      reference:
+        path: data/processed/references/gse129785_immune/atac/reference.h5ad
+      spatial:
+        path: data/processed/datasets/gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive/atac/spatial.h5ad
+      labels_key: cell_type
+      spatial_key: spatial
+      cell_types:
+      - Dendritic cells
+      - Monocytes
+      - B cells
+      - Regulatory T cells
+      - Naive CD4 T cells
+      - Memory CD4 T cells
+      - NK cells
+      - Naive CD8 T cells
+      - Memory CD8 T cells
+      fragment_shape:
+        schema_version: 1
+        axis: parent_fragment_length_bp
+        count_unit: deduplicated_cut_sites
+        read_support_policy: ignore
+        peak_assignment: containing_nonoverlapping_peak
+        left_cut_offset: 0
+        right_cut_offset: -1
+        coordinate_validation:
+          selected_right_cut_offset: -1
+          matrix_match: exact
+          mismatched_entries: 0
+          absolute_error: 0
+        bins:
+        - name: short
+          min_inclusive: 0
+          max_exclusive: 100
+          layer: fragment_length_lt_100
+        - name: mono
+          min_inclusive: 100
+          max_exclusive: 250
+          layer: fragment_length_100_249
+        - name: long
+          min_inclusive: 250
+          max_exclusive: null
+          layer: fragment_length_ge_250
+      feature_sets:
+        all:
+          mode: all
+        selected_reference_peaks:
+          path: data/processed/datasets/gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive/atac/features/selected_reference_peaks.txt
+  config_path: /home/ericzhuang2010/VscodeProjects/deconvATAC/data/processed/datasets/gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive/dataset.yaml

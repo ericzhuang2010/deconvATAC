@@ -123,7 +123,7 @@ def _sha256(path: Path) -> str:
 
 
 def _repository_path(path: Path) -> str:
-    return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    return path.absolute().relative_to(ROOT.absolute()).as_posix()
 
 
 def _atomic_h5ad(adata: ad.AnnData, path: Path) -> None:

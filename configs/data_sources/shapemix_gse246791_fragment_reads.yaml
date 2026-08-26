@@ -1,0 +1,77 @@
+schema_version: 1
+source_dataset_id: shapemix_gse246791_selected_fragment_reads
+accession: GSE246791
+provider: european_nucleotide_archive_mirror_of_ncbi_sra
+organism: Mus musculus
+tissue: whole brain regional atlas
+stage: adult
+genome_build: mm10
+assay: snATAC-seq
+raw_directory: data/raw/sources/ncbi_sra/GSE246791
+work_directory: data/work/downloads/gse246791_fragment_reads
+processed_directory: data/processed/shapemix/gse246791_mouse_brain_reference
+source_audit_filename: fragment_read_downloads.yaml
+selection:
+  policy: exact paired FASTQs for the same 12 region-balanced samples frozen in shapemix_gse246791_reference.yaml
+  major_regions: [AMY, CB, HPF, HY, Isocortex, MB, MY, OLF, PAL, Pons, STR, TH]
+  expected_samples: 12
+  expected_files: 24
+  expected_bytes: 149964894951
+  rationale: old SnapATAC2 H5ADs retain insertion sites but not parent-fragment pairing; paired reads are required for exact ShapeMix length layers
+resources:
+  # Download the frozen representative first so its paired-read/barcode audit can
+  # gate the exact alignment and fragment-construction recipe for every sample.
+  - {name: SRR26585986_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7877011, srx: SRX22287221, srr: SRR26585986, read: 1, sample: CEMBA171214_4D, major_region: STR, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/086/SRR26585986/SRR26585986_1.fastq.gz", expected_bytes: 2010024796, expected_md5: f5f8c4db2c5b2f4ffa80119902655b5d, payload: gzip, destination: samples/GSM7877011/raw_reads/SRR26585986_1.fastq.gz}
+  - {name: SRR26585986_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7877011, srx: SRX22287221, srr: SRR26585986, read: 2, sample: CEMBA171214_4D, major_region: STR, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/086/SRR26585986/SRR26585986_2.fastq.gz", expected_bytes: 2010694657, expected_md5: de79573245830711ed92c43951e83cfd, payload: gzip, destination: samples/GSM7877011/raw_reads/SRR26585986_2.fastq.gz}
+  - {name: SRR26585897_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7877041, srx: SRX22287310, srr: SRR26585897, read: 1, sample: CEMBA200820_7H, major_region: AMY, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/097/SRR26585897/SRR26585897_1.fastq.gz", expected_bytes: 7089688616, expected_md5: e9ec9815330ba8f6d9e4e3afb402e761, payload: gzip, destination: samples/GSM7877041/raw_reads/SRR26585897_1.fastq.gz}
+  - {name: SRR26585897_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7877041, srx: SRX22287310, srr: SRR26585897, read: 2, sample: CEMBA200820_7H, major_region: AMY, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/097/SRR26585897/SRR26585897_2.fastq.gz", expected_bytes: 7018281052, expected_md5: 720037d076e2e45d7dc641871f25d7d7, payload: gzip, destination: samples/GSM7877041/raw_reads/SRR26585897_2.fastq.gz}
+  - {name: SRR26586009_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7876942, srx: SRX22287199, srr: SRR26586009, read: 1, sample: CEMBA201217_14B, major_region: CB, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/009/SRR26586009/SRR26586009_1.fastq.gz", expected_bytes: 15869572364, expected_md5: 9ebd18a68d925cd8318833200966ef33, payload: gzip, destination: samples/GSM7876942/raw_reads/SRR26586009_1.fastq.gz}
+  - {name: SRR26586009_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7876942, srx: SRX22287199, srr: SRR26586009, read: 2, sample: CEMBA201217_14B, major_region: CB, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/009/SRR26586009/SRR26586009_2.fastq.gz", expected_bytes: 15700757186, expected_md5: 6c76ee2ac8219503c1f3b95c22f90fc4, payload: gzip, destination: samples/GSM7876942/raw_reads/SRR26586009_2.fastq.gz}
+  - {name: SRR26585991_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7877006, srx: SRX22287216, srr: SRR26585991, read: 1, sample: CEMBA190212_9H, major_region: HPF, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/091/SRR26585991/SRR26585991_1.fastq.gz", expected_bytes: 4633926676, expected_md5: eedb5d6e024fbc998268f43e6127bcc0, payload: gzip, destination: samples/GSM7877006/raw_reads/SRR26585991_1.fastq.gz}
+  - {name: SRR26585991_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7877006, srx: SRX22287216, srr: SRR26585991, read: 2, sample: CEMBA190212_9H, major_region: HPF, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/091/SRR26585991/SRR26585991_2.fastq.gz", expected_bytes: 4641523814, expected_md5: 04c34b289e43cf6d10762b6509223315, payload: gzip, destination: samples/GSM7877006/raw_reads/SRR26585991_2.fastq.gz}
+  - {name: SRR26586088_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7877102, srx: SRX22287120, srr: SRR26586088, read: 1, sample: CEMBA200305_7J, major_region: HY, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/088/SRR26586088/SRR26586088_1.fastq.gz", expected_bytes: 2896854570, expected_md5: b2832ad52d5aab65898b50d709d37f6a, payload: gzip, destination: samples/GSM7877102/raw_reads/SRR26586088_1.fastq.gz}
+  - {name: SRR26586088_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7877102, srx: SRX22287120, srr: SRR26586088, read: 2, sample: CEMBA200305_7J, major_region: HY, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/088/SRR26586088/SRR26586088_2.fastq.gz", expected_bytes: 2854030176, expected_md5: 400f2453bcebd8b495b21537ff43982d, payload: gzip, destination: samples/GSM7877102/raw_reads/SRR26586088_2.fastq.gz}
+  - {name: SRR26585982_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7877014, srx: SRX22287225, srr: SRR26585982, read: 1, sample: CEMBA171206_3C, major_region: Isocortex, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/082/SRR26585982/SRR26585982_1.fastq.gz", expected_bytes: 4507717319, expected_md5: fa65a7684f2d48efb67240b94daeff2a, payload: gzip, destination: samples/GSM7877014/raw_reads/SRR26585982_1.fastq.gz}
+  - {name: SRR26585982_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7877014, srx: SRX22287225, srr: SRR26585982, read: 2, sample: CEMBA171206_3C, major_region: Isocortex, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/082/SRR26585982/SRR26585982_2.fastq.gz", expected_bytes: 4483839450, expected_md5: 38be6d2220b88053a6497e5631cacd23, payload: gzip, destination: samples/GSM7877014/raw_reads/SRR26585982_2.fastq.gz}
+  - {name: SRR26585984_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7877013, srx: SRX22287223, srr: SRR26585984, read: 1, sample: CEMBA200730_11H, major_region: MB, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/084/SRR26585984/SRR26585984_1.fastq.gz", expected_bytes: 6548518232, expected_md5: bf9f488e629953c4f0dfa6ca6b2fa219, payload: gzip, destination: samples/GSM7877013/raw_reads/SRR26585984_1.fastq.gz}
+  - {name: SRR26585984_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7877013, srx: SRX22287223, srr: SRR26585984, read: 2, sample: CEMBA200730_11H, major_region: MB, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/084/SRR26585984/SRR26585984_2.fastq.gz", expected_bytes: 6459776893, expected_md5: 9425462ea9844e92a4ef2d67e16da70f, payload: gzip, destination: samples/GSM7877013/raw_reads/SRR26585984_2.fastq.gz}
+  - {name: SRR26585876_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7877084, srx: SRX22287331, srr: SRR26585876, read: 1, sample: CEMBA210408_15C, major_region: MY, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/076/SRR26585876/SRR26585876_1.fastq.gz", expected_bytes: 13461701952, expected_md5: 9aa264c4ffa9b16796603d24d8d3343d, payload: gzip, destination: samples/GSM7877084/raw_reads/SRR26585876_1.fastq.gz}
+  - {name: SRR26585876_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7877084, srx: SRX22287331, srr: SRR26585876, read: 2, sample: CEMBA210408_15C, major_region: MY, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/076/SRR26585876/SRR26585876_2.fastq.gz", expected_bytes: 13356889434, expected_md5: 2fda893032051813d80148a3a62ec40b, payload: gzip, destination: samples/GSM7877084/raw_reads/SRR26585876_2.fastq.gz}
+  - {name: SRR26585979_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7877017, srx: SRX22287228, srr: SRR26585979, read: 1, sample: CEMBA180119_1B, major_region: OLF, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/079/SRR26585979/SRR26585979_1.fastq.gz", expected_bytes: 2735877254, expected_md5: 8f78ab9844909ecafeaa48a82e7d98ca, payload: gzip, destination: samples/GSM7877017/raw_reads/SRR26585979_1.fastq.gz}
+  - {name: SRR26585979_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7877017, srx: SRX22287228, srr: SRR26585979, read: 2, sample: CEMBA180119_1B, major_region: OLF, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/079/SRR26585979/SRR26585979_2.fastq.gz", expected_bytes: 2737497001, expected_md5: ff03c37447919c34d27a44a3de2bf880, payload: gzip, destination: samples/GSM7877017/raw_reads/SRR26585979_2.fastq.gz}
+  - {name: SRR26585932_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7876953, srx: SRX22287275, srr: SRR26585932, read: 1, sample: CEMBA180724_4H, major_region: PAL, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/032/SRR26585932/SRR26585932_1.fastq.gz", expected_bytes: 2685630520, expected_md5: 15b715e0e9d843cb127bd1b705f13816, payload: gzip, destination: samples/GSM7876953/raw_reads/SRR26585932_1.fastq.gz}
+  - {name: SRR26585932_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7876953, srx: SRX22287275, srr: SRR26585932, read: 2, sample: CEMBA180724_4H, major_region: PAL, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/032/SRR26585932/SRR26585932_2.fastq.gz", expected_bytes: 2686639175, expected_md5: 1c77e97d27b4834d1722092083192931, payload: gzip, destination: samples/GSM7876953/raw_reads/SRR26585932_2.fastq.gz}
+  - {name: SRR26585866_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7876902, srx: SRX22287341, srr: SRR26585866, read: 1, sample: CEMBA200917_14C, major_region: Pons, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/066/SRR26585866/SRR26585866_1.fastq.gz", expected_bytes: 6941990752, expected_md5: dfca1b85093f5f5265b9cccf6341ce0c, payload: gzip, destination: samples/GSM7876902/raw_reads/SRR26585866_1.fastq.gz}
+  - {name: SRR26585866_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7876902, srx: SRX22287341, srr: SRR26585866, read: 2, sample: CEMBA200917_14C, major_region: Pons, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/066/SRR26585866/SRR26585866_2.fastq.gz", expected_bytes: 6886055630, expected_md5: d05feadbb4366539cae5594fe11c9047, payload: gzip, destination: samples/GSM7876902/raw_reads/SRR26585866_2.fastq.gz}
+  - {name: SRR26585890_1.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_1, gsm: GSM7877047, srx: SRX22287317, srr: SRR26585890, read: 1, sample: CEMBA190423_10G, major_region: TH, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/090/SRR26585890/SRR26585890_1.fastq.gz", expected_bytes: 5869431503, expected_md5: 7e2108ffde5b23039091b6b3354a205e, payload: gzip, destination: samples/GSM7877047/raw_reads/SRR26585890_1.fastq.gz}
+  - {name: SRR26585890_2.fastq.gz, role: selected_sample_demultiplexed_paired_end_read_2, gsm: GSM7877047, srx: SRX22287317, srr: SRR26585890, read: 2, sample: CEMBA190423_10G, major_region: TH, url: "https://ftp.sra.ebi.ac.uk/vol1/fastq/SRR265/090/SRR26585890/SRR26585890_2.fastq.gz", expected_bytes: 5877975929, expected_md5: 46319746f0bb69d9fffa4e59d598397b, payload: gzip, destination: samples/GSM7877047/raw_reads/SRR26585890_2.fastq.gz}
+preprocessing_policy:
+  immutable_source: retain byte-for-byte
+  author_workflow_repository: https://github.com/beyondpie/CEMBA_wmb_snATAC
+  author_workflow_commit: 4605d86a83fe45a38e656ba87df85fe99762f358
+  author_snaptools_repository: https://github.com/r3fang/SnapTools
+  author_snaptools_commit: eecfa5653020b80e31eed1ae5d2b13068e17a2df
+  author_snaptools_version: 1.4.8
+  alignment: BWA-MEM 0.7.17-r1188 against UCSC mm10/GRCm38 initial; restore the ENA second header field as the original barcode-first QNAME before streaming
+  alignment_threads: 1
+  alignment_thread_departure: author used 4 threads; one thread changes resources only and protects the co-tenant workload
+  fragment_construction: SnapATAC2 2.4.0 make_fragment_file with is_paired=true, barcode_regex='^(\w+):.+', min_mapq=30, shift_left=4, shift_right=-5, and deduplication
+  fragment_sort_chunk_size: 5000000
+  fragment_chunk_departure: lower than the 2.4.0 default to bound memory; affects external sort chunking, not filtering, coordinates, or deduplication semantics
+  normalized_fastq_storage: none; validated normalization is streamed to BWA and immutable raw FASTQs remain unchanged
+  cell_filter: retain only deposited H5AD observation barcodes and exact SI-Table-2 annotations
+  temporary_bam_location: data/work/preprocessing/gse246791_mouse_brain_reference/<gsm>/alignment/name_sorted.bam
+  final_fragment_location: data/processed/shapemix/gse246791_mouse_brain_reference/normalized_fragments/<gsm>
+  representative_concordance_gate:
+    require_all_h5ad_barcodes_present: true
+    median_absolute_relative_error_max: 0.02
+    p95_absolute_relative_error_max: 0.10
+    spearman_r_min: 0.98
+validation_gates:
+  - exact ENA byte size and MD5 for every paired FASTQ
+  - complete gzip streams and project SHA-256 lock
+  - paired read IDs and cell-barcode encoding match between mates
+  - mm10 coordinate, proper-pair, MAPQ, duplicate, and Tn5-shift audit
+  - retained fragment barcodes map exactly to deposited H5AD observations
+  - reconstructed per-cell unique-fragment counts agree with deposited n_fragment within the frozen tolerance
+download_workers_max: 1

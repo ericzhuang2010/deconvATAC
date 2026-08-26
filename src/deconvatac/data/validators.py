@@ -167,16 +167,30 @@ def _validate_sha256(value: Any, field_name: str) -> None:
 def _validate_source_sha256(value: Any) -> None:
     if not isinstance(value, Mapping) or not value:
         raise ValueError("fragment_shape.source_sha256 must be a non-empty digest mapping.")
-    missing = {"fragments", "tabix_index"}.difference(value)
-    if missing:
-        raise ValueError(
-            "fragment_shape.source_sha256 is missing required sources: "
-            f"{', '.join(sorted(missing))}."
-        )
     for source_name, digest in value.items():
         if not isinstance(source_name, str) or not source_name:
             raise ValueError("fragment_shape.source_sha256 keys must be non-empty strings.")
         _validate_sha256(digest, f"source_sha256.{source_name}")
+
+    # Preserve the strict canonical contract for a single 10x fragments source.
+    # Multi-sample references and deposited BEDPE sources use immutable source
+    # basenames as keys, so forcing literal aliases would discard their identity.
+    canonical = {"fragments", "tabix_index"}
+    if canonical.intersection(value):
+        missing = canonical.difference(value)
+        if missing:
+            raise ValueError(
+                "fragment_shape.source_sha256 is missing required sources: "
+                f"{', '.join(sorted(missing))}."
+            )
+    elif not any(
+        "fragment" in str(source_name).lower()
+        or "bedpe" in str(source_name).lower()
+        for source_name in value
+    ):
+        raise ValueError(
+            "fragment_shape.source_sha256 must identify at least one fragments or BEDPE source."
+        )
 
 
 def _bin_counter_values(
@@ -317,25 +331,44 @@ def _validate_coordinate_provenance(
             "fragment_shape.coordinate_validation.selected_right_cut_offset must "
             "match fragment_shape.right_cut_offset."
         )
-    expected_numeric = {
-        "mismatched_entries": 0,
-        "absolute_error": 0,
-    }
-    required_fields = set(expected_numeric) | {"matrix_match"}
-    missing = required_fields - value.keys()
-    if missing:
+    matrix_match = value.get("matrix_match")
+    if matrix_match is None:
         raise ValueError(
-            "fragment_shape.coordinate_validation is missing required fields: "
-            f"{', '.join(sorted(missing))}."
+            "fragment_shape.coordinate_validation is missing required fields: matrix_match."
         )
-    for field_name, expected_value in expected_numeric.items():
-        observed = value[field_name]
-        if not _is_integer(observed) or observed != expected_value:
+    if matrix_match == "exact":
+        expected_numeric = {
+            "mismatched_entries": 0,
+            "absolute_error": 0,
+        }
+        missing = set(expected_numeric).difference(value)
+        if missing:
             raise ValueError(
-                f"fragment_shape.coordinate_validation.{field_name} must be {expected_value}."
+                "fragment_shape.coordinate_validation is missing required fields: "
+                f"{', '.join(sorted(missing))}."
             )
-    if value["matrix_match"] != "exact":
-        raise ValueError("fragment_shape.coordinate_validation.matrix_match must be 'exact'.")
+        for field_name, expected_value in expected_numeric.items():
+            observed = value[field_name]
+            if not _is_integer(observed) or observed != expected_value:
+                raise ValueError(
+                    f"fragment_shape.coordinate_validation.{field_name} must be {expected_value}."
+                )
+        return
+
+    if matrix_match == "not_available" and value.get("validation_method") == (
+        "deposited_strand_aware_bedpe_5prime"
+    ):
+        if value.get("semantic_match") != "exact":
+            raise ValueError(
+                "fragment_shape.coordinate_validation.semantic_match must be 'exact' "
+                "for deposited BEDPE validation."
+            )
+        return
+
+    raise ValueError(
+        "fragment_shape.coordinate_validation must record either an exact matrix "
+        "match or exact deposited strand-aware BEDPE semantics."
+    )
 
 
 def validate_fragment_shape_feature_axis(adata: Any, role: str = "AnnData") -> str:

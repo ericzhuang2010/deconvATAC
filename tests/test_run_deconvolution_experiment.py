@@ -516,6 +516,11 @@ def test_success_records_campaign_code_output_and_resource_provenance(tmp_path):
 
     performance = metadata["performance"]
     assert performance["wall_runtime_seconds"] > 0
+    assert performance["process_cpu_seconds"] >= 0
+    assert performance["average_process_cpu_cores"] >= 0
+    assert performance["average_process_cpu_percent_of_one_core"] >= 0
+    assert performance["cpu_measurement"]["source"] == "psutil_process_tree_cpu_times"
+    assert performance["resource_preflight"]["passed"] is True
     assert performance["peak_rss_bytes"] > 0
     assert performance["peak_rss_mb"] > 0
     assert performance["scope"] == "load_signature_fit_diagnostics_standard_write_and_evaluation"
@@ -626,6 +631,33 @@ def test_resume_detects_tampered_output_before_batch_mutation(tmp_path):
     assert (batch_dir / "batch_manifest.yaml").read_bytes() == batch_manifest_before
 
 
+def test_resource_gate_is_disabled_without_launcher_environment(monkeypatch):
+    import scripts.run_deconvolution as runner
+
+    monkeypatch.delenv(runner.RESOURCE_GUARD_ENV, raising=False)
+
+    assert runner._resource_gate_state() == {"enabled": False, "passed": True}
+
+
+def test_resource_gate_waits_and_rechecks_until_safe(monkeypatch):
+    import scripts.run_deconvolution as runner
+
+    states = iter(
+        (
+            {"enabled": True, "passed": False, "one_minute_load": 12.0},
+            {"enabled": True, "passed": True, "one_minute_load": 1.0},
+        )
+    )
+    sleeps = []
+    monkeypatch.setattr(runner, "_resource_gate_state", lambda: next(states))
+    monkeypatch.setattr(runner.time, "sleep", sleeps.append)
+
+    selected = runner._wait_for_resource_gate()
+
+    assert selected["passed"] is True
+    assert sleeps == [runner.RESOURCE_RECHECK_SECONDS]
+
+
 def test_failed_run_is_explicitly_finalized_and_never_reused(tmp_path):
     registry_path = _write_toy_dataset(tmp_path)
     experiment_path = tmp_path / "failed_resume.yaml"
@@ -662,6 +694,56 @@ def test_failed_run_is_explicitly_finalized_and_never_reused(tmp_path):
 
     with pytest.raises(ValueError, match="Cannot resume run.*status is 'failed'"):
         run_experiment(experiment_path, registry_path, output_root, resume=True)
+
+
+def test_failed_run_persists_and_hashes_method_diagnostics(tmp_path, monkeypatch):
+    import scripts.run_deconvolution as runner
+
+    class FailureDiagnostics:
+        def to_dict(self):
+            return {
+                "success": False,
+                "stopping_reason": "max_steps_without_convergence",
+                "restarts": [{"restart_index": 0, "steps": 17}],
+            }
+
+    class FailingMethod:
+        def __init__(self, **params):
+            del params
+
+        def run(self, data):
+            del data
+            error = RuntimeError("controlled optimizer failure")
+            error.diagnostics = FailureDiagnostics()
+            raise error
+
+    registry_path = _write_toy_dataset(tmp_path)
+    experiment_path = tmp_path / "failure_diagnostics.yaml"
+    experiment_path.write_text(
+        yaml.safe_dump(
+            {
+                "run_group": "failure_diagnostics",
+                "datasets": ["toy"],
+                "modalities": ["atac"],
+                "feature_sets": ["all"],
+                "methods": ["nnls"],
+                "metrics": ["rmse_v1"],
+                "continue_on_error": True,
+            }
+        )
+    )
+    monkeypatch.setattr(runner, "get_method", lambda _: FailingMethod)
+
+    comparison_path = runner.run_experiment(
+        experiment_path,
+        registry_path,
+        tmp_path / "results",
+    )
+    run_dir = comparison_path.parent / "toy__atac__all__nnls"
+    diagnostics_path = run_dir / "failure_diagnostics.json"
+    assert json.loads(diagnostics_path.read_text()) == FailureDiagnostics().to_dict()
+    output_manifest = yaml.safe_load((run_dir / "output_sha256.yaml").read_text())
+    assert "failure_diagnostics.json" in output_manifest["files"]
 
 
 def test_resume_and_overwrite_are_mutually_exclusive_before_output(tmp_path):

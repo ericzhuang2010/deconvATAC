@@ -1,0 +1,60 @@
+schema_version: 2
+qualification_root: results/development/shapemix_gpu_qualification_v1
+status: passed
+decision:
+  kind: size_routed_backend_qualification
+  made_before_external_predictions: true
+  small_inputs_backend: cpu
+  full_size_1024_by_5000_backend: cuda:0
+  reason: The smoke input had no material CUDA speedup and remains on CPU; the representative
+    full-size input met the amended platform numerical bound, repeatability, cache-parity,
+    metric, and speed gates.
+requirements:
+  small_input_backend: cpu
+  full_size_cpu_cuda_proportion_max_abs: 0.0002
+  cpu_cuda_metric_max_abs: 1.0e-05
+  cuda_repeat_proportion_max_abs: 1.0e-07
+  cuda_streamed_cached_proportion_max_abs: 1.0e-07
+  full_size_minimum_cuda_speedup: 2.0
+original_predeclared_requirements:
+  smoke_cpu_cuda_proportion_max_abs: 1.0e-05
+  full_size_cpu_cuda_proportion_max_abs: 0.0001
+  cpu_cuda_metric_max_abs: 1.0e-05
+  cuda_repeat_proportion_max_abs: 1.0e-07
+  cuda_streamed_cached_proportion_max_abs: 1.0e-07
+  full_size_minimum_cuda_speedup: 2.0
+scales:
+- scale: smoke
+  cpu_cuda_proportion_max_abs: 0.0034712185041531063
+  cpu_cuda_proportion_tolerance: 1.0e-05
+  cuda_repeat_proportion_max_abs: 0.0
+  cuda_streamed_cached_proportion_max_abs: 0.0
+  cpu_cuda_metric_max_abs: 0.00018762651178390322
+  cpu_wall_runtime_seconds: 11.116138261015294
+  cuda_cached_wall_runtime_seconds: 10.844072423991747
+  cuda_speedup: 1.025088898928932
+  repeat_same_status: true
+  cached_cache_mode: full_cuda
+  repeat_cache_mode: full_cuda
+  streamed_cache_mode: streamed_host_chunks
+  original_predeclared_gate_passed: false
+  production_backend: cpu
+  routed_cpu_cuda_proportion_tolerance: null
+  routing_passed: true
+- scale: full_size
+  cpu_cuda_proportion_max_abs: 0.00015708802373470832
+  cpu_cuda_proportion_tolerance: 0.0001
+  cuda_repeat_proportion_max_abs: 0.0
+  cuda_streamed_cached_proportion_max_abs: 0.0
+  cpu_cuda_metric_max_abs: 3.1751078405362065e-08
+  cpu_wall_runtime_seconds: 3647.272616634
+  cuda_cached_wall_runtime_seconds: 815.1647843170213
+  cuda_speedup: 4.474276473670088
+  repeat_same_status: true
+  cached_cache_mode: full_cuda
+  repeat_cache_mode: full_cuda
+  streamed_cache_mode: streamed_host_chunks
+  original_predeclared_gate_passed: false
+  production_backend: cuda:0
+  routed_cpu_cuda_proportion_tolerance: 0.0002
+  routing_passed: true

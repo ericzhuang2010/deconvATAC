@@ -1,0 +1,85 @@
+dataset_id: gse129785_shapemix_preparation_comparison
+modality: atac
+feature_set: selected_reference_peaks
+registry: /home/ericzhuang2010/VscodeProjects/deconvATAC/data/registry/datasets.yaml
+dataset_config:
+  dataset_id: gse129785_shapemix_preparation_comparison
+  source: GSE129785 PBMC preparation comparison
+  description: Fresh, frozen-sorted, and frozen-unsorted PBMC scATAC samples, aggregated
+    to one deconvolution spot per preparation.
+  labels_key: cell_type
+  spatial_key: spatial
+  benchmark_scope: external_unlabelled_evaluation
+  shapemix_seeds:
+    outer_split_seed: 0
+    inner_mixture_seed: 0
+  evaluation_design:
+    comparison_key: preparation
+    truth_limitation: No quantitative cell-type truth is published for these samples;
+      use concordance and robustness endpoints only.
+    samples:
+    - gsm: GSM3722040
+      srx: SRX5679910
+      title: Fresh_pbmc_5k
+      role: preparation_evaluation
+      preparation: fresh
+    - gsm: GSM3722041
+      srx: SRX5679911
+      title: Frozen_sorted_pbmc_5k
+      role: preparation_evaluation
+      preparation: frozen_sorted
+    - gsm: GSM3722042
+      srx: SRX5679912
+      title: Frozen_unsorted_pbmc_5k
+      role: preparation_evaluation
+      preparation: frozen_unsorted
+  modalities:
+    atac:
+      reference:
+        path: data/processed/references/gse129785_immune/atac/reference.h5ad
+      spatial:
+        path: data/processed/datasets/gse129785_shapemix_preparation_comparison/atac/spatial.h5ad
+      labels_key: cell_type
+      spatial_key: spatial
+      cell_types:
+      - Dendritic cells
+      - Monocytes
+      - B cells
+      - Regulatory T cells
+      - Naive CD4 T cells
+      - Memory CD4 T cells
+      - NK cells
+      - Naive CD8 T cells
+      - Memory CD8 T cells
+      fragment_shape:
+        schema_version: 1
+        axis: parent_fragment_length_bp
+        count_unit: deduplicated_cut_sites
+        read_support_policy: ignore
+        peak_assignment: containing_nonoverlapping_peak
+        left_cut_offset: 0
+        right_cut_offset: -1
+        coordinate_validation:
+          selected_right_cut_offset: -1
+          matrix_match: exact
+          mismatched_entries: 0
+          absolute_error: 0
+        bins:
+        - name: short
+          min_inclusive: 0
+          max_exclusive: 100
+          layer: fragment_length_lt_100
+        - name: mono
+          min_inclusive: 100
+          max_exclusive: 250
+          layer: fragment_length_100_249
+        - name: long
+          min_inclusive: 250
+          max_exclusive: null
+          layer: fragment_length_ge_250
+      feature_sets:
+        all:
+          mode: all
+        selected_reference_peaks:
+          path: data/processed/datasets/gse129785_shapemix_preparation_comparison/atac/features/selected_reference_peaks.txt
+  config_path: /home/ericzhuang2010/VscodeProjects/deconvATAC/data/processed/datasets/gse129785_shapemix_preparation_comparison/dataset.yaml

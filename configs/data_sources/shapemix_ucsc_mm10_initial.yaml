@@ -1,0 +1,42 @@
+schema_version: 1
+source_dataset_id: shapemix_ucsc_mm10_initial_reference
+accession: UCSC_mm10_initial
+provider: ucsc_genome_browser
+organism: Mus musculus
+assembly: GRCm38 initial release
+genome_build: mm10
+raw_directory: data/raw/sources/ucsc/mm10_initial
+work_directory: data/work/downloads/ucsc_mm10_initial
+processed_directory: data/processed/references/mm10_ucsc_initial
+download_workers_max: 1
+selection:
+  rationale: author configuration names mm10.fa; deposited H5AD primary-contig lengths exactly match UCSC mm10/GRCm38
+  assembly_accession: GCA_000001635.2
+  provider_checksum_index: https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/md5sum.txt
+  expected_sequences: 66
+resources:
+  - name: mm10.fa.gz
+    role: immutable_soft_masked_reference_fasta
+    url: https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/mm10.fa.gz
+    expected_bytes: 870141360
+    expected_md5: db005b65828db31735f384e4c5787be5
+    expected_etag: 33dd4db0-5c05d90cc825f
+    payload: gzip
+    destination: mm10.fa.gz
+  - name: mm10.chrom.sizes
+    role: immutable_reference_sequence_sizes
+    url: https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/mm10.chrom.sizes
+    expected_bytes: 1405
+    expected_md5: 5a103c9a15dd660c295a089ef5035672
+    expected_etag: 57d-4b850ea801680
+    payload: text
+    destination: mm10.chrom.sizes
+preprocessing:
+  decompressed_fasta: data/processed/references/mm10_ucsc_initial/mm10.fa
+  bwa_index_prefix: data/processed/references/mm10_ucsc_initial/mm10.fa
+  provenance: data/processed/references/mm10_ucsc_initial/reference.yaml
+validation_gates:
+  - provider byte counts, ETags, MD5 checksums, full gzip stream, and SHA-256 pass
+  - decompressed FASTA sequence lengths reproduce mm10.chrom.sizes exactly
+  - primary chromosome names and lengths reproduce the deposited GSE246791 H5AD reference_sequences table exactly
+  - BWA index artifacts are derived under data/processed/references, never data/raw

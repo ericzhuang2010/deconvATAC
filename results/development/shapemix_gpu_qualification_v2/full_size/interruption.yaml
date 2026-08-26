@@ -1,0 +1,11 @@
+schema_version: 1
+interrupted_at: "2026-08-25T17:28:26-04:00"
+campaign: shapemix_gpu_qualification_v2/full_size
+active_arm: shapemix_length_cpu
+status: interrupted_before_any_run_finalized
+reason: >-
+  Stopped by the evaluation operator before the co-tenant workflow transitioned
+  from download to trimming and a high-memory STAR alignment. Continuing would
+  have triggered the co-tenant memory-collision guard.
+scientific_outputs_created: false
+recovery: rerun the full-size v2 campaign with explicit --overwrite in a safe window

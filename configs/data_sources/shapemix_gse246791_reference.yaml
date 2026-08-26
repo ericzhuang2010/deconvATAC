@@ -132,7 +132,7 @@ resources:
     destination: samples/GSM7877047/source_files/GSM7877047_CEMBA190423_10G_rm_dlt.h5ad.gz
 preprocessing_policy:
   immutable_source: retain byte-for-byte
-  decompress_h5ad_to: data/processed/shapemix/gse246791_mouse_brain_reference/source_objects
+  decompress_h5ad_to: data/processed/shapemix/gse246791_mouse_brain_reference/source_audit/source_objects
   peak_selection: reference-only ranking on the selected samples
   fragment_bins_bp: [[0, 100], [100, 250], [250, null]]
   right_cut_offset: audit against the deposited 500-bp matrices before freezing

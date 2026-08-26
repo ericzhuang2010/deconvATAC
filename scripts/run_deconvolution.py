@@ -60,6 +60,13 @@ THREAD_ENVIRONMENT_VARIABLES = (
     "VECLIB_MAXIMUM_THREADS",
     "NUMEXPR_NUM_THREADS",
 )
+RESOURCE_GUARD_ENV = "DECONVATAC_RESOURCE_GUARD"
+RESOURCE_MAX_ONE_MINUTE_LOAD = 6.0
+RESOURCE_MIN_AVAILABLE_MEMORY_BYTES = 4 * 1024**3
+RESOURCE_MAX_GPU_MEMORY_USED_MIB = 2048
+RESOURCE_MAX_GPU_TEMPERATURE_C = 79
+RESOURCE_MAX_DISPLAY_PROCESS_MEMORY_MIB = 512
+RESOURCE_RECHECK_SECONDS = 30
 
 
 def read_yaml(path: Optional[Union[str, Path]]) -> dict[str, Any]:
@@ -406,6 +413,22 @@ class _PeakRSSMonitor:
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._peak_bytes = 0
+        self._cpu_seconds_start = 0.0
+
+    def _cpu_seconds(self) -> float:
+        processes = [self._process]
+        try:
+            processes.extend(self._process.children(recursive=True))
+        except (psutil.Error, OSError):
+            pass
+        total = 0.0
+        for process in processes:
+            try:
+                times = process.cpu_times()
+                total += float(times.user) + float(times.system)
+            except (psutil.Error, OSError):
+                continue
+        return total
 
     def _sample(self) -> None:
         processes = [self._process]
@@ -427,6 +450,7 @@ class _PeakRSSMonitor:
 
     def start(self) -> float:
         self._sample()
+        self._cpu_seconds_start = self._cpu_seconds()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
         return time.perf_counter()
@@ -437,9 +461,20 @@ class _PeakRSSMonitor:
         if self._thread is not None:
             self._thread.join(timeout=max(1.0, self.interval_seconds * 4))
         self._sample()
+        process_cpu_seconds = max(0.0, self._cpu_seconds() - self._cpu_seconds_start)
         ru_maxrss = _ru_maxrss_measurement()
         return {
             "wall_runtime_seconds": elapsed,
+            "process_cpu_seconds": process_cpu_seconds,
+            "average_process_cpu_cores": process_cpu_seconds / elapsed,
+            "average_process_cpu_percent_of_one_core": 100.0
+            * process_cpu_seconds
+            / elapsed,
+            "cpu_measurement": {
+                "source": "psutil_process_tree_cpu_times",
+                "semantics": "driver-plus-live-child user and system CPU time",
+                "average_core_semantics": "CPU seconds divided by wall seconds",
+            },
             "peak_rss_bytes": self._peak_bytes,
             "peak_rss_mb": self._peak_bytes / (1024.0 * 1024.0),
             "scope": scope,
@@ -452,6 +487,112 @@ class _PeakRSSMonitor:
                 "ru_maxrss": ru_maxrss,
             },
         }
+
+
+def _query_gpu_resource_state() -> dict[str, Any]:
+    applications = subprocess.run(
+        [
+            "nvidia-smi",
+            "--query-compute-apps=pid,process_name,used_memory",
+            "--format=csv,noheader,nounits",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    ).stdout
+    gpu_lines = subprocess.run(
+        [
+            "nvidia-smi",
+            "--query-gpu=memory.used,memory.total,utilization.gpu,temperature.gpu",
+            "--format=csv,noheader,nounits",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    ).stdout.splitlines()
+    if len(gpu_lines) != 1:
+        raise RuntimeError(f"Expected one GPU from nvidia-smi, found {len(gpu_lines)}.")
+    gpu_fields = [field.strip() for field in gpu_lines[0].split(",")]
+    if len(gpu_fields) != 4:
+        raise RuntimeError("Unexpected nvidia-smi GPU state response.")
+    unrelated = []
+    own_gpu_memory_mib = 0
+    for line in applications.splitlines():
+        if not line.strip():
+            continue
+        fields = [field.strip() for field in line.split(",", 2)]
+        if len(fields) != 3:
+            raise RuntimeError("Unexpected nvidia-smi application response.")
+        pid, process_name, used_memory = int(fields[0]), fields[1], int(fields[2])
+        if pid == os.getpid():
+            own_gpu_memory_mib += used_memory
+            continue
+        if (
+            Path(process_name).name == "gnome-remote-desktop-daemon"
+            and used_memory <= RESOURCE_MAX_DISPLAY_PROCESS_MEMORY_MIB
+        ):
+            continue
+        unrelated.append(
+            {
+                "pid": pid,
+                "process_name": process_name,
+                "used_memory_mib": used_memory,
+            }
+        )
+    gpu_used_mib = int(gpu_fields[0])
+    return {
+        "gpu_memory_used_mib": gpu_used_mib,
+        "gpu_external_memory_used_mib": max(0, gpu_used_mib - own_gpu_memory_mib),
+        "own_gpu_memory_used_mib": own_gpu_memory_mib,
+        "gpu_memory_total_mib": int(gpu_fields[1]),
+        "gpu_utilization_percent": int(gpu_fields[2]),
+        "gpu_temperature_c": int(gpu_fields[3]),
+        "unrelated_gpu_processes": unrelated,
+    }
+
+
+def _resource_gate_state() -> dict[str, Any]:
+    if os.environ.get(RESOURCE_GUARD_ENV) != "1":
+        return {"enabled": False, "passed": True}
+    state: dict[str, Any] = {
+        "enabled": True,
+        "captured_at": datetime.now().astimezone().isoformat(),
+        "one_minute_load": float(os.getloadavg()[0]),
+        "available_memory_bytes": int(psutil.virtual_memory().available),
+        "process_nice": int(psutil.Process().nice()),
+        "process_ionice": str(psutil.Process().ionice()),
+        "thresholds": {
+            "one_minute_load_max_exclusive": RESOURCE_MAX_ONE_MINUTE_LOAD,
+            "available_memory_bytes_min": RESOURCE_MIN_AVAILABLE_MEMORY_BYTES,
+            "gpu_external_memory_used_mib_max": RESOURCE_MAX_GPU_MEMORY_USED_MIB,
+            "gpu_temperature_c_max": RESOURCE_MAX_GPU_TEMPERATURE_C,
+        },
+    }
+    try:
+        state.update(_query_gpu_resource_state())
+        state["passed"] = bool(
+            state["one_minute_load"] < RESOURCE_MAX_ONE_MINUTE_LOAD
+            and state["available_memory_bytes"] >= RESOURCE_MIN_AVAILABLE_MEMORY_BYTES
+            and state["gpu_external_memory_used_mib"] <= RESOURCE_MAX_GPU_MEMORY_USED_MIB
+            and state["gpu_temperature_c"] <= RESOURCE_MAX_GPU_TEMPERATURE_C
+            and not state["unrelated_gpu_processes"]
+        )
+    except Exception as exc:
+        state["passed"] = False
+        state["gpu_query_error"] = str(exc)
+    return state
+
+
+def _wait_for_resource_gate() -> dict[str, Any]:
+    while True:
+        state = _resource_gate_state()
+        if state["passed"]:
+            print(f"resource_job_preflight {json.dumps(state, sort_keys=True)}", flush=True)
+            return state
+        print(f"resource_job_wait {json.dumps(state, sort_keys=True)}", flush=True)
+        time.sleep(RESOURCE_RECHECK_SECONDS)
 
 
 def _execution_metadata(method_config: Mapping[str, Any]) -> dict[str, Any]:
@@ -1431,10 +1572,12 @@ def _failure_fallback_metadata(
 def _attach_compute_metadata(
     performance: dict[str, Any],
     execution_provenance: Mapping[str, Any],
+    resource_preflight: Mapping[str, Any],
 ) -> dict[str, Any]:
     performance["compute_environment"] = copy.deepcopy(
         execution_provenance.get("compute_environment", {})
     )
+    performance["resource_preflight"] = copy.deepcopy(dict(resource_preflight))
     return performance
 
 
@@ -1596,6 +1739,7 @@ def run_experiment(
             )
             continue
 
+        resource_preflight = _wait_for_resource_gate()
         monitor = _PeakRSSMonitor()
         started_at = monitor.start()
         try:
@@ -1627,6 +1771,7 @@ def run_experiment(
                     "load_signature_fit_diagnostics_standard_write_and_evaluation",
                 ),
                 execution_provenance,
+                resource_preflight,
             )
             metadata = _finalize_run_directory(
                 run_dir,
@@ -1646,12 +1791,25 @@ def run_experiment(
                 )
             )
         except Exception as exc:
+            failure_diagnostics = getattr(exc, "diagnostics", None)
+            if failure_diagnostics is not None and callable(
+                getattr(failure_diagnostics, "to_dict", None)
+            ):
+                with (run_dir / "failure_diagnostics.json").open("w") as handle:
+                    json.dump(
+                        failure_diagnostics.to_dict(),
+                        handle,
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    handle.write("\n")
             performance = _attach_compute_metadata(
                 monitor.stop(
                     started_at,
                     "load_signature_fit_diagnostics_standard_write_and_evaluation_until_failure",
                 ),
                 execution_provenance,
+                resource_preflight,
             )
             metadata = _finalize_run_directory(
                 run_dir,
@@ -1848,6 +2006,7 @@ def main() -> None:
             "single_run_config" if config_path else "implicit_empty_default"
         ),
     }
+    resource_preflight = _wait_for_resource_gate()
     monitor = _PeakRSSMonitor()
     started_at = monitor.start()
     try:
@@ -1872,6 +2031,7 @@ def main() -> None:
         performance = _attach_compute_metadata(
             monitor.stop(started_at, "load_signature_fit_diagnostics_and_standard_write"),
             execution_provenance,
+            resource_preflight,
         )
         _finalize_run_directory(
             completed_run_dir,
@@ -1881,9 +2041,24 @@ def main() -> None:
             execution_action="executed",
         )
     except Exception as exc:
+        failure_diagnostics = getattr(exc, "diagnostics", None)
+        if (
+            run_dir.exists()
+            and failure_diagnostics is not None
+            and callable(getattr(failure_diagnostics, "to_dict", None))
+        ):
+            with (run_dir / "failure_diagnostics.json").open("w") as handle:
+                json.dump(
+                    failure_diagnostics.to_dict(),
+                    handle,
+                    indent=2,
+                    sort_keys=True,
+                )
+                handle.write("\n")
         performance = _attach_compute_metadata(
             monitor.stop(started_at, "single_run_until_failure"),
             execution_provenance,
+            resource_preflight,
         )
         if run_dir.exists() and (args.overwrite or not output_existed_before):
             _finalize_run_directory(

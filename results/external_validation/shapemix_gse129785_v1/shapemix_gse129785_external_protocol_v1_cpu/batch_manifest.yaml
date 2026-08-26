@@ -1,0 +1,611 @@
+schema_version: 1
+run_group: shapemix_gse129785_external_protocol_v1_cpu
+status: completed_with_failures
+metrics: []
+execution_provenance:
+  schema_version: 1
+  experiment_config:
+    path: configs/experiments/shapemix_gse129785_external.yaml
+    source_sha256: 6f77a41a5a26844db64af8cc2ae6509de5821f5bef8b2988fa2defcf78676199
+    resolved_sha256: 308f7f78659e8d702bcc6223d4f3af64d5f46a130b942797cca3524cb5ee670e
+    resolved_hash_encoding: canonical_json_sorted_keys_compact_utf8
+  benchmark_protocol:
+    path: docs/ShapeMix/benchmark_protocol.md
+    source_sha256: bac408f631922efa884adcb2a5a94131106bb9bfcbf81e4c6525ba1623ffe79c
+  registry:
+    path: /home/ericzhuang2010/hd1t/VscodeProjects/deconvATAC/data/registry/datasets.yaml
+    source_sha256: 84d1424be310cefcca586a4b27d71c57b5a8e0a92ebc956049e4f4dc331836f6
+  code:
+    git_commit: 94a3c6feabb4c87ea9557e98ea76d2bd2c4958c3
+    git_worktree_dirty: true
+    git_status:
+    - M configs/experiments/shapemix_gse129785_external.yaml
+    - ' M configs/methods/shapemix.yaml'
+    - ' M configs/methods/shapemix_count_only.yaml'
+    - ' M docs/ShapeMix/full_evaluation_protocol.md'
+    - ' M docs/ShapeMix/iimplementation_plan.md'
+    - ' M scripts/__pycache__/evaluate_runs.cpython-311.pyc'
+    - ' M scripts/__pycache__/run_deconvolution.cpython-311.pyc'
+    - ' M scripts/summarize_shapemix_cuda_qualification.py'
+    - ' M src/deconvatac/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/data/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/data/__pycache__/loaders.cpython-311.pyc'
+    - ' M src/deconvatac/data/__pycache__/registry.cpython-311.pyc'
+    - ' M src/deconvatac/data/__pycache__/schemas.cpython-311.pyc'
+    - ' M src/deconvatac/data/__pycache__/validators.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/base.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/cell2location.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/destvi.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/nnls.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/rctd.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/registry.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/spatialdwls.cpython-311.pyc'
+    - ' M src/deconvatac/methods/__pycache__/tangram.cpython-311.pyc'
+    - ' M src/deconvatac/metrics/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/metrics/__pycache__/proportions.cpython-311.pyc'
+    - ' M src/deconvatac/pp/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/pp/__pycache__/feature_selection.cpython-311.pyc'
+    - ' M src/deconvatac/pp/__pycache__/fragment_shapes.cpython-311.pyc'
+    - ' M src/deconvatac/pp/__pycache__/reads_to_fragments.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/__init__.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/cell2location.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/destvi.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/metrics.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/rctd.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/simulate.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/spatialdwls.cpython-311.pyc'
+    - ' M src/deconvatac/tl/__pycache__/tangram.cpython-311.pyc'
+    - ?? scripts/__pycache__/audit_shapemix_signal.cpython-311.pyc
+    - ?? scripts/__pycache__/download_gse129785.cpython-311.pyc
+    - ?? scripts/__pycache__/download_gse194122.cpython-311.pyc
+    - ?? scripts/__pycache__/download_shapemix_spatial.cpython-311.pyc
+    - ?? scripts/__pycache__/prepare_shapemix_gse194122.cpython-311.pyc
+    - ?? scripts/__pycache__/prepare_shapemix_pbmc.cpython-311.pyc
+    - ?? scripts/__pycache__/prepare_shapemix_pbmc_sensitivity.cpython-311.pyc
+    - ?? scripts/__pycache__/preprocess_gse129785.cpython-311.pyc
+    - ?? scripts/__pycache__/preprocess_gse194122.cpython-311.pyc
+    - ?? scripts/__pycache__/preprocess_shapemix_spatial.cpython-311.pyc
+    - ?? scripts/__pycache__/regenerate_shapemix_pbmc_simulations.cpython-311.pyc
+    - ?? scripts/__pycache__/run_shapemix_negative_controls.cpython-311.pyc
+    - ?? scripts/__pycache__/shapemix_provenance.cpython-311.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_benchmark.cpython-311.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_cuda_qualification.cpython-312.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_gse129785.cpython-311.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_gse194122.cpython-311.pyc
+    - ?? scripts/__pycache__/summarize_shapemix_pbmc_sensitivity.cpython-311.pyc
+    - ?? scripts/__pycache__/validate_shapemix_file_layout.cpython-311.pyc
+    - ?? src/deconvatac/methods/__pycache__/shapemix.cpython-311.pyc
+    - ?? src/deconvatac/shapemix/__pycache__/
+    manifest_sha256: d519a7882db0109eb230d5935c0bd5a8224e8165641423155c1d72c87955b731
+    manifest_hash_encoding: canonical_json_sorted_keys_compact_utf8
+    selection:
+    - scripts/*.py
+    - src/deconvatac/**/*.py
+    files:
+      scripts/audit_shapemix_signal.py: 28540e61febf833effa0ce0be13bb9a8fed23e58a6573587c59f01009205a349
+      scripts/download_gse129785.py: 01dd03f3cbef7d5ca50f772b57e784b3d0bd56ea9dccced7cc54aaa71bda1857
+      scripts/download_gse194122.py: e78a8c55865f2672ab233438b26ff37cb657821c75b88eb106c71ffd75b05981
+      scripts/download_shapemix_spatial.py: 2fa8e46236c27c0753bf133755a42c052147ede0e242f1053e1711d5200db32d
+      scripts/evaluate_runs.py: 9296574a18069086c3fe80ddfbdf66b9c7595545f00861638d077040a284efc0
+      scripts/migrate_legacy_results.py: bf36efb886a76eed938fc7b969fc6914ddc952940b0c5053c9f136ba70329efa
+      scripts/prepare_feature_annotations.py: 94d8087570d4ef6559c23d9d5218f6e2a922d811ebdb31fa521cf5391b08eb0d
+      scripts/prepare_pbmc_multiome_labels.py: 160498e0bc44d4dde2f24701788d358f152827fc7119ca4e8dd197ffb336028e
+      scripts/prepare_pbmc_multiome_references.py: 273748cef15f6aa154278aabb976f8aa9f1b42fedb531dbe1642dfc0c58cd322
+      scripts/prepare_shapemix_gse194122.py: a6a5c4bb1c72893a8d2c4e92977bbbec0305f124f5f9e52335d874720802f68c
+      scripts/prepare_shapemix_pbmc.py: da617ef98f48ea6e7f14407f4586417a45d209bc24144466088fcbdeb9c693ca
+      scripts/prepare_shapemix_pbmc_sensitivity.py: d7e8b1b9d2038def70d217384b9ac89751063f2bce392e417150dd0038017cfd
+      scripts/prepare_shared_feature_sets.py: 1b570814c28135e42657d5052daf28a4f15bc8a0d2e5a53455fba8a33079302c
+      scripts/preprocess_gse129785.py: e9f1d0cd6bbb8c534552333e77ed58ab630c9f5b65b718c569c767fdfd1e4b46
+      scripts/preprocess_gse194122.py: 693b59b03fb0c0107b45ee276878ac6b7958857580f7d79270ad98e29a48d50b
+      scripts/preprocess_shapemix_spatial.py: e59412a98f0908d423455f56768461d3e047bff86ed7a6b05f9351fc630a0a5f
+      scripts/regenerate_heart_simulations.py: 947e7f9b49075dcc57a4e6df3b5fe0d5d73f462487470c32f8b33fc471969266
+      scripts/regenerate_pbmc_simulations.py: 89410abbb7dbf2b73e0638da314d040ab11a1a0fba34b735d39101f99aeaa102
+      scripts/regenerate_shapemix_pbmc_simulations.py: c6c1193f46f51715480360889c68417554a2fabb0e34cf25bead2a059cbec4c0
+      scripts/run_deconvolution.py: 2a7541280499589d060873258970a8c3e59c2abb76dabbe97b8572a12b16a55f
+      scripts/run_shapemix_negative_controls.py: 69e7040f40287e77078a83695f5e0af89bac8c72778367d7e55814fe7c0f60fa
+      scripts/shapemix_provenance.py: bd051d96c8a453b14df29e043fec96c3bc8ac9eeb9be978a9f9dc621751a1376
+      scripts/summarize_shapemix_benchmark.py: edb7230a54d54bc5c000058ce6ba0a40a53d7e3a5bb9c88ae9078eb2e0ec6b1b
+      scripts/summarize_shapemix_cuda_qualification.py: 06947faa74c214fdbcbd90f57343daec84b0bf8ef224bb51970e71a7002603ae
+      scripts/summarize_shapemix_gse129785.py: 3c4b27b65fcdc93c5f539bfc5f6b8bba55a5069df9cefffa48b999d0e3458111
+      scripts/summarize_shapemix_gse194122.py: 43e967fe422da5af63d3cde8c23e9c4c1d6fa16d8e8cb668891de0844c608611
+      scripts/summarize_shapemix_pbmc_sensitivity.py: 83536d0e348d786eb5038c4dfb6b3a9384387f6a60867e2532255f617fb8dccb
+      scripts/validate_shapemix_file_layout.py: 7eaab8fedc1fa3f93957ac9ca26461546fe18b3d4ea0d48555f101152e4bdd44
+      scripts/validate_shapemix_step3.py: 7eb297610a7b6732b54f5ff5a601e9b3782952f650c60f4256ed77e84d209e42
+      src/deconvatac/__init__.py: 9ddebe455b5e5a29af92b2cf66cc585e7d7ec5c37d0a70eac2ad03f06204c02c
+      src/deconvatac/data/__init__.py: 5789b3ef935b56c908c4aecabb01ea65a5e1a56660b8f320ff3aad6a15f32bf5
+      src/deconvatac/data/loaders.py: be4d3ad2a1a67a70efa0f4ed2c5047c812106eaf922976ef40b546635f9bb24b
+      src/deconvatac/data/registry.py: fad6e2db43babfb453f6ed1b8044c7006c4d591981be99b6a7827688acc426dd
+      src/deconvatac/data/schemas.py: a0a9ebf5762ceb5295ed75d5fbf8aa96fb300e91a5fa0df24d69a809d089bb80
+      src/deconvatac/data/validators.py: 736fb94af18b140da9b6851b5756af138610b0baca3f7e01460583f12c0f1c95
+      src/deconvatac/methods/__init__.py: 9ae32e7211f6b92fff7aa752165d475ebbc9fc4dd16710b1b6fb6701093d3d34
+      src/deconvatac/methods/base.py: d24c3077008c20920b7ff4db230205e471776a07ce0d3fe20fc6cf1faa4b32f2
+      src/deconvatac/methods/cell2location.py: 33cefff29f029b8af2aff9d87e5f902537b8175ce3057228acf5e6a3ec1afe17
+      src/deconvatac/methods/destvi.py: 41c04546f1113f10ead9595112468668cab5abb06787e0c3b8f6cb039cbc3dd0
+      src/deconvatac/methods/nnls.py: eed85044c56e8574ed2a31f7499f41ff7dee2f204fbf5b28cae7a955b6cf0ed7
+      src/deconvatac/methods/rctd.py: 2ed4cd17a84df8a7f11ae8dd7ae9c4efdcb8dd5633c9efad5b96bf54bb09660f
+      src/deconvatac/methods/registry.py: 7907c9a435f9eac4ae91497a2cb67e12b35465f731e3af64f94d5edf531dd7de
+      src/deconvatac/methods/shapemix.py: adf674bcd99e22ec3b241479d818f29b5a6a4e66d43238b4e2b9e485f7437ddc
+      src/deconvatac/methods/spatialdwls.py: 182b30d9ba6ac3131eeba573026041a1ed3fd4d7eb69845811950412949a94f7
+      src/deconvatac/methods/tangram.py: 648142bb46f71f25fb29792171a6349deadc906c9969a8b0c5cf723c6131530c
+      src/deconvatac/metrics/__init__.py: 30b3b4abeac1bd24517f5cfe49f70c16dbe5207f176e02f39c21290eebe12982
+      src/deconvatac/metrics/proportions.py: 505e2af7ca07cc0b866fb0975aa810a580c59f6c7bca11b4baafa801f211259e
+      src/deconvatac/pp/__init__.py: a0a3c8ecbe36731f92e4d89bc8a7a18b2410f0b37c137e66e03da0bdeccf584d
+      src/deconvatac/pp/feature_selection.py: ce4b4e042512a116e9d105b13d4b143f3f570efdbd8e78f69d5bcb9ae2c25dad
+      src/deconvatac/pp/fragment_shapes.py: de0b235b4a0a7bc860a885c56ea1c6cc9726cef4bfbc6b30cb3356e72e7fa4ff
+      src/deconvatac/pp/reads_to_fragments.py: b12da50e0cbea919fc2dae77526971589a6e41f6fb0b20005e180ab3e7416768
+      src/deconvatac/shapemix/__init__.py: 818ed6593a0378ee5cfbfaf83400fc98161190dcb367173cda1a6a683d12523b
+      src/deconvatac/shapemix/config.py: 5d74d0a3690760ace6323e9d20d097e4991b2615295c12a7eafbb2c9eb5ce678
+      src/deconvatac/shapemix/diagnostics.py: dc416828a63a85de83e5139244bc15d236beb900a40a619ee1fa2becc3b72516
+      src/deconvatac/shapemix/likelihood.py: 9dbb9e78589562375b234f9b69c6766cda8c5010b856373d9ae218a4930f6873
+      src/deconvatac/shapemix/map.py: 3c4d0cb4c5ddb871779b0cbe195bfee556cd548364c2e328e0b6aae34fbdc3fe
+      src/deconvatac/shapemix/signatures.py: ebae1bb0edfdc4681e4fb5046643dd5b2b434bd5552564294091e4f8a82c7356
+      src/deconvatac/tl/__init__.py: 09c2e4d934ba5d4bc7313bb81e946e1aa081c21aa7279f8f3fe7d70899f107e3
+      src/deconvatac/tl/cell2location.py: e291022429e5591f5a60428250ff73520a1e743784d45c14ce2bde5700df29e9
+      src/deconvatac/tl/destvi.py: 5de96bd1d488c3eaa47e2555c579c1ca9c86652722193b10811a0548ca355236
+      src/deconvatac/tl/metrics.py: bf0961411eb21e80a98ccdc60ad8102d96e357bcd5faed5a9a8a7b2fd8abe73b
+      src/deconvatac/tl/rctd.py: 5693368795ba1f24faea09a2be7c23800650f32c7c51124cd16e7eab59c0bd79
+      src/deconvatac/tl/simulate.py: a11c447770a9ae6715586c20af461d2abaad50eed98119398d8f3c417420e429
+      src/deconvatac/tl/spatialdwls.py: 99bcd462b75b3791f81b1b42701f3a60d81c9c0c1499e4a581e74cfb0cf58b3f
+      src/deconvatac/tl/tangram.py: d919a3a9280d44610fff186fe4e2624c42ce1f15a7de292fa2aae9511a314ad7
+  compute_environment:
+    thread_environment:
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      VECLIB_MAXIMUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+    logical_cpu_count: 16
+    physical_cpu_count: 8
+    cpu_affinity:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    torch_num_threads: 1
+    torch_num_interop_threads: 8
+runs:
+- run_id: gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: f9b88676aec60526161607b48c1f83a01009a3e4509bccc84f29e70b422f7acc
+  wall_runtime_seconds: 138.44136247999268
+  peak_rss_bytes: 1999818752
+- run_id: gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: bb647eac2d680c62887c6f0279b4cbc157d0f40c44ae1d77e9ab3a5fd6e443e1
+  wall_runtime_seconds: 86.40297818600084
+  peak_rss_bytes: 2545930240
+- run_id: gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: 6aef11b211badf207dfdf27b168270099cc90a06769e90633aaae6802990080a
+  wall_runtime_seconds: 1.5762923220172524
+  peak_rss_bytes: 2629685248
+- run_id: gse129785_shapemix_physical_dilution_0p5_99p5_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p5_99p5_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: 660296760940c0e87f56a55892e59d5ae9096dc45c9d5dc36409af0fc30b5c97
+  wall_runtime_seconds: 138.67021555901738
+  peak_rss_bytes: 3338682368
+- run_id: gse129785_shapemix_physical_dilution_0p5_99p5_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p5_99p5_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 9e0a0985b21a4b3ed5038a38a5c93c4e464ec9eebcfc8c7f4162e17dab27ebd2
+  wall_runtime_seconds: 86.61976374400547
+  peak_rss_bytes: 3341922304
+- run_id: gse129785_shapemix_physical_dilution_0p5_99p5_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p5_99p5_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: 669ed260ccba56b72a146cd968e12c2f6e8c8ea2d1fe993f77aac33d22ebef5c
+  wall_runtime_seconds: 1.6076845589850564
+  peak_rss_bytes: 3445501952
+- run_id: gse129785_shapemix_physical_dilution_1_99_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_1_99_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: 59d6bb108fadc947b5771ba4e46ba492283b0a27736099469c851092df2f018f
+  wall_runtime_seconds: 137.5700678699941
+  peak_rss_bytes: 4157550592
+- run_id: gse129785_shapemix_physical_dilution_1_99_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_1_99_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 3e030a5c35be4f482030032e01608deb64701becce8700816c4b248c1a3d870d
+  wall_runtime_seconds: 89.35676666698419
+  peak_rss_bytes: 4179304448
+- run_id: gse129785_shapemix_physical_dilution_1_99_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_1_99_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: 9f246f64841e4a0297312576ad7646b1f9b118cfc11e931b61a43f8f69b7fb4d
+  wall_runtime_seconds: 1.6749664439994376
+  peak_rss_bytes: 4255326208
+- run_id: gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: ddaf0250ae69aa53cffc89b85c61b1e4244158b9bf1a859ad485fb092790e53b
+  wall_runtime_seconds: 140.40700098100933
+  peak_rss_bytes: 4572520448
+- run_id: gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 5d56c804cc451c2803d34f57f23498fb627ad5ab5c877109aaab8acc80283d21
+  wall_runtime_seconds: 84.90165690201684
+  peak_rss_bytes: 4980555776
+- run_id: gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: c2fe69894ac7bd56b206c2040c39d283982543101ae556ace70becd5fc484f7f
+  wall_runtime_seconds: 1.791311722015962
+  peak_rss_bytes: 5064597504
+- run_id: gse129785_shapemix_physical_dilution_99_1_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99_1_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: bd494088c8cb6d6cb2400489848b8f057a9123a4b0677bd05d4f46acf200bf2f
+  wall_runtime_seconds: 141.03038414698676
+  peak_rss_bytes: 5802545152
+- run_id: gse129785_shapemix_physical_dilution_99_1_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99_1_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 63d4000906b76fc83857c2f2fe6955a410051f524e4f9a67d0b033040f1e7a23
+  wall_runtime_seconds: 89.77799257202423
+  peak_rss_bytes: 5816823808
+- run_id: gse129785_shapemix_physical_dilution_99_1_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99_1_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: 9c403cf9f0251759ebd8efc8338c8773cf2b494b58d0fd78a1fc3aaa8e987aa1
+  wall_runtime_seconds: 1.7109528120199684
+  peak_rss_bytes: 5883076608
+- run_id: gse129785_shapemix_physical_dilution_99p5_0p5_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p5_0p5_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: f40ec5e6d95ebbaacbfdd419a76d343e490bb5e9e30b432e29cdba9ea3fa90a9
+  wall_runtime_seconds: 141.6806194759847
+  peak_rss_bytes: 6615609344
+- run_id: gse129785_shapemix_physical_dilution_99p5_0p5_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p5_0p5_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 711e8dc7ff5225318f0d93f70a8bf969d733240da5dabacfa82c697b679dbc0e
+  wall_runtime_seconds: 88.51869759798865
+  peak_rss_bytes: 6622830592
+- run_id: gse129785_shapemix_physical_dilution_99p5_0p5_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p5_0p5_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: c467632a3622ae692ea56527217db800be4f85889671057eb8047cb4dc187047
+  wall_runtime_seconds: 1.7630058139911853
+  peak_rss_bytes: 6698045440
+- run_id: gse129785_shapemix_physical_dilution_99p9_0p1_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p9_0p1_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: f743333ca59b1fc8ab40119da30659f36581d57488295ac1406056e8277b6d44
+  wall_runtime_seconds: 141.9890478279849
+  peak_rss_bytes: 7409225728
+- run_id: gse129785_shapemix_physical_dilution_99p9_0p1_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p9_0p1_cd4mem_cd8naive__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 15a0d2e2d66eb9cf4f7b6667c5ec6ac10a3c17ae87f51be41eb941d32872d407
+  wall_runtime_seconds: 89.17565412799013
+  peak_rss_bytes: 4894154752
+- run_id: gse129785_shapemix_physical_dilution_99p9_0p1_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p9_0p1_cd4mem_cd8naive__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: debbb628d47c909349f2686503818c00c8ba8109a197bd9cf8c8bfca5954d9ba
+  wall_runtime_seconds: 1.4545260849990882
+  peak_rss_bytes: 4894154752
+- run_id: gse129785_shapemix_physical_dilution_0p1_99p9_mono_t__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p1_99p9_mono_t__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: cc4538b9a4b62aa9d96112b24d49e9abb48dd3c686ea03d5e038cc136ee4677e
+  wall_runtime_seconds: 137.24401792997378
+  peak_rss_bytes: 4894158848
+- run_id: gse129785_shapemix_physical_dilution_0p1_99p9_mono_t__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p1_99p9_mono_t__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 0be537c4d79b71c9d16c47a06eb5f610be55d53c690af9833d06c4b834315d8b
+  wall_runtime_seconds: 87.80800028899102
+  peak_rss_bytes: 4894158848
+- run_id: gse129785_shapemix_physical_dilution_0p1_99p9_mono_t__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p1_99p9_mono_t__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: 2d96c51f96d42bcd7abaa20c0d5e7a6d3c31d463e2b408db054446313e23f943
+  wall_runtime_seconds: 1.4588242869940586
+  peak_rss_bytes: 4894158848
+- run_id: gse129785_shapemix_physical_dilution_0p5_99p5_mono_t__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p5_99p5_mono_t__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: a759aa34d5dae9fda753a76d6e44b73448cb152b8a3af43ef9a6d2adc065d983
+  wall_runtime_seconds: 137.12786491497536
+  peak_rss_bytes: 4894158848
+- run_id: gse129785_shapemix_physical_dilution_0p5_99p5_mono_t__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p5_99p5_mono_t__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 34c820ac8448ef42b5f8a3c40c584e90b8d69824a2dfd92b73ab760f6761ede4
+  wall_runtime_seconds: 87.53348865700536
+  peak_rss_bytes: 4894158848
+- run_id: gse129785_shapemix_physical_dilution_0p5_99p5_mono_t__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_0p5_99p5_mono_t__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: 873e4fcf39400a371ffc3b94f095d16fe8d3d2e3cf926af968859fb0c426a068
+  wall_runtime_seconds: 1.4512065299786627
+  peak_rss_bytes: 4894158848
+- run_id: gse129785_shapemix_physical_dilution_1_99_mono_t__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_1_99_mono_t__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: e65373d84d4f5f781fce2ff113aa8d69172e5ec59b76786d51b4347820a20dbf
+  wall_runtime_seconds: 136.62817092001205
+  peak_rss_bytes: 5129478144
+- run_id: gse129785_shapemix_physical_dilution_1_99_mono_t__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_1_99_mono_t__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 72ac657900ea80c34ba3439d34fcc177c7b95056e69b06c087c1c7fab310f312
+  wall_runtime_seconds: 86.13393888200517
+  peak_rss_bytes: 5232898048
+- run_id: gse129785_shapemix_physical_dilution_1_99_mono_t__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_1_99_mono_t__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: ae4730d5784d31438dbe5cf373bbd9441b9ebecdfb1b107c80c01b832b232511
+  wall_runtime_seconds: 1.5017003699904308
+  peak_rss_bytes: 5306732544
+- run_id: gse129785_shapemix_physical_dilution_50_50_mono_t__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_50_50_mono_t__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: efcfaa5362f8c4bac3535d31c1e963f045574a29f7ca95643336db36b9d49f50
+  wall_runtime_seconds: 136.6269084730011
+  peak_rss_bytes: 5618585600
+- run_id: gse129785_shapemix_physical_dilution_50_50_mono_t__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_50_50_mono_t__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 2954ad51b539dda7fbb9d0b4ff0ba2e61dca2ad8e454b55748daac3fcd234c8e
+  wall_runtime_seconds: 86.37258569299593
+  peak_rss_bytes: 5760483328
+- run_id: gse129785_shapemix_physical_dilution_50_50_mono_t__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_50_50_mono_t__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: 61e9be0b593a90bf44073d8a8a686072d8a5d089f25c66092cab5d49287c210a
+  wall_runtime_seconds: 1.550410769006703
+  peak_rss_bytes: 5853380608
+- run_id: gse129785_shapemix_physical_dilution_99_1_monot__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99_1_monot__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: 3a184bbace4c0647767f093e012fbe2d5590c99cc822e8d1bd7b66ac99612010
+  wall_runtime_seconds: 138.0633583299932
+  peak_rss_bytes: 6596395008
+- run_id: gse129785_shapemix_physical_dilution_99_1_monot__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99_1_monot__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: ddf3ebcd3dece4d0d8ec6cf91e477c450273b143ec5377d6e83e65433641838d
+  wall_runtime_seconds: 86.81378396798391
+  peak_rss_bytes: 6554611712
+- run_id: gse129785_shapemix_physical_dilution_99_1_monot__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99_1_monot__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: 280211890d376a054b6c41c486dcc7288f1a4ca24f0486c4b45621c419b830b5
+  wall_runtime_seconds: 1.554616392008029
+  peak_rss_bytes: 6659399680
+- run_id: gse129785_shapemix_physical_dilution_99p5_0p5_monot__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p5_0p5_monot__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: ce2603476a9782ac1c76570f5ed7996ed92727b1f6d0b7a99ce23e38b73504c7
+  wall_runtime_seconds: 138.7991909699922
+  peak_rss_bytes: 6963269632
+- run_id: gse129785_shapemix_physical_dilution_99p5_0p5_monot__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p5_0p5_monot__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 5ade694e7434bee0b13fbae13b55d0a3719e5c6179a653cfc2c4f511ab8417ab
+  wall_runtime_seconds: 91.73825439400389
+  peak_rss_bytes: 7379058688
+- run_id: gse129785_shapemix_physical_dilution_99p5_0p5_monot__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p5_0p5_monot__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: 7173f237f820c08f9ac2020cc4d8e47e892282f5776edc82c02652d8592cf8bd
+  wall_runtime_seconds: 1.595729782973649
+  peak_rss_bytes: 7468871680
+- run_id: gse129785_shapemix_physical_dilution_99p9_0p1_mono_t__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p9_0p1_mono_t__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: 2e0922e961b9f8cd3e04615613d8fc64f8b994d1a69263afab547ea27949b506
+  wall_runtime_seconds: 137.65756185297505
+  peak_rss_bytes: 8203091968
+- run_id: gse129785_shapemix_physical_dilution_99p9_0p1_mono_t__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p9_0p1_mono_t__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: e5d77492e9d443a42813e6188fd183b5a48b8f2975f1e647318ac3156f9e2c6e
+  wall_runtime_seconds: 89.43453973499709
+  peak_rss_bytes: 8218460160
+- run_id: gse129785_shapemix_physical_dilution_99p9_0p1_mono_t__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_physical_dilution_99p9_0p1_mono_t__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: cba187a152c4c88e3e9f8bd5babc0bcef2746704ddbb28c5ebd48001f3e99eff
+  wall_runtime_seconds: 1.555722045013681
+  peak_rss_bytes: 8284536832
+- run_id: gse129785_shapemix_pbmc_replicates__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_pbmc_replicates__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: 35d4b388e8da18b7486a52a110a104190a152f8efb388c8e63de1a23eee0e7cd
+  wall_runtime_seconds: 180.99980746899382
+  peak_rss_bytes: 9027334144
+- run_id: gse129785_shapemix_pbmc_replicates__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_pbmc_replicates__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 5994edc30309db5ba75d2d0dcbce5a94b5e9fbf58f80e75c538289d429cc1c68
+  wall_runtime_seconds: 111.49769627698697
+  peak_rss_bytes: 9436024832
+- run_id: gse129785_shapemix_pbmc_replicates__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_pbmc_replicates__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: a11fbd85f08661a9a6b61975ba594106db2f1a007e01b8e86eaaa7441f2aec60
+  wall_runtime_seconds: 1.5662929479731247
+  peak_rss_bytes: 9499750400
+- run_id: gse129785_shapemix_preparation_comparison__atac__selected_reference_peaks__shapemix_length
+  method: shapemix
+  method_run_id: shapemix_length
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_preparation_comparison__atac__selected_reference_peaks__shapemix_length
+  output_manifest_sha256: 5f87630358e5b2db3eeda2e0b93cd9d158792908900c29c706fb0550fae15635
+  wall_runtime_seconds: 169.89084218701464
+  peak_rss_bytes: 10241806336
+- run_id: gse129785_shapemix_preparation_comparison__atac__selected_reference_peaks__shapemix_count_only
+  method: shapemix
+  method_run_id: shapemix_count_only
+  status: failed
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_preparation_comparison__atac__selected_reference_peaks__shapemix_count_only
+  output_manifest_sha256: 29027409724f3d79f31feddd56bf05697b948eb2bc512f9067674f29a7f328e3
+  wall_runtime_seconds: 104.95892898199963
+  peak_rss_bytes: 10243072000
+- run_id: gse129785_shapemix_preparation_comparison__atac__selected_reference_peaks__nnls
+  method: nnls
+  method_run_id: nnls
+  status: success
+  execution_action: executed
+  run_dir: /home/ericzhuang2010/VscodeProjects/deconvATAC/results/external_validation/shapemix_gse129785_v1/shapemix_gse129785_external_protocol_v1_cpu/gse129785_shapemix_preparation_comparison__atac__selected_reference_peaks__nnls
+  output_manifest_sha256: cd98b3bf75274ee0629e30d3dea4c581643cfe918ea656094d2b5d66804fcf1f
+  wall_runtime_seconds: 1.55554983500042
+  peak_rss_bytes: 10056036352

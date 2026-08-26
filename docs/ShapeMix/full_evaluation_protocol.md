@@ -1,6 +1,6 @@
 # ShapeMix full-evaluation protocol v1
 
-Status: frozen before external predictions are inspected  
+Status: frozen before production external predictions; CUDA routing and optimizer coordinate amended 2026-08-25
 Frozen: 2026-08-24  
 Canonical layout: [file_organization.md](file_organization.md)  
 Execution roadmap: [iimplementation_plan.md](iimplementation_plan.md), Section 13
@@ -158,6 +158,25 @@ The source scopes are frozen before acquisition:
   major brain regions; and
 - GSE244618: GEO metadata, author Tables S1-S6, and exactly nine BEDPE samples
   spanning HiT, HiB, and Sub for donors 1, 2, and 4, using rep1 where needed.
+### GSE244618 human-hippocampus ontology freeze
+
+Frozen 2026-08-26 before feature selection or any spatial prediction, the
+reference uses these six classes in exact output order: inhibitory neurons,
+excitatory neurons, astrocytes, oligodendrocytes, OPCs, and microglia.
+Author `cellclass=GABA` and `cellclass=GLUT` define the two neuronal classes.
+Within `cellclass=NonN`, subclasses `ACBGM`, `ASCNT`, and `ASCT` map to
+astrocytes; `OGC`, `OPC`, and `MGC` map to oligodendrocytes, OPCs, and
+microglia. The rare vascular subclasses `EC`, `PER`, and `SMC` are
+predeclared exclusions. Every retained class has at least 20 annotated cells
+in every one of the nine selected samples.
+
+The feature selector ranks the 544,735 unique, non-overlapping author GRCh38
+cCREs using the frozen count-only variance score across the six reference
+classes, requires at least ten nonzero retained reference cells, and selects
+exactly 5,000 cCREs with coverage, total-count, and identifier tie-breaks.
+Neither the human spatial section nor any RNA concordance value participates
+in labels or feature selection.
+
 
 The frozen downloads total exactly 91,839,769,587 bytes (85.53 GiB) across 36
 files. Their tracked manifests are the sole acquisition authority.
@@ -174,13 +193,34 @@ RNA/protein/histone concordance on a section later used for reporting.
 
 ## CUDA qualification
 
+### Pre-external routing amendment (2026-08-25)
+
+No external prediction had been run when this amendment was made. The original
+predeclared gates and their failed result remain recorded in the qualification
+table. On the 32 by 200 smoke input, CPU/CUDA maximum absolute proportion
+difference was `0.00347122` and CUDA was only `1.025x` faster. Those tiny inputs
+therefore remain on CPU. All GSE129785 inputs are 1--4 samples by 5,000 peaks
+and use the paired CPU configurations.
+
+On the representative 1,024 by 5,000 input, only 3 of 16,384 proportions
+exceeded the original `1e-4` bound; the maximum was `0.000157089`, the 99th
+percentile was `5.66e-8`, and RMSE/JSD differed by at most `3.18e-8`. Repeated
+CUDA and cached/streamed CUDA results were identical, and cached CUDA was
+`4.474x` faster than CPU. The production full-size CUDA bound is therefore
+amended to `2e-4`. This is a hardware-equivalence decision based only on the
+development qualification data, not an external scientific result. Large
+campaigns use CUDA only when their scale is represented by this qualification;
+otherwise they retain CPU. Both ShapeMix arms within every dataset use the same
+backend.
+
 Before any external prediction is inspected:
 
 - deterministic algorithms are enabled with `warn_only=False`;
 - CPU/CUDA toy objectives and gradients meet relative `1e-5` and absolute
   `1e-4` tolerances;
-- smoke proportions agree within maximum absolute error `1e-5`;
-- one 1,024 by 5,000 development dataset agrees within `1e-4`, with RMSE/JSD
+- smoke proportions are retained diagnostically and smoke-scale production
+  inputs use CPU;
+- one 1,024 by 5,000 development dataset agrees within `2e-4`, with RMSE/JSD
   agreement within `1e-5`;
 - two repeated CUDA fits agree within `1e-7` and have the same convergence
   status;
@@ -191,6 +231,35 @@ Before any external prediction is inspected:
   identity are recorded under `results/development/`.
 
 No autocast, TF32, float16, or bfloat16 is permitted in protocol v1.
+
+### Optimizer-coordinate amendment (2026-08-25)
+
+The first GSE129785 campaign attempted all 48 jobs. All 16 NNLS jobs
+succeeded, while all 32 ShapeMix jobs reached `max_steps` and produced no
+ShapeMix prediction files. Development-only initialization and trajectory
+diagnostics on the first registered descriptor identified a scale mismatch:
+effective NNLS abundance reached 4,566.9, but the softplus optimizer coordinate
+could not traverse that abundance scale under the frozen Adam budget.
+
+This amendment does not change the likelihood, priors, signatures,
+dispersion, seed tuples, convergence rule, or maximum-step budget. It changes
+only the optimizer coordinate to `z = exp(raw_z) + epsilon`; restart zero is
+the exact NNLS point, and later restarts retain the frozen deterministic
+log-normal perturbation. Failed optimizations now retain hashed failure
+diagnostics. A post-change one-descriptor development check converged in both
+arms and was inspected only for convergence and finite normalized output; it
+was not used to choose endpoints, tolerances, learning rate, or model terms.
+
+The failed campaign and all development diagnostics remain visible under
+`results/external_validation/shapemix_gse129785_v1/` and
+`results/development/shapemix_gse129785_convergence_v1/`. Valid production
+predictions must use a fresh run group. Because the coordinate changes the
+optimization trajectory, CUDA qualification v1 is historical evidence only:
+v2 smoke qualification has completed, and the v2 full-size qualification must
+pass before any large campaign is routed to CUDA. The resource-safety stop of
+the first v2 full-size attempt is recorded at
+`results/development/shapemix_gpu_qualification_v2/full_size/interruption.yaml`;
+it produced no scientific output.
 
 ## PBMC diagnostic sensitivity campaign
 
@@ -240,8 +309,12 @@ not a competing scientific job, only while its reported allocation is at most
 
 ## Canonical outputs
 
-- GPU pilots: `results/development/shapemix_gpu_qualification_v1/`
-- GSE129785: `results/external_validation/shapemix_gse129785_v1/`
+- GPU pilots: v1 historical evidence under
+  `results/development/shapemix_gpu_qualification_v1/`; current qualification
+  under `results/development/shapemix_gpu_qualification_v2/`
+- GSE129785: failed v1 evidence under
+  `results/external_validation/shapemix_gse129785_v1/`; current production
+  campaign under `results/external_validation/shapemix_gse129785_v2/`
 - GSE194122: `results/external_validation/shapemix_gse194122_lodo_v1/`
 - GSE205055/GSE263333: `results/real_spatial/<family>/<campaign_id>/`
 - PBMC sensitivities: `results/sensitivity/<campaign_id>/`

@@ -42,8 +42,8 @@ SOURCE_H5AD = (
     / "source_object"
     / "GSE194122_openproblems_neurips2021_multiome_BMMC_processed.h5ad"
 )
-LABELS_PATH = FAMILY_ROOT / "harmonized_labels" / "cells.tsv.gz"
-FEATURES_PATH = FAMILY_ROOT / "feature_axes" / "features.tsv.gz"
+LABELS_PATH = FAMILY_ROOT / "labels" / "source_broad7_v1" / "cells.tsv.gz"
+FEATURES_PATH = FAMILY_ROOT / "feature_axes" / "source_axis_v1" / "features.tsv.gz"
 FRAGMENT_MANIFEST = FAMILY_ROOT / "source_audit" / "fragment_suite.yaml"
 SOURCE_LOCK = ROOT / "configs" / "data_sources" / "shapemix_gse194122_lock.yaml"
 AXIS_ROOT = FAMILY_ROOT / "feature_axes" / "broad7_lodo_v1"
@@ -99,7 +99,10 @@ BROAD_LABELS = {
 
 
 def _repository_path(path: Path) -> str:
-    return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    try:
+        return path.absolute().relative_to(ROOT.absolute()).as_posix()
+    except ValueError:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
@@ -447,7 +450,7 @@ def build_fragment_caches() -> None:
                 "split_sha256": label_sha256,
                 "source_sha256": {
                     f"{sample_key}.fragments.tsv.gz": str(record["sha256"]),
-                    "harmonized_labels": label_sha256,
+                    "labels": label_sha256,
                 },
                 "coordinate_validation": {
                     "selected_right_cut_offset": 0,

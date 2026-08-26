@@ -29,7 +29,7 @@ def test_nominal_collapses_preserve_off_target_mass():
     assert names == ("CD4 Memory", "CD8 Naive")
     np.testing.assert_allclose(cd4, [0.15, 0.20, 0.65])
 
-    names, mono_t = collapse_prediction(row, "monocyte_t")
+    names, mono_t = collapse_prediction(row, "monocyte_t_cell")
     assert names == ("Monocytes", "T cells")
     np.testing.assert_allclose(mono_t, [0.20, 0.65, 0.15])
 

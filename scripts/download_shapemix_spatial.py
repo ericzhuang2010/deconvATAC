@@ -35,6 +35,7 @@ class Resource:
     staging_path: Path
     expected_bytes: Optional[int] = None
     expected_etag: Optional[str] = None
+    expected_md5: Optional[str] = None
     payload: str = "gzip"
 
 
@@ -47,6 +48,8 @@ class DownloadResult:
     path: str
     bytes: int
     remote_etag: Optional[str]
+    provider_md5: Optional[str]
+    observed_md5: Optional[str]
     sha256: str
     integrity: str
     tar_members: Optional[int]
@@ -64,8 +67,9 @@ def load_config(path: Path) -> dict[str, Any]:
         "GSE216371",
         "GSE246791",
         "GSE244618",
+        "UCSC_mm10_initial",
     }:
-        raise ValueError(f"Unsupported spatial GEO source manifest: {path}")
+        raise ValueError(f"Unsupported ShapeMix source manifest: {path}")
     return value
 
 
@@ -109,6 +113,11 @@ def resources_from_config(config: Mapping[str, Any]) -> tuple[Resource, ...]:
                     expected_etag=(
                         str(record["expected_etag"])
                         if record.get("expected_etag") is not None
+                        else None
+                    ),
+                    expected_md5=(
+                        str(record["expected_md5"]).lower()
+                        if record.get("expected_md5") is not None
                         else None
                     ),
                     payload=str(record.get("payload", "gzip")),
@@ -155,6 +164,14 @@ def resources_from_config(config: Mapping[str, Any]) -> tuple[Resource, ...]:
 
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(CHUNK_BYTES), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def md5_file(path: Path) -> str:
+    digest = hashlib.md5()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(CHUNK_BYTES), b""):
             digest.update(chunk)
@@ -321,6 +338,12 @@ def acquire(resource: Resource, timeout: int) -> DownloadResult:
             f"Unsupported payload type for {resource.name}: {resource.payload}"
         )
     digest = sha256_file(source)
+    observed_md5 = md5_file(source) if resource.expected_md5 is not None else None
+    if observed_md5 != resource.expected_md5:
+        raise ValueError(
+            f"Provider MD5 changed for {resource.name}: "
+            f"{observed_md5!r} != frozen {resource.expected_md5!r}"
+        )
     if source == resource.staging_path:
         os.replace(source, resource.destination)
     return DownloadResult(
@@ -331,6 +354,8 @@ def acquire(resource: Resource, timeout: int) -> DownloadResult:
         path=str(resource.destination.relative_to(ROOT)),
         bytes=official_bytes,
         remote_etag=remote_etag,
+        provider_md5=resource.expected_md5,
+        observed_md5=observed_md5,
         sha256=digest,
         integrity=integrity,
         tar_members=tar_members,
@@ -392,9 +417,13 @@ def main() -> None:
     }
     default_lock = args.config.with_name(f"{args.config.stem}_lock.yaml")
     lock_output = args.lock_output or default_lock
+    audit_filename = str(config.get("source_audit_filename", "downloads.yaml"))
+    if Path(audit_filename).name != audit_filename:
+        raise ValueError(f"Unsafe source-audit filename: {audit_filename}")
     default_audit = (
         project_path(str(config["processed_directory"]))
-        / "source_audit/downloads.yaml"
+        / "source_audit"
+        / audit_filename
     )
     audit_output = args.audit_output or default_audit
     atomic_yaml(lock_output, record)

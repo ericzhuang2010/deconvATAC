@@ -1,0 +1,352 @@
+{
+  "config": {
+    "abundance_prior": "gamma",
+    "abundance_prior_rate": 1.0,
+    "abundance_prior_shape": 2.0,
+    "background_mode": "none",
+    "conditional_shape_likelihood": "multinomial",
+    "cuda_count_cache": "auto",
+    "device": "cpu",
+    "dispersion_alpha_floor": 1e-08,
+    "dispersion_crossfit_folds": 2,
+    "dispersion_mode": "reference_crossfit_global_scaled_by_abundance",
+    "dtype": "float32",
+    "exposure_mode": "absorbed_in_abundance",
+    "learning_rate": 0.03,
+    "max_steps": 2000,
+    "optimizer": "adam",
+    "patience": 100,
+    "peak_chunk_size": 512,
+    "restarts": 3,
+    "seed": 0,
+    "signature_rate_pseudocount": 0.5,
+    "signature_shape_concentration": 1.0,
+    "spot_batch_size": 64,
+    "tolerance": 1e-05,
+    "total_likelihood": "negative_binomial",
+    "use_shape": true
+  },
+  "config_sha256": "b5d54d1d34ecc6752b0611fd95ce20ac417273331a11a12c06a84388b05e048d",
+  "fit": {
+    "device": "cpu",
+    "dimensions": {
+      "bins": 3,
+      "cell_types": 9,
+      "peaks": 5000,
+      "spots": 1
+    },
+    "dtype": "float32",
+    "execution": {
+      "count_cache_bytes": 0,
+      "count_cache_mode": "streamed_host_chunks",
+      "count_cache_requested_bytes": 60000,
+      "cuda_runtime_version": "13.0",
+      "cuda_workspace_margin_bytes": null,
+      "deterministic_algorithms": false,
+      "device_compute_capability": null,
+      "device_free_memory_bytes_before_cache": null,
+      "device_index": null,
+      "device_name": null,
+      "device_total_memory_bytes": null,
+      "float32_matmul_precision": "highest",
+      "peak_device_memory_allocated_bytes": null,
+      "peak_device_memory_reserved_bytes": null,
+      "torch_num_interop_threads": 1,
+      "torch_num_threads": 1,
+      "torch_version": "2.11.0+cu130"
+    },
+    "nnls_fallback_spots": [],
+    "nonfinite_events": [],
+    "objective": {
+      "abundance_log_prior": -6512.10205078125,
+      "count_log_likelihood": -131656.98046875,
+      "shape_log_likelihood": -70235.6875,
+      "total_log_objective": -208404.77001953125
+    },
+    "restarts": [
+      {
+        "abundance_log_prior": -6511.97509765625,
+        "best_step": 1232,
+        "converged": true,
+        "count_log_likelihood": -131655.6572265625,
+        "final_gradient_norm": 12.95787525177002,
+        "history_rows": 1241,
+        "nonfinite_events": [],
+        "restart_index": 0,
+        "runtime_seconds": 27.53950904798694,
+        "seed_tuple": [
+          20260822,
+          0,
+          0,
+          0,
+          0
+        ],
+        "shape_log_likelihood": -70238.0068359375,
+        "steps": 1240,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -208405.63916015625
+      },
+      {
+        "abundance_log_prior": -6511.93359375,
+        "best_step": 1337,
+        "converged": true,
+        "count_log_likelihood": -131655.0712890625,
+        "final_gradient_norm": 12.59323787689209,
+        "history_rows": 1341,
+        "nonfinite_events": [],
+        "restart_index": 1,
+        "runtime_seconds": 29.86800570896594,
+        "seed_tuple": [
+          20260822,
+          0,
+          0,
+          0,
+          1
+        ],
+        "shape_log_likelihood": -70239.11865234375,
+        "steps": 1340,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -208406.12353515625
+      },
+      {
+        "abundance_log_prior": -6512.10205078125,
+        "best_step": 1106,
+        "converged": true,
+        "count_log_likelihood": -131656.98046875,
+        "final_gradient_norm": 10.577953338623047,
+        "history_rows": 1107,
+        "nonfinite_events": [],
+        "restart_index": 2,
+        "runtime_seconds": 25.000914659001864,
+        "seed_tuple": [
+          20260822,
+          0,
+          0,
+          0,
+          2
+        ],
+        "shape_log_likelihood": -70235.6875,
+        "steps": 1106,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -208404.77001953125
+      }
+    ],
+    "runtime_seconds": 82.40870223299135,
+    "selected_restart": 2,
+    "stopping_reason": "selected_largest_finite_converged_objective",
+    "success": true,
+    "use_shape": true
+  },
+  "fragment_shape": {
+    "axis": "parent_fragment_length_bp",
+    "bins": [
+      {
+        "layer": "fragment_length_lt_100",
+        "max_exclusive": 100,
+        "min_inclusive": 0,
+        "name": "short"
+      },
+      {
+        "layer": "fragment_length_100_249",
+        "max_exclusive": 250,
+        "min_inclusive": 100,
+        "name": "mono"
+      },
+      {
+        "layer": "fragment_length_ge_250",
+        "min_inclusive": 250,
+        "name": "long"
+      }
+    ],
+    "coordinate_validation": {
+      "absolute_error": 0,
+      "matrix_match": "exact",
+      "mismatched_entries": 0,
+      "selected_right_cut_offset": -1
+    },
+    "count_unit": "deduplicated_cut_sites",
+    "left_cut_offset": 0,
+    "peak_assignment": "containing_nonoverlapping_peak",
+    "read_support_policy": "ignore",
+    "right_cut_offset": -1,
+    "schema_version": 1
+  },
+  "method": "shapemix",
+  "model_version": 1,
+  "native_outputs": {
+    "reconstruction_summary": "results/raw_method_output/reconstruction_summary.csv",
+    "residuals_by_peak_and_bin": "results/raw_method_output/residuals_by_peak_and_bin.csv.gz",
+    "restart_summary": "results/raw_method_output/restart_summary.csv",
+    "signature_summary": "results/raw_method_output/signature_summary.yaml",
+    "training_history": "results/raw_method_output/training_history.csv"
+  },
+  "reconstruction": {
+    "count": {
+      "absolute_error_sum": 1299388.0950242346,
+      "entries": 5000,
+      "expected_positive_entries": 5000,
+      "expected_positive_fraction": 1.0,
+      "expected_total": 10020270.807255603,
+      "mean_absolute_error": 259.8776190048469,
+      "observed_nonzero_entries": 5000,
+      "observed_nonzero_fraction": 1.0,
+      "observed_total": 10042710.0,
+      "residual_total": 22439.192744396627,
+      "root_mean_squared_error": 427.33829577952145,
+      "squared_error_sum": 913090095.1987287
+    },
+    "shape": {
+      "absolute_error_by_bin": [
+        713081.9313761423,
+        515129.67091089854,
+        231139.52803649174
+      ],
+      "expected_by_bin": [
+        4807396.835821061,
+        3518359.0857171062,
+        1694514.8857174357
+      ],
+      "observed_by_bin": [
+        4676458.0,
+        3706161.0,
+        1660091.0
+      ],
+      "residual_by_bin": [
+        -130938.8358210614,
+        187801.91428289376,
+        -34423.88571743574
+      ],
+      "squared_error_by_bin": [
+        275164574.49028605,
+        147764171.43546683,
+        27635084.634475745
+      ]
+    }
+  },
+  "seeds": {
+    "inner_mixture_seed": 0,
+    "method_seed": 0,
+    "outer_split_seed": 0
+  },
+  "signature": {
+    "bin_names": [
+      "short",
+      "mono",
+      "long"
+    ],
+    "cell_types": [
+      "Dendritic cells",
+      "Monocytes",
+      "B cells",
+      "Regulatory T cells",
+      "Naive CD4 T cells",
+      "Memory CD4 T cells",
+      "NK cells",
+      "Naive CD8 T cells",
+      "Memory CD8 T cells"
+    ],
+    "content_sha256": "78266d62063c2bcd9ab9a1fa944320160d7ff13741cee6b40d824edcec4dd980",
+    "dispersion_diagnostics": {
+      "alpha_floor": 1e-08,
+      "alpha_ref": 2.127763472513719,
+      "alpha_ref_raw": 2.127763472513719,
+      "bit_generator": "PCG64",
+      "crossfit_mean_max": 3.634881612639608,
+      "crossfit_mean_min": 1.4656740507112262e-05,
+      "denominator": 16164591.31171723,
+      "fold_counts": {
+        "B cells": {
+          "fold_0": 1491,
+          "fold_1": 1491
+        },
+        "Dendritic cells": {
+          "fold_0": 633,
+          "fold_1": 632
+        },
+        "Memory CD4 T cells": {
+          "fold_0": 603,
+          "fold_1": 603
+        },
+        "Memory CD8 T cells": {
+          "fold_0": 545,
+          "fold_1": 544
+        },
+        "Monocytes": {
+          "fold_0": 934,
+          "fold_1": 934
+        },
+        "NK cells": {
+          "fold_0": 555,
+          "fold_1": 555
+        },
+        "Naive CD4 T cells": {
+          "fold_0": 313,
+          "fold_1": 312
+        },
+        "Naive CD8 T cells": {
+          "fold_0": 973,
+          "fold_1": 972
+        },
+        "Regulatory T cells": {
+          "fold_0": 1299,
+          "fold_1": 1299
+        }
+      },
+      "fold_membership_sha256": "8c6645746c1fe816e148abce2c9ed8eab3a0e614d7887c7d3be0ef3acb5c3aed",
+      "fold_seed": [
+        20260822,
+        0,
+        17
+      ],
+      "numerator": 34394426.94118455,
+      "numpy_version": "1.25.2",
+      "phi_ref": 0.46997705004241364,
+      "rate_pseudocount": 0.5
+    },
+    "feature_sha256": "4b2ca54aeb55ce8174c0b8050a42cd62beba3f68bf21a0d88ef211ab10cf703c",
+    "layer_names": [
+      "fragment_length_lt_100",
+      "fragment_length_100_249",
+      "fragment_length_ge_250"
+    ],
+    "schema_version": 1,
+    "signature_diagnostics": {
+      "accessibility_max": 3.2452182045213505,
+      "accessibility_min": 1.0135375748511195e-05,
+      "bin_totals": {
+        "long": 3586293,
+        "mono": 7788882,
+        "short": 11357574
+      },
+      "cell_counts": {
+        "B cells": 2982,
+        "Dendritic cells": 1265,
+        "Memory CD4 T cells": 1206,
+        "Memory CD8 T cells": 1089,
+        "Monocytes": 1868,
+        "NK cells": 1110,
+        "Naive CD4 T cells": 625,
+        "Naive CD8 T cells": 1945,
+        "Regulatory T cells": 2598
+      },
+      "feature_sha256": "4b2ca54aeb55ce8174c0b8050a42cd62beba3f68bf21a0d88ef211ab10cf703c",
+      "n_bins": 3,
+      "n_cell_types": 9,
+      "n_cells": 14688,
+      "n_peaks": 5000,
+      "omega_max": 0.9853831358197198,
+      "omega_max_sum_error": 2.220446049250313e-16,
+      "omega_min": 0.00027430023385087535,
+      "signature_parameter_sha256": "d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba",
+      "total_cut_sites": 22732749
+    },
+    "signature_parameter_sha256": "d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba"
+  },
+  "software_versions": {
+    "numpy": "1.25.2",
+    "pandas": "2.3.3",
+    "pysam": "0.24.0",
+    "torch": "2.11.0"
+  },
+  "use_shape": true
+}

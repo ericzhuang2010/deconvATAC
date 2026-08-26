@@ -14,7 +14,7 @@ from scipy.optimize import nnls
 
 from .config import ShapeMixConfig
 from .diagnostics import FitRecord, OptimizationStepRecord, RestartRecord
-from .likelihood import gamma_log_prior, likelihood_components, positive_abundance
+from .likelihood import gamma_log_prior, likelihood_components
 
 
 SEED_NAMESPACE = 20260822
@@ -324,16 +324,28 @@ def _nnls_initialization(
     return initialization, tuple(fallback_spots)
 
 
-def _softplus_inverse(values: np.ndarray, epsilon: float) -> np.ndarray:
+def _log_abundance(raw_z: torch.Tensor) -> torch.Tensor:
+    """Map unconstrained optimizer coordinates to positive abundance."""
+    return torch.exp(raw_z) + ABUNDANCE_EPSILON
+
+
+def _log_abundance_inverse(values: np.ndarray, epsilon: float) -> np.ndarray:
     adjusted = np.maximum(np.asarray(values, dtype=np.float64) - epsilon, epsilon)
-    # x + log(1-exp(-x)) is stable for both small and large positive x.
-    return adjusted + np.log(-np.expm1(-adjusted))
+    return np.log(adjusted)
 
 
 def _seeded_restart(
     initial_abundance: np.ndarray,
     seed_tuple: tuple[int, int, int, int, int],
 ) -> np.ndarray:
+    # Retain the deterministic NNLS solution as restart zero. Later restarts
+    # explore the frozen log-normal perturbation distribution in the same
+    # scale-invariant log-abundance coordinates used by Adam.
+    if seed_tuple[-1] == 0:
+        return _log_abundance_inverse(
+            np.maximum(initial_abundance, INITIAL_ABUNDANCE_FLOOR),
+            ABUNDANCE_EPSILON,
+        )
     rng = np.random.Generator(np.random.PCG64(np.random.SeedSequence(seed_tuple)))
     perturbation = rng.normal(
         loc=0.0,
@@ -341,7 +353,7 @@ def _seeded_restart(
         size=initial_abundance.shape,
     )
     abundance = initial_abundance * np.exp(perturbation)
-    return _softplus_inverse(np.maximum(abundance, INITIAL_ABUNDANCE_FLOOR), ABUNDANCE_EPSILON)
+    return _log_abundance_inverse(np.maximum(abundance, INITIAL_ABUNDANCE_FLOOR), ABUNDANCE_EPSILON)
 
 
 def _resolve_device(config: ShapeMixConfig) -> torch.device:
@@ -512,7 +524,7 @@ def _complete_objective(
         for spot_start in range(0, counts.shape[0], config.spot_batch_size):
             spot_stop = min(spot_start + config.spot_batch_size, counts.shape[0])
             spot_slice = slice(spot_start, spot_stop)
-            z_batch = positive_abundance(raw_z[spot_slice], eps=ABUNDANCE_EPSILON)
+            z_batch = _log_abundance(raw_z[spot_slice])
             prior = gamma_log_prior(
                 z_batch,
                 shape=config.abundance_prior_shape,
@@ -564,7 +576,7 @@ def _streaming_backward(
     for spot_start in range(0, counts.shape[0], config.spot_batch_size):
         spot_stop = min(spot_start + config.spot_batch_size, counts.shape[0])
         spot_slice = slice(spot_start, spot_stop)
-        z_for_prior = positive_abundance(raw_z[spot_slice], eps=ABUNDANCE_EPSILON)
+        z_for_prior = _log_abundance(raw_z[spot_slice])
         prior = gamma_log_prior(
             z_for_prior,
             shape=config.abundance_prior_shape,
@@ -578,7 +590,7 @@ def _streaming_backward(
             peak_slice = slice(peak_start, peak_stop)
             # Recompute z so this small graph can be released immediately after
             # backward instead of retaining a graph for the full S x P x B fit.
-            z_chunk = positive_abundance(raw_z[spot_slice], eps=ABUNDANCE_EPSILON)
+            z_chunk = _log_abundance(raw_z[spot_slice])
             shape_counts = _count_chunk(
                 counts, count_cache, spot_slice, peak_slice, device
             )
@@ -815,7 +827,7 @@ def fit_shapemix_map(
         if finite and converged:
             with torch.no_grad():
                 best_abundance = (
-                    positive_abundance(best_raw, eps=ABUNDANCE_EPSILON)
+                    _log_abundance(best_raw)
                     .detach()
                     .cpu()
                     .numpy()

@@ -15,11 +15,11 @@ from scipy.stats import spearmanr
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_EXPERIMENT = ROOT / "configs/experiments/shapemix_gse129785_external.yaml"
+DEFAULT_EXPERIMENT = ROOT / "configs/experiments/shapemix_gse129785_external_v2.yaml"
 DEFAULT_BATCH = (
     ROOT
-    / "results/external_validation/shapemix_gse129785_v1"
-    / "shapemix_gse129785_external_protocol_v1_cuda"
+    / "results/external_validation/shapemix_gse129785_v2"
+    / "shapemix_gse129785_external_protocol_v2_cpu_log_abundance"
 )
 METHOD_IDS = ("shapemix_length", "shapemix_count_only", "nnls")
 RARE_MAX_NOMINAL = 0.01
@@ -85,7 +85,7 @@ def collapse_prediction(
             [row["Memory CD4 T cells"], row["Naive CD8 T cells"]],
             dtype=np.float64,
         )
-    elif family == "monocyte_t":
+    elif family == "monocyte_t_cell":
         names = ("Monocytes", "T cells")
         values = np.asarray(
             [row["Monocytes"], row[list(T_CELL_TYPES)].sum()],
@@ -371,7 +371,7 @@ def main() -> None:
             },
             "broad_nominal_sample_level": {
                 "samples": 7,
-                "family": "monocyte_t",
+                "family": "monocyte_t_cell",
                 "claim_limit": "broad monocyte-versus-total-T contrast only",
             },
             "prediction_only": {

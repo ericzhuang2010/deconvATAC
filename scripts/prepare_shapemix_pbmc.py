@@ -964,7 +964,7 @@ def display_path(path: Union[str, Path]) -> str:
     """Prefer a portable project-relative path when the target is in the repo."""
     path = Path(path)
     try:
-        return str(path.resolve().relative_to(ROOT.resolve()))
+        return str(path.absolute().relative_to(ROOT.absolute()))
     except ValueError:
         return str(path)
 

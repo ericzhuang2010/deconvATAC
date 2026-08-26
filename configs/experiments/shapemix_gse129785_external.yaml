@@ -12,7 +12,7 @@ protocol:
     physical_dilution_mono_t: broad_nominal_sample_level
     pbmc_replicates: prediction_only
     preparation_comparison: prediction_only
-run_group: shapemix_gse129785_external_protocol_v1_cuda
+run_group: shapemix_gse129785_external_protocol_v1_cpu
 datasets:
   - gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive
   - gse129785_shapemix_physical_dilution_0p5_99p5_cd4mem_cd8naive
@@ -38,10 +38,10 @@ feature_sets:
 method_runs:
   - id: shapemix_length
     method: shapemix
-    config: configs/methods/shapemix_cuda.yaml
+    config: configs/methods/shapemix.yaml
   - id: shapemix_count_only
     method: shapemix
-    config: configs/methods/shapemix_count_only_cuda.yaml
+    config: configs/methods/shapemix_count_only.yaml
   - id: nnls
     method: nnls
     config: configs/methods/nnls.yaml

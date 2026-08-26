@@ -1,0 +1,55 @@
+description: >-
+  Post-log-abundance external immune evaluation on all 16 registered GSE129785
+  descriptors. Physical ratios are nominal validation evidence and are never
+  loaded through the exact-truth contract.
+benchmark_scope: external_validation_nominal_and_prediction_only
+protocol:
+  name: shapemix_full_evaluation
+  version: 1
+  frozen_date: "2026-08-24"
+  amendment: log_abundance_optimizer_2026-08-25
+  evidence_classes:
+    physical_dilution_cd4mem_cd8naive: nominal_sample_level
+    physical_dilution_mono_t: broad_nominal_sample_level
+    pbmc_replicates: prediction_only
+    preparation_comparison: prediction_only
+run_group: shapemix_gse129785_external_protocol_v2_cpu_log_abundance
+datasets:
+  - gse129785_shapemix_physical_dilution_0p1_99p9_cd4mem_cd8naive
+  - gse129785_shapemix_physical_dilution_0p5_99p5_cd4mem_cd8naive
+  - gse129785_shapemix_physical_dilution_1_99_cd4mem_cd8naive
+  - gse129785_shapemix_physical_dilution_50_50_cd4mem_cd8naive
+  - gse129785_shapemix_physical_dilution_99_1_cd4mem_cd8naive
+  - gse129785_shapemix_physical_dilution_99p5_0p5_cd4mem_cd8naive
+  - gse129785_shapemix_physical_dilution_99p9_0p1_cd4mem_cd8naive
+  - gse129785_shapemix_physical_dilution_0p1_99p9_mono_t
+  - gse129785_shapemix_physical_dilution_0p5_99p5_mono_t
+  - gse129785_shapemix_physical_dilution_1_99_mono_t
+  - gse129785_shapemix_physical_dilution_50_50_mono_t
+  - gse129785_shapemix_physical_dilution_99_1_monot
+  - gse129785_shapemix_physical_dilution_99p5_0p5_monot
+  - gse129785_shapemix_physical_dilution_99p9_0p1_mono_t
+  - gse129785_shapemix_pbmc_replicates
+  - gse129785_shapemix_preparation_comparison
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - selected_reference_peaks
+method_runs:
+  - id: shapemix_length
+    method: shapemix
+    config: configs/methods/shapemix.yaml
+  - id: shapemix_count_only
+    method: shapemix
+    config: configs/methods/shapemix_count_only.yaml
+  - id: nnls
+    method: nnls
+    config: configs/methods/nnls.yaml
+evaluation_mode: prediction_only
+metrics: []
+output_root: results/external_validation/shapemix_gse129785_v2
+run_id_template: "{dataset}__{modality}__{feature_set}__{method_run_id}"
+skip_missing: false
+continue_on_error: true
+overwrite: false
