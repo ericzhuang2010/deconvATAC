@@ -173,8 +173,8 @@ version of the model until every part of this example makes sense.
 \end{bigidea}
 
 \vfill
-{\large Progressive rewrite, version 2.0\par}
-{\large August 27, 2026\par}
+{\large Progressive rewrite, version 2.1\par}
+{\large August 28, 2026\par}
 \end{titlepage}
 
 \hypersetup{pageanchor=true}
@@ -776,7 +776,8 @@ means “given,” and \(\propto\) means “proportional to.”
 \right].
 \]
 
-The software normalizes this best point to report:
+The software normalizes the best finite, converged numerical MAP candidate that
+its optimizer found to report:
 \[
 \widehat\pi_T=
 \frac{\widehat z_T}{\widehat z_T+\widehat z_B},
@@ -789,7 +790,9 @@ The software normalizes this best point to report:
 MAP reports the location of the posterior's highest point, not its width.
 Consequently, the MVP does not provide a confidence level or credible interval
 for each reported proportion. Optimization diagnostics are not uncertainty
-intervals.
+intervals. Also, normalizing the jointly optimized abundance vector gives a
+derived point estimate of \(\boldsymbol\pi\); it is not generally the posterior mean
+or the separately calculated marginal posterior mode of \(\boldsymbol\pi\).
 \end{watchout}
 
 \begin{checkpoint}
@@ -878,9 +881,11 @@ selected peaks and cell-type definitions & one separate reported mixture row \\
 \end{center}
 
 \begin{watchout}
-Software may process many spots together in one batch for speed.  Batching is a
+Software may process many spots together in one batch for speed. Batching is a
 computational detail; it does not make one spot's abundance affect another's.
-Spatial smoothing and hierarchical coupling are not part of version 1.
+Every spot batch and peak chunk contributes before an Adam update, so this is
+not stochastic mini-batch inference. Spatial smoothing and hierarchical
+coupling are not part of version 1.
 \end{watchout}
 
 \subsection{Finally replace names with general indices}
@@ -1187,15 +1192,17 @@ The software repeats the following search:
   \item run that \(z\) forward to calculate \(\mu,\rho\);
   \item score how well those predictions explain the observed \(N,Y\);
   \item include how plausible the candidate is under the Gamma prior; and
-  \item move toward a higher posterior score until it finds the MAP estimate.
+  \item move toward a higher posterior score until it obtains a converged
+  numerical MAP candidate.
 \end{enumerate}
 
 \begin{watchout}
 The red arrow is not a claim that biology or time literally runs backward.  It
 shows the direction of the computer's reasoning: from known observations toward
-an unknown explanation.  A “supported \(z\)” is a candidate that explains the
-data well \emph{and} is reasonably compatible with the prior.  The MAP result is
-the highest-scoring point, not a confidence interval.
+an unknown explanation. A “supported \(z\)” is a candidate that explains the
+data well \emph{and} is reasonably compatible with the prior. The reported result is
+the highest-scoring finite, converged candidate found by the search, not a
+guaranteed global maximum or a confidence interval.
 \end{watchout}
 
 \subsection{How one candidate \(z\) receives a likelihood score}
@@ -1299,6 +1306,293 @@ posterior combines that likelihood with the prior.  A candidate that exactly
 matches one peak is not automatically the MAP estimate: all peaks, count noise,
 and the Gamma prior contribute to the final score.
 \end{watchout}
+
+\subsection{How the computer actually finds the MAP estimate}
+
+We now know how to score \emph{one} proposed mixture. The next problem is finding
+the proposal with the greatest score. These are two different jobs:
+
+\begin{center}
+\begin{tabular}{L{0.25\linewidth}L{0.38\linewidth}L{0.25\linewidth}}
+\toprule
+Job & What ShapeMix does & What “accurate” means \\
+\midrule
+Score one chosen \(z\) & directly evaluate the negative-binomial, multinomial,
+and Gamma formulas & deterministic formula evaluation, apart from ordinary
+floating-point rounding \\
+Find the best \(z\) & use a numerical optimizer to search infinitely many
+possible positive mixtures & an approximate numerical maximum; not a proof of
+the global maximum \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Write the score as
+\[
+\mathcal S(z)
+=
+\log p(N\mid z)
++\log p(\boldsymbol Y\mid N,z)
++\log p(z).
+\]
+Then MAP means
+\[
+\widehat z_{\mathrm{MAP}}
+=\underset{z>0}{\operatorname{arg\,max}}\;\mathcal S(z).
+\]
+Here, \(\operatorname{arg\,max}\) asks for the \emph{location} \(z\) where the
+score is highest, rather than for the height of the score itself. ShapeMix does
+not need the posterior's evidence denominator because it is constant with
+respect to \(z\) and therefore cannot change this location.
+
+\begin{bigidea}
+Think of \(\mathcal S(z)\) as a landscape. A proposed mixture is a location, and
+its posterior score is the height at that location. The formulas act like an
+accurate altimeter at a visited location. The optimizer is the hiker trying to
+find the tallest summit without visiting every point in the landscape.
+\end{bigidea}
+
+\subsubsection*{Step 1: NNLS chooses an informed starting point}
+
+Beginning from a completely arbitrary mixture would ignore useful information.
+ShapeMix first solves a simpler problem called \textbf{nonnegative least squares},
+or \textbf{NNLS}. For one spot it asks:
+
+\begin{quote}
+\emph{What nonnegative combination of the reference peak-count fingerprints
+comes closest to the observed peak totals?}
+\end{quote}
+
+In symbols, NNLS chooses starting values by minimizing
+\[
+\boxed{
+\underset{z_c\ge 0}{\text{minimize}}
+\quad
+\sum_p
+\left(
+N_p-\sum_c z_cA_{c,p}
+\right)^2.
+}
+\]
+The expression inside parentheses is a residual: observed total minus predicted
+total. Squaring prevents positive and negative residuals from canceling. The
+restriction \(z_c\ge0\) prevents impossible negative cell-type amounts.
+
+\begin{worked}{NNLS with the running two-peak example}
+Suppose the two fixed reference fingerprints and observed totals are:
+
+\begin{center}
+\begin{tabular}{C{0.18\linewidth}C{0.20\linewidth}C{0.20\linewidth}C{0.20\linewidth}}
+\toprule
+Peak & T rate \(A_{T,p}\) & B rate \(A_{B,p}\) & observed \(N_p\) \\
+\midrule
+1 & 12 & 12 & 24 \\
+2 & 8 & 16 & 20 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+An exact match in this clean teaching example satisfies
+\[
+12z_T+12z_B=24,
+\qquad
+8z_T+16z_B=20.
+\]
+Solving gives \(z_T=1.5\) and \(z_B=0.5\). With noisy real data, no mixture
+usually matches every peak exactly, so NNLS returns the nonnegative mixture with
+the smallest total squared mismatch.
+\end{worked}
+
+\begin{watchout}
+NNLS is \emph{not} the final Bayesian answer. It uses collapsed peak totals and
+a squared-error rule. It does not yet use the negative-binomial count model, the
+fragment-length multinomial term, or the Gamma prior. NNLS is a promising
+trailhead; Adam performs the actual posterior climb.
+\end{watchout}
+
+\subsubsection*{Step 2: keep every abundance positive}
+
+Adam is allowed to change an unrestricted internal number
+\(z^{\mathrm{raw}}\), while the current production fitter converts it to abundance
+using
+\[
+\boxed{z=\exp\left(z^{\mathrm{raw}}\right)+10^{-8}.}
+\]
+The exponential is always positive, so Adam cannot propose a negative abundance.
+This transformation changes the coordinates used during the search, not the
+definition of a biologically meaningful positive \(z\).
+
+\subsubsection*{Step 3: calculate the score and its slope}
+
+For the current \(z\), ShapeMix runs the model forward to obtain \(\mu\) and
+\(\boldsymbol\rho\), then evaluates all three terms in \(\mathcal S(z)\). In
+software, an illustrative comparison might look like this:
+
+\begin{center}
+\begin{tabular}{C{0.19\linewidth}C{0.17\linewidth}C{0.17\linewidth}C{0.17\linewidth}C{0.14\linewidth}}
+\toprule
+Candidate & count score & shape score & prior score & total \\
+\midrule
+\((1.0,1.0)\) & \(-20\) & \(-7\) & \(-3\) & \(-30\) \\
+\((1.5,0.5)\) & \(-17\) & \(-5\) & \(-5\) & \(-27\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+These numbers are only an illustration, not values from a fitted dataset. The
+second candidate wins this comparison because \(-27\) is higher than \(-30\).
+
+PyTorch's \textbf{automatic differentiation} then applies the chain rule to
+calculate a slope for every internal abundance coordinate. A positive slope of
+\(\mathcal S\) means a small increase would locally raise the score; a negative
+slope means a small decrease would locally raise it. The code asks Adam to
+minimize \(-\mathcal S\), which is mathematically the same as maximizing
+\(\mathcal S\).
+
+\subsubsection*{Step 4: Adam takes a guided step and repeats}
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=0.55cm and 0.65cm,
+  every node/.style={align=center,font=\small},
+  box/.style={draw,rounded corners,minimum width=2.75cm,minimum height=0.85cm},
+  >=Latex
+]
+  \node[box,fill=fixedpale] (nnls) {NNLS starting\\mixture};
+  \node[box,fill=calcpale,right=of nnls] (predict) {calculate \(\mu,\boldsymbol\rho\)\\and posterior score};
+  \node[box,fill=unknownpale,right=of predict] (slope) {PyTorch calculates\\the local slopes};
+  \node[box,fill=observedpale,below=of slope] (adam) {Adam updates\\\(z^{\mathrm{raw}}\)};
+  \node[box,fill=outputpale,left=of adam] (stop) {stop when converged;\\keep the best point};
+  \draw[->,thick,calcteal] (nnls) -- (predict);
+  \draw[->,thick,calcteal] (predict) -- (slope);
+  \draw[->,thick,calcteal] (slope) -- (adam);
+  \draw[->,thick,calcteal] (adam) -- (stop);
+  \draw[->,thick,calcteal] (adam.south) -- ++(0,-0.42) -| (predict.south)
+    node[pos=0.28,below,font=\footnotesize] {repeat};
+\end{tikzpicture}
+\end{center}
+
+Adam does not blindly test a grid of values and does not draw samples from the
+posterior. It uses the current slopes, together with recent slope magnitudes, to
+choose an adaptive next step. Every optimization step includes all spots and
+peaks. Processing them in chunks saves memory; it is not random mini-batch
+estimation.
+
+\begin{advanced}{which libraries do which jobs?}
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{SciPy} supplies NNLS for the initial count-based estimate.
+  \item \textbf{PyTorch} evaluates tensor operations, automatically calculates
+  gradients, and supplies the Adam optimizer.
+  \item \textbf{ShapeMix code} defines the negative-binomial, multinomial, and
+  Gamma log-score formulas. A general posterior-sampling engine is not used.
+\end{itemize}
+\end{advanced}
+
+\subsubsection*{Why a slope-guided search can find a local maximum}
+
+A \textbf{local maximum} is higher than every nearby point. A
+\textbf{global maximum} is the highest point anywhere. To move from a smaller
+hill to a taller one, an optimizer might first have to move downhill. A method
+that follows local slopes may not discover that distant hill.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=0.86\linewidth,
+  height=5.4cm,
+  axis lines=left,
+  xmin=0,xmax=8,
+  ymin=0,ymax=1.42,
+  xtick=\empty,
+  ytick=\empty,
+  xlabel={possible mixtures \(z\)},
+  ylabel={posterior score},
+  clip=false
+]
+  \addplot[very thick,unknownpurple,domain=0:8,samples=180]
+    {0.72*exp(-((x-2)/0.85)^2)+1.15*exp(-((x-6)/1.15)^2)+0.06};
+  \addplot[only marks,mark=*,mark size=2.5pt,coral]
+    coordinates {(2,0.78)};
+  \addplot[only marks,mark=*,mark size=2.5pt,outputgreen]
+    coordinates {(6,1.21)};
+  \node[coral,align=center] at (axis cs:2,0.98) {local\\maximum};
+  \node[outputgreen!75!black,align=center] at (axis cs:6,1.38) {global\\maximum};
+  \addplot[only marks,mark=triangle*,mark size=2.3pt,fixedblue]
+    coordinates {(0.75,0.13) (4.45,0.23)};
+  \node[fixedblue!75!black] at (axis cs:0.75,0.03) {start 1};
+  \node[fixedblue!75!black] at (axis cs:4.45,0.08) {restart};
+  \draw[->,very thick,fixedblue]
+    (axis cs:0.82,0.17) .. controls (axis cs:1.15,0.30) and (axis cs:1.55,0.68) .. (axis cs:1.92,0.76);
+  \draw[->,very thick,calcteal]
+    (axis cs:4.53,0.26) .. controls (axis cs:4.90,0.48) and (axis cs:5.35,1.02) .. (axis cs:5.90,1.19);
+\end{axis}
+\end{tikzpicture}
+\caption{Schematic illustration: a slope-guided search can stop on the smaller hill. A different
+starting point may reach the higher hill. Real ShapeMix abundance space has one
+dimension per cell type, so its landscape cannot usually be drawn on paper.}
+\end{figure}
+
+ShapeMix reduces this risk with three deterministic restarts:
+
+\begin{enumerate}[leftmargin=2em]
+  \item Restart 0 begins at the NNLS estimate.
+  \item Two more restarts apply small, reproducible perturbations to that estimate.
+  \item Adam performs a complete search from each starting point.
+  \item Each run remembers the best score it encountered.
+  \item Only finite, converged runs compete, and the run with the highest complete
+  posterior score is retained.
+\end{enumerate}
+
+With the default settings, each restart may take up to 2,000 Adam steps. It can
+declare convergence when the gradient is very small or when the score has not
+improved enough for 100 steps. Merely reaching the 2,000-step limit does not
+count as convergence.
+
+\begin{watchout}
+Restarts reduce sensitivity to the starting point, but they cannot prove that
+the global maximum was found. They are also \emph{not} samples from the
+posterior. ShapeMix reports the best converged point it found, then normalizes
+that abundance vector into proportions. It does not use these restarts to
+produce credible intervals.
+\end{watchout}
+
+\subsubsection*{Direct calculation versus numerical approximation}
+
+\begin{center}
+\begin{tabular}{L{0.31\linewidth}L{0.55\linewidth}}
+\toprule
+Part & Interpretation \\
+\midrule
+Negative-binomial, multinomial, and Gamma scores & evaluated directly from
+their mathematical formulas for every visited candidate \\
+Gradient & calculated by PyTorch automatic differentiation using every datum,
+not estimated from a random subset \\
+Computer arithmetic & finite precision, mostly 32-bit floating point, with
+stability guards; therefore not infinitely exact arithmetic \\
+Location of the MAP maximum & an iterative numerical estimate that can, in
+principle, be a local rather than global maximum \\
+Scientific correctness & depends on the reference signatures, available cell
+types, noise model, prior, and observed data, not only on the optimizer \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The most precise description is therefore:
+
+\begin{quote}
+\emph{ShapeMix directly evaluates the declared posterior score and uses a
+carefully checked numerical procedure to obtain an approximate MAP solution.}
+\end{quote}
+
+\begin{checkpoint}
+Which part is calculated directly, and which part is found approximately?
+
+\textbf{Answer:} the posterior score at a chosen \(z\) is calculated directly.
+The location of the highest score is found approximately by numerical
+optimization. NNLS supplies a sensible starting point, and restarts reduce---but
+do not eliminate---the risk of selecting a local maximum.
+\end{checkpoint}
 
 \subsection{Count-only versus ShapeMix}
 
@@ -1484,7 +1778,7 @@ After fitting, check:
   \item predicted totals \(\mu\) reconstruct \(N\) reasonably;
   \item predicted bin fractions \(\rho\) reconstruct short/mono/long patterns;
   \item objectives, gradients, abundances, and proportions are finite;
-  \item restarts converge to compatible solutions;
+  \item restart convergence and complete-objective values are inspected;
   \item homogenized \(\omega\) removes ShapeMix's advantage; and
   \item permuted cell-type shape labels do not create a false improvement.
 \end{itemize}
@@ -1757,17 +2051,27 @@ The fold seed, numerator, denominator, and result are recorded. Non-finite value
 or a zero denominator are errors.
 
 \section{Optimization, implementation, and fixed contract}
+\label{sec:optimization}
 
 \subsection{MAP fitting}
 
 Only \(z\) is inferred. The implementation uses
 \[
-z=\operatorname{softplus}(z^{\mathrm{raw}})+\epsilon
+z=\exp(z^{\mathrm{raw}})+10^{-8}
 \]
-to keep abundances positive. It initializes from collapsed-count NNLS with a
-uniform fallback, uses deterministic restarts and Adam optimization, processes
-spots and peaks in chunks, and fails on non-finite losses, gradients, abundances,
-or proportions.
+to keep abundances positive. For each spot, it initializes from collapsed-count
+NNLS, floors each starting abundance at \(0.05\), and uses a uniform positive
+fallback when NNLS has no usable signal. An all-zero spot starts at the
+\(\Gam(2,1)\) prior mode, \(1\). Restart 0 uses that NNLS or fallback estimate;
+two more deterministic restarts perturb it on the log-abundance scale.
+
+PyTorch's Adam optimizer uses automatic differentiation and a complete-data
+gradient at every step. The implementation processes spots and peaks in chunks
+only to limit memory use. It retains the best point visited in each restart and
+selects the finite converged restart with the largest complete objective. A
+non-finite event disqualifies that restart; the whole fit fails if no finite
+converged restart remains. This is a numerical local MAP search, not posterior
+sampling and not a proof of the global maximum.
 
 \begin{advanced}{objective comparison}
 \[
@@ -1793,8 +2097,8 @@ Only the final conditional-shape term differs.
   \item Every layer contains finite, nonnegative integers.
   \item The layer sum equals the ordinary peak-count matrix exactly.
   \item A zero-total spot/peak row contributes zero to the conditional term.
-  \item Log probabilities use stable normalization; non-finite objectives or
-  gradients are hard failures.
+  \item Log probabilities use stable normalization; a non-finite objective or
+  gradient disqualifies that restart, and the fit fails if no valid restart remains.
 \end{itemize}
 
 \subsection{Fixed evaluation contract}
@@ -1849,7 +2153,8 @@ improves deconvolution beyond the same cut sites collapsed to peak totals.
   \item A negative binomial models each noisy peak total \(N\).
   \item A conditional multinomial models how the same total divides into \(Y\).
   \item A fixed \(\Gam(2,1)\) prior regularizes every \(z\).
-  \item MAP reports one best abundance vector, normalized to proportions \(\pi\).
+  \item MAP reports the best finite, converged abundance vector found, normalized
+  to proportions \(\pi\).
   \item Version 1 reports no spot-level credible or confidence intervals.
 \end{enumerate}
 
