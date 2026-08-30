@@ -19,7 +19,13 @@ from pptx.util import Inches, Pt
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OUT = REPO_ROOT / "docs" / "ShapeMix" / "ShapeMix_High_School_Research_Deck.pptx"
+OUT = (
+    REPO_ROOT
+    / "docs"
+    / "ShapeMix"
+    / "presentations"
+    / "ShapeMix_High_School_Research_Deck.pptx"
+)
 
 W = 13.333
 H = 7.5
@@ -333,6 +339,67 @@ def add_fragment(slide, x, y, w, color, line_width=5, cut_color=INK):
     add_line(slide, x + w, y - 0.06, x + w, y + 0.06, color=cut_color, width=1.2)
 
 
+def add_nucleosome(slide, center_x, center_y, scale=1.0):
+    """Draw a compact histone core with a visible DNA wrap."""
+    dna_color = "654640"
+    lobe_colors = ("6D43D6", PURPLE, "7650DE", PURPLE)
+    lobe_w = 0.18 * scale
+    lobe_h = 0.48 * scale
+    for offset, color in zip((-0.22, -0.075, 0.075, 0.22), lobe_colors):
+        lobe = add_shape(
+            slide,
+            MSO_SHAPE.OVAL,
+            center_x + offset * scale - lobe_w / 2,
+            center_y - lobe_h / 2,
+            lobe_w,
+            lobe_h,
+            color,
+            line="5634B5",
+            line_width=0.6,
+        )
+        lobe.rotation = 18
+
+    wrap = slide.shapes.add_shape(
+        MSO_SHAPE.OVAL,
+        Inches(center_x - 0.38 * scale),
+        Inches(center_y - 0.31 * scale),
+        Inches(0.76 * scale),
+        Inches(0.62 * scale),
+    )
+    wrap.fill.background()
+    wrap.line.color.rgb = C(dna_color)
+    wrap.line.width = Pt(1.45)
+    wrap.rotation = 9
+    add_line(
+        slide,
+        center_x - 0.34 * scale,
+        center_y + 0.12 * scale,
+        center_x + 0.34 * scale,
+        center_y - 0.10 * scale,
+        color=dna_color,
+        width=1.25,
+    )
+    return wrap
+
+
+def add_tn5_marker(slide, x, y):
+    """Small two-lobed Tn5 marker placed on exposed linker DNA."""
+    enzyme_blue = "68B5E8"
+    add_circle(slide, x - 0.11, y - 0.14, 0.16, enzyme_blue, line=WHITE, line_width=0.6)
+    add_circle(slide, x - 0.01, y - 0.10, 0.16, enzyme_blue, line=WHITE, line_width=0.6)
+    add_line(slide, x + 0.02, y + 0.01, x + 0.02, y + 0.15, color=CORAL, width=1.2)
+
+
+def add_atac_fragment(slide, x, y, w, color):
+    """Fragment with visible endpoint dots and short adapter-colored caps."""
+    add_line(slide, x, y, x + w, y, color=color, width=3.8)
+    cap_w = min(0.12, w * 0.24)
+    add_line(slide, x, y, x + cap_w, y, color=CORAL, width=3.8)
+    add_line(slide, x + w - cap_w, y, x + w, y, color=CORAL, width=3.8)
+    for end_x in (x, x + w):
+        add_circle(slide, end_x - 0.035, y - 0.035, 0.07, NAVY, line=NAVY, line_width=0.3)
+
+
 def build_deck():
     prs = Presentation()
     prs.slide_width = Inches(W)
@@ -420,10 +487,192 @@ def build_deck():
     add_footer(slide, "Source: Buenrostro et al., Nature Methods (2013). Diagram is conceptual.")
     add_notes(slide, "Students only need one idea here: accessible DNA is easier for the Tn5 enzyme to reach. ATAC-seq turns those accessible regions into measurable DNA fragments.")
 
-    # 3 — Spatial mixture
+    # 3 — ATAC-seq: aligned chromatin, fragments, and peak-count chart
     slide = prs.slides.add_slide(blank)
     set_bg(slide, WHITE)
-    add_title(slide, "One spatial spot can contain several cell types", "The problem", slide_num=3)
+    add_title(
+        slide,
+        "ATAC-seq turns accessible DNA into peak counts",
+        "ATAC-seq basics",
+        slide_num=3,
+    )
+    add_text(
+        slide,
+        "The same genomic regions line up from chromatin → fragments → counts.",
+        0.70,
+        1.15,
+        11.90,
+        0.32,
+        size=15.5,
+        color=SLATE,
+        align=PP_ALIGN.CENTER,
+    )
+
+    # Three full-width rows share one genomic x-coordinate system.
+    row_x, row_w = 0.72, 11.90
+    add_card(slide, row_x, 1.55, row_w, 1.39, fill=PALE, line=MID)
+    add_card(slide, row_x, 3.05, row_w, 1.56, fill=WHITE, line=MID)
+    add_card(slide, row_x, 4.72, row_w, 1.86, fill=BLUE_PALE, line=BLUE)
+
+    # Subtle peak-aligned bands make the three rows refer to the same DNA.
+    peak_columns = [
+        (3.05, 2.30, "F2F6FE"),
+        (6.05, 2.60, "EEF9F7"),
+        (9.45, 2.35, "FFF8E8"),
+    ]
+    for x, w, fill in peak_columns:
+        add_shape(slide, MSO_SHAPE.RECTANGLE, x, 1.66, w, 1.17, fill, line=fill, line_width=0.2)
+        add_shape(slide, MSO_SHAPE.RECTANGLE, x, 3.16, w, 1.34, fill, line=fill, line_width=0.2)
+
+    # Row 1: chromatin. Purple cores are histone proteins; the dark DNA thread
+    # visibly wraps around them, following the supplied ATAC-seq reference.
+    add_circle(slide, 0.94, 1.76, 0.38, TEAL, line=TEAL, line_width=0.8)
+    add_text(
+        slide,
+        "1",
+        0.94,
+        1.76,
+        0.38,
+        0.34,
+        size=14,
+        color=WHITE,
+        bold=True,
+        align=PP_ALIGN.CENTER,
+        valign=MSO_ANCHOR.MIDDLE,
+        margin=0,
+    )
+    add_text(slide, "CHROMATIN", 1.43, 1.82, 1.40, 0.27, size=12, color=TEAL_DARK, bold=True)
+
+    dna_y = 2.35
+    add_line(slide, 2.72, dna_y, 12.18, dna_y, color="654640", width=1.7)
+    for center_x in (4.16, 6.82, 7.82, 10.56, 12.02):
+        add_nucleosome(slide, center_x, dna_y, scale=0.92)
+
+    # Tn5 is shown only on exposed linker DNA, as in the reference figure.
+    for marker_x in (3.48, 5.22, 6.20, 8.52, 9.72, 11.42):
+        add_tn5_marker(slide, marker_x, dna_y)
+    add_pill(slide, "Tn5", 5.02, 1.73, 0.56, 0.24, BLUE, size=8.2)
+    add_text(
+        slide,
+        "DNA wrapped around histones",
+        3.18,
+        2.65,
+        1.92,
+        0.18,
+        size=9.5,
+        color=PURPLE,
+        bold=True,
+        align=PP_ALIGN.CENTER,
+    )
+    add_text(
+        slide,
+        "exposed linker DNA",
+        5.45,
+        2.65,
+        1.38,
+        0.18,
+        size=9.5,
+        color=TEAL_DARK,
+        bold=True,
+        align=PP_ALIGN.CENTER,
+    )
+
+    # Row 2: distinct fragments of different lengths on separate lanes.
+    add_circle(slide, 0.94, 3.31, 0.38, CORAL, line=CORAL, line_width=0.8)
+    add_text(
+        slide,
+        "2",
+        0.94,
+        3.31,
+        0.38,
+        0.34,
+        size=14,
+        color=WHITE,
+        bold=True,
+        align=PP_ALIGN.CENTER,
+        valign=MSO_ANCHOR.MIDDLE,
+        margin=0,
+    )
+    add_text(slide, "FRAGMENTS", 1.43, 3.37, 1.40, 0.27, size=12, color=CORAL, bold=True)
+
+    # Compact key: length can suggest whether a fragment spans nucleosomes.
+    add_pill(slide, "SHORT • OPEN DNA", 2.88, 3.20, 1.34, 0.24, CORAL, size=8.0)
+    add_pill(slide, "MEDIUM • SPANS 1 NUCLEOSOME", 5.52, 3.20, 2.12, 0.24, GOLD, color=NAVY, size=7.6)
+    add_pill(slide, "LONG • SPANS 2 NUCLEOSOMES", 7.77, 3.20, 2.04, 0.24, PURPLE, size=7.6)
+
+    fragments = [
+        # Peak 1: two short open-DNA fragments and one that spans a nucleosome.
+        (3.23, 3.70, 0.56, CORAL),
+        (3.79, 4.03, 0.77, GOLD),
+        (4.46, 4.35, 0.66, CORAL),
+        # Peak 2: one mono-nucleosome-like and one longer protected fragment.
+        (6.43, 3.73, 1.23, GOLD),
+        (6.20, 4.22, 2.22, PURPLE),
+        # Peak 3: one fragment with cuts flanking a nucleosome.
+        (9.82, 3.99, 1.48, GOLD),
+    ]
+    for x, y, w, color in fragments:
+        add_atac_fragment(slide, x, y, w, color)
+
+    # Row 3 is the bar chart. Bar widths occupy the same genomic intervals as
+    # the peak-aligned columns above, while bar heights encode endpoint counts.
+    add_circle(slide, 0.94, 4.98, 0.38, BLUE, line=BLUE, line_width=0.8)
+    add_text(
+        slide,
+        "3",
+        0.94,
+        4.98,
+        0.38,
+        0.34,
+        size=14,
+        color=WHITE,
+        bold=True,
+        align=PP_ALIGN.CENTER,
+        valign=MSO_ANCHOR.MIDDLE,
+        margin=0,
+    )
+    add_text(slide, "PEAK COUNTS", 1.43, 5.04, 1.40, 0.27, size=12, color=BLUE, bold=True)
+    add_pill(slide, "HEIGHT = COUNT  •  WIDTH = PEAK INTERVAL", 9.59, 4.84, 2.51, 0.24, NAVY, size=7.7)
+
+    chart_x1, chart_x2, baseline, unit_h = 2.95, 12.18, 6.23, 0.17
+    for value in (0, 2, 4, 6):
+        y = baseline - value * unit_h
+        add_line(slide, chart_x1, y, chart_x2, y, color=MID, width=0.7)
+        add_text(slide, str(value), 2.62, y - 0.09, 0.24, 0.18, size=8.5, color=SLATE, align=PP_ALIGN.RIGHT)
+    add_line(slide, chart_x1, baseline, chart_x1, baseline - 6 * unit_h, color=NAVY, width=1.0)
+    chart_bars = [
+        (3.05, 2.30, 6, BLUE, "Peak 1"),
+        (6.05, 2.60, 4, TEAL, "Peak 2"),
+        (9.45, 2.35, 2, GOLD, "Peak 3"),
+    ]
+    for x, width, value, color, label in chart_bars:
+        height = value * unit_h
+        add_shape(slide, MSO_SHAPE.RECTANGLE, x, baseline - height, width, height, color, line=color)
+        add_text(slide, str(value), x, baseline - height - 0.24, width, 0.20, size=13, color=NAVY, bold=True, align=PP_ALIGN.CENTER)
+        add_text(slide, label, x, baseline + 0.05, width, 0.20, size=9.5, color=NAVY, bold=True, align=PP_ALIGN.CENTER)
+    add_pill(
+        slide,
+        "COUNT THE ENDPOINT DOTS: 3 fragments → 6 counts   |   2 → 4   |   1 → 2",
+        2.14,
+        6.72,
+        9.05,
+        0.29,
+        TEAL,
+        size=9.7,
+    )
+    add_footer(
+        slide,
+        "Conceptual ATAC-seq schematic. Some pipelines count fragment overlaps instead; the convention must be stated.",
+    )
+    add_notes(
+        slide,
+        "Read the slide from top to bottom at the same horizontal genomic position. The purple shapes are histone protein cores; the dark DNA thread wraps around each core to form a nucleosome. Tn5 inserts adapters most readily in exposed linker DNA, and paired-end sequencing locates the two endpoints of each resulting fragment. Fragment lengths vary: short fragments are often nucleosome-free-like, approximately 200-base-pair fragments can span one nucleosome, and longer fragments can span two; length is informative but not a perfect label. The fragments are kept on separate lanes so they never look like one continuous segment. In the teaching convention used here, each endpoint inside a selected peak contributes one count. Peak 1 has three fragments and six endpoints, Peak 2 has two and four, and Peak 3 has one and two. The bar widths align with the selected genomic intervals and the gaps show DNA outside peaks. Some pipelines count fragments or overlaps instead, so a real analysis must state its counting convention.",
+    )
+
+    # 4 — Spatial mixture
+    slide = prs.slides.add_slide(blank)
+    set_bg(slide, WHITE)
+    add_title(slide, "One spatial spot can contain several cell types", "The problem", slide_num=4)
     add_text(slide, "A spatial assay preserves location—but each spot may collect fragments from multiple nearby nuclei.", 0.7, 1.18, 11.7, 0.48, size=19, color=SLATE)
     # tissue grid
     add_card(slide, 0.72, 1.86, 5.10, 4.54, fill=PALE, line=MID)
@@ -463,10 +712,10 @@ def build_deck():
     add_footer(slide, "Source: Deng et al., Nature (2022). Spot drawing is conceptual.")
     add_notes(slide, "A spatial spot is like a collection bucket placed over a tiny region of tissue. It keeps the location, but it may mix fragments from several cell types. The task is to estimate the ingredients of that mixture.")
 
-    # 4 — Deconvolution
+    # 5 — Deconvolution
     slide = prs.slides.add_slide(blank)
     set_bg(slide, CREAM)
-    add_title(slide, "Deconvolution works like identifying ingredients in a smoothie", "Core task", slide_num=4)
+    add_title(slide, "Deconvolution works like identifying ingredients in a smoothie", "Core task", slide_num=5)
     add_text(slide, "Known reference fingerprints + an unknown mixture → estimated cell-type proportions", 0.71, 1.17, 11.9, 0.46, size=20, color=SLATE, align=PP_ALIGN.CENTER)
     # reference cards
     labels = [("B cell", BLUE, [4, 2, 1]), ("T cell", TEAL, [1, 4, 2]), ("Monocyte", CORAL, [1, 2, 4])]
@@ -503,10 +752,10 @@ def build_deck():
     add_footer(slide, "Background: Ouologuem et al., Bioinformatics (2025). Values shown are a teaching example, not data.")
     add_notes(slide, "Use the smoothie analogy literally: references tell us what each pure ingredient tends to look like; the model asks which combination best matches the mixed measurement. The output is a proportion for every cell type.")
 
-    # 5 — Existing algorithms: common setup
+    # 6 — Existing algorithms: common setup
     slide = prs.slides.add_slide(blank)
     set_bg(slide, WHITE)
-    add_title(slide, "Most existing algorithms start from the same input table", "Existing algorithms", slide_num=5)
+    add_title(slide, "Most existing algorithms start from the same input table", "Existing algorithms", slide_num=6)
     add_text(
         slide,
         "Methods first collapse every ATAC peak to one count, then ask which reference mixture best reconstructs the spot.",
@@ -564,10 +813,10 @@ def build_deck():
     add_footer(slide, "Background: Ouologuem et al., Bioinformatics (2025). Diagram is conceptual.")
     add_notes(slide, "This slide establishes the common setup before comparing individual methods. A labeled single-cell reference becomes a cell-type-by-peak fingerprint. The spatial measurement becomes one total count per peak. The algorithms differ in how they fit the mixture, but this transferred-ATAC setup usually discards the parent-fragment length before inference starts.")
 
-    # 6 — Existing algorithms: families
+    # 7 — Existing algorithms: families
     slide = prs.slides.add_slide(blank)
     set_bg(slide, CREAM)
-    add_title(slide, "Existing methods use different mathematical engines", "Existing algorithms", slide_num=6)
+    add_title(slide, "Existing methods use different mathematical engines", "Existing algorithms", slide_num=7)
     add_text(slide, "All solve an inverse problem: work backward from a mixed measurement to the hidden recipe.", 0.72, 1.14, 11.85, 0.43, size=19, color=SLATE, align=PP_ALIGN.CENTER)
     families = [
         (
@@ -617,10 +866,10 @@ def build_deck():
     add_footer(slide, "Sources: Tsoucas et al. (2019); Dong & Yuan (2021); Cable et al. (2022); Kleshchevnikov et al. (2022); Biancalani et al. (2021); Lopez et al. (2022).")
     add_notes(slide, "NNLS and SpatialDWLS are linear mixture methods; SpatialDWLS adds feature selection and weights. RCTD and cell2location write probabilistic count-generating models. Tangram optimizes a mapping from single cells to space, while DestVI uses a deep generative latent-variable model. These categories are simplified for teaching. In the published spatial-ATAC benchmark, peaks were substituted for genes, so these methods still used peak totals rather than parent-fragment shape.")
 
-    # 7 — Shape clue
+    # 8 — Shape clue
     slide = prs.slides.add_slide(blank)
     set_bg(slide, WHITE)
-    add_title(slide, "ShapeMix keeps an extra clue: fragment length", "The new idea", slide_num=7)
+    add_title(slide, "ShapeMix keeps an extra clue: fragment length", "The new idea", slide_num=8)
     add_rich_text(
         slide,
         [("Two samples can have the same peak total", {"bold": True, "color": NAVY}), (" but different fragment-length patterns.", {"color": SLATE})],
@@ -665,10 +914,10 @@ def build_deck():
     add_footer(slide, "Sources: Buenrostro et al. (2013); Martens et al., Nature Methods (2024). Diagram is conceptual.")
     add_notes(slide, "This is the project’s central idea. Each panel shows 12 fragments, and this conceptual example assigns both Tn5 cut sites from every fragment to the same peak, for 24 cut sites total. Cell type A allocates those cuts 14 short, 6 middle, and 4 long; cell type B allocates them 4 short, 8 middle, and 12 long. Ordinary deconvolution keeps only the total. ShapeMix also records the parent-fragment length pattern. The biological labels for bins are useful approximations, not perfect one-to-one assignments.")
 
-    # 8 — Bayesian thinking
+    # 9 — Bayesian thinking
     slide = prs.slides.add_slide(blank)
     set_bg(slide, CREAM)
-    add_title(slide, "Bayesian modeling is a scientific story run backward", "ShapeMix: Bayesian model", slide_num=8)
+    add_title(slide, "Bayesian modeling is a scientific story run backward", "ShapeMix: Bayesian model", slide_num=9)
     add_text(slide, "First describe how a hidden cell mixture could generate the data. Then use the data to infer the mixture.", 0.72, 1.14, 11.84, 0.48, size=19, color=SLATE, align=PP_ALIGN.CENTER)
     # Forward story
     add_card(slide, 0.76, 1.87, 5.29, 4.60, fill=WHITE, line=MID)
@@ -706,10 +955,10 @@ def build_deck():
     add_footer(slide, "Bayesian vocabulary: prior + likelihood → posterior. ShapeMix uses a MAP point estimate from that posterior.")
     add_notes(slide, "Bayesian does not mean guessing. The model first states a forward scientific story: a hidden recipe produces expected ATAC signals, and measurements fluctuate around them. Inference runs that story backward. The prior rules out impossible negative amounts and discourages unsupported extremes; the likelihood lets the observed data update the answer. ShapeMix's MVP summarizes the posterior by its highest point, called MAP.")
 
-    # 9 — Generative equations
+    # 10 — Generative equations
     slide = prs.slides.add_slide(blank)
     set_bg(slide, WHITE)
-    add_title(slide, "The generative story links cell amounts to expected data", "ShapeMix: Bayesian model", slide_num=9)
+    add_title(slide, "The generative story links cell amounts to expected data", "ShapeMix: Bayesian model", slide_num=10)
     add_text(slide, "Two reference fingerprints are fixed from labeled training cells; only each spot's effective cell amounts are inferred.", 0.72, 1.14, 11.84, 0.46, size=18.5, color=SLATE, align=PP_ALIGN.CENTER)
     # Input cards
     add_card(slide, 0.76, 1.82, 3.00, 1.63, fill=BLUE_PALE, line=BLUE)
@@ -748,10 +997,10 @@ def build_deck():
     add_footer(slide, "Notation: s = spot, c = cell type, p = peak, b = fragment-length bin. Background is fixed to zero in model v1.")
     add_notes(slide, "z is the only unknown shown here. A is the learned mean peak count per training-reference cell type. Omega is the learned length-bin distribution for that type and peak. The model multiplies amount by accessibility to predict the total, and uses omega to predict how that total should be divided among short, middle, and long parent-fragment bins. The output z is depth-scaled effective abundance, not a calibrated nucleus count.")
 
-    # 10 — Likelihoods
+    # 11 — Likelihoods
     slide = prs.slides.add_slide(blank)
     set_bg(slide, CREAM)
-    add_title(slide, "Two probability models score two kinds of evidence", "ShapeMix: likelihood", slide_num=10)
+    add_title(slide, "Two probability models score two kinds of evidence", "ShapeMix: likelihood", slide_num=11)
     add_text(slide, "The factorization protects the fair comparison: the count model stays identical, and ShapeMix adds only the conditional length term.", 0.72, 1.14, 11.84, 0.48, size=18.5, color=SLATE, align=PP_ALIGN.CENTER)
     # Negative binomial panel
     add_card(slide, 0.76, 1.84, 5.63, 4.56, fill=BLUE_PALE, line=BLUE)
@@ -774,10 +1023,10 @@ def build_deck():
     add_footer(slide, "ShapeMix model v1: negative-binomial totals + conditional multinomial bins; not three independent negative-binomial models.")
     add_notes(slide, "The negative binomial is a probability model for noisy counts. It allows variance greater than the mean, which is common in sequencing data. The multinomial is like dividing a fixed number of colored marbles among three boxes. Conditioning on N means ShapeMix's extra term scores only the length composition. If there is just one bin, or every cell type has the same shape fingerprint, this extra term contributes no information.")
 
-    # 11 — Inference and MAP
+    # 12 — Inference and MAP
     slide = prs.slides.add_slide(blank)
     set_bg(slide, NAVY)
-    add_title(slide, "Inference searches for the most supported mixture", "ShapeMix: Bayesian inference", dark=True, slide_num=11)
+    add_title(slide, "Inference searches for the most supported mixture", "ShapeMix: Bayesian inference", dark=True, slide_num=12)
     add_text(slide, "ShapeMix maximizes one score for every candidate abundance matrix z.", 0.72, 1.18, 11.84, 0.39, size=18.5, color=LIGHT_TEXT, align=PP_ALIGN.CENTER)
     add_card(slide, 0.78, 1.80, 11.77, 1.23, fill=NAVY_2, line=TEAL)
     add_text(slide, "log posterior", 1.10, 2.06, 1.77, 0.38, size=19, color=GOLD, bold=True, align=PP_ALIGN.CENTER)
@@ -797,14 +1046,14 @@ def build_deck():
         else:
             add_pill(slide, label.upper(), x, 2.00, width, 0.34, color, size=8.5)
             add_text(slide, sub, x, 2.45, width, 0.24, size=9.3, color=LIGHT_TEXT, align=PP_ALIGN.CENTER)
-    add_text(slide, "MAP = the highest point of this posterior score", 10.37, 2.04, 1.72, 0.54, size=12.7, color=GOLD, bold=True, align=PP_ALIGN.CENTER)
+    add_text(slide, "MAP targets the highest point of this posterior score", 10.37, 2.04, 1.72, 0.54, size=12.7, color=GOLD, bold=True, align=PP_ALIGN.CENTER)
     # Optimization path
     stages = [
         ("START", "NNLS estimate", "a sensible count-only guess", BLUE),
-        ("CONSTRAIN", "softplus", "keeps every z positive", GOLD),
+        ("CONSTRAIN", "log abundance", "z = exp(raw) stays positive", GOLD),
         ("UPDATE", "Adam optimizer", "moves uphill on the score", PURPLE),
         ("REPEAT", "3 restarts", "checks different starting paths", CORAL),
-        ("REPORT", "best MAP", "normalize z to percentages", TEAL),
+        ("REPORT", "best found MAP", "normalize z to percentages", TEAL),
     ]
     add_line(slide, 1.33, 4.77, 11.95, 4.77, color=LIGHT_TEXT, width=3)
     for i, (label, title, body, color) in enumerate(stages):
@@ -817,12 +1066,12 @@ def build_deck():
     add_card(slide, 2.52, 6.56, 8.31, 0.42, fill=CORAL, line=CORAL)
     add_text(slide, "Important: this MVP reports one MAP point estimate—not a credible interval or full posterior distribution.", 2.72, 6.59, 7.91, 0.32, size=11.7, color=WHITE, bold=True, align=PP_ALIGN.CENTER)
     add_footer(slide, "Frozen protocol v1: Gamma(2,1) prior; Adam; 3 deterministic restarts; identical settings in count-only and shape-aware arms.", dark=True)
-    add_notes(slide, "ShapeMix performs MAP inference: it finds the mixture with the largest posterior density. The count likelihood, shape likelihood, and Gamma prior are added on the log scale. The Gamma prior is defined only for positive amounts and discourages unsupported extremes. Optimization begins from a nonnegative least-squares solution, uses a positive softplus transformation, and runs Adam from three deterministic restarts. The best finite converged full objective is selected. This is Bayesian modeling with MAP inference, not full posterior sampling, so the MVP does not report credible intervals.")
+    add_notes(slide, "ShapeMix performs MAP inference: it searches for the mixture with the largest posterior density. The count likelihood, shape likelihood, and Gamma prior are added on the log scale. The Gamma prior is defined only for positive amounts and discourages unsupported extremes. Optimization begins from a nonnegative least-squares solution, uses z = exp(raw) + 1e-8 to keep abundance positive, and runs Adam from three deterministic restarts. The best finite converged full objective is selected. This numerical search reduces but cannot eliminate the risk of a local maximum. It is not full posterior sampling, so the MVP does not report credible intervals.")
 
-    # 12 — Algorithm
+    # 13 — Algorithm
     slide = prs.slides.add_slide(blank)
     set_bg(slide, NAVY)
-    add_title(slide, "How ShapeMix works—four steps", "Algorithm overview", dark=True, slide_num=12)
+    add_title(slide, "How ShapeMix works—four steps", "Algorithm overview", dark=True, slide_num=13)
     steps = [
         ("1", "Build references", "Use labeled single cells to learn each cell type’s peak counts and length pattern.", BLUE),
         ("2", "Read a mixed spot", "Count cut sites in each peak and sort them into three length bins.", GOLD),
@@ -856,10 +1105,10 @@ def build_deck():
     add_footer(slide, "Technical version: negative-binomial peak totals + conditional multinomial length bins; fitted by MAP.", dark=True)
     add_notes(slide, "Keep the math verbal unless someone asks. ShapeMix learns reference fingerprints, reads a mixed spot, tries possible combinations, and chooses the mixture that best explains both the total counts and the length composition. MAP means choosing the most supported values after combining the data with a reasonable prior.")
 
-    # 13 — Fair test
+    # 14 — Fair test
     slide = prs.slides.add_slide(blank)
     set_bg(slide, WHITE)
-    add_title(slide, "A matched experiment isolates the value of fragment length", "Experimental design", slide_num=13)
+    add_title(slide, "A matched experiment isolates the value of fragment length", "Experimental design", slide_num=14)
     add_text(slide, "The two models see the same data and use the same settings. Only one ingredient changes.", 0.72, 1.16, 11.85, 0.42, size=19, color=SLATE, align=PP_ALIGN.CENTER)
     # split
     add_card(slide, 0.72, 1.77, 3.15, 4.56, fill=PALE, line=MID)
@@ -886,10 +1135,10 @@ def build_deck():
     add_footer(slide, "Design source: ShapeMix benchmark protocol and project proposal in this repository.")
     add_notes(slide, "This is the strongest part of the experimental design. If the models differ, it should be because ShapeMix saw fragment-length composition—not because it got different cells, peaks, or extra computing time.")
 
-    # 14 — Main dataset
+    # 15 — Main dataset
     slide = prs.slides.add_slide(blank)
     set_bg(slide, CREAM)
-    add_title(slide, "Primary dataset: human blood immune cells", "Dataset plan", slide_num=14)
+    add_title(slide, "Primary dataset: human blood immune cells", "Dataset plan", slide_num=15)
     add_text(slide, "A public 10x Genomics PBMC Multiome dataset provides paired RNA labels and raw ATAC fragments.", 0.72, 1.14, 11.85, 0.44, size=19, color=SLATE, align=PP_ALIGN.CENTER)
     facts = [
         ("PBMCs", "blood immune cells", BLUE),
@@ -915,10 +1164,10 @@ def build_deck():
     add_footer(slide, "Source: 10x Genomics PBMC from a healthy donor, granulocytes removed, 10k, Cell Ranger ARC 2.0.0.")
     add_notes(slide, "PBMC means peripheral blood mononuclear cell. This dataset contains many related immune types, so it is a useful challenge. Simulated spots are essential because we know exactly which cells were mixed together. The one-donor limitation will be stated clearly.")
 
-    # 15 — Additional datasets
+    # 16 — Additional datasets
     slide = prs.slides.add_slide(blank)
     set_bg(slide, WHITE)
-    add_title(slide, "Broader datasets test whether the idea generalizes", "Validation roadmap", slide_num=15)
+    add_title(slide, "Broader datasets test whether the idea generalizes", "Validation roadmap", slide_num=16)
     add_text(slide, "Different datasets answer different questions; not all provide exact ground truth.", 0.72, 1.13, 11.84, 0.42, size=19, color=SLATE, align=PP_ALIGN.CENTER)
     headers = [("DATASET", 0.82, 2.16), ("WHAT IT ADDS", 3.02, 5.10), ("HOW WE CHECK IT", 8.21, 4.23)]
     for text_value, x, w in headers:
@@ -949,10 +1198,10 @@ def build_deck():
     add_footer(slide, "Sources: NCBI GEO accessions GSE129785, GSE194122, GSE205055, and GSE263333.")
     add_notes(slide, "Stress that each dataset has a different role. Simulations can provide exact composition truth. Physical dilutions provide planned mixing ratios. Real tissues need indirect checks using anatomy or other molecular measurements.")
 
-    # 16 — Evaluation
+    # 17 — Evaluation
     slide = prs.slides.add_slide(blank)
     set_bg(slide, CREAM)
-    add_title(slide, "Success means estimates are close to the known recipe", "Evaluation", slide_num=16)
+    add_title(slide, "Success means estimates are close to the known recipe", "Evaluation", slide_num=17)
     add_pill(slide, "TEACHING EXAMPLE — NOT RESULTS", 4.81, 1.20, 3.70, 0.39, CORAL, size=10.5)
     add_card(slide, 0.79, 1.88, 6.18, 4.72, fill=WHITE, line=MID)
     add_text(slide, "Compare truth with prediction", 1.11, 2.17, 5.50, 0.38, size=21, color=NAVY, bold=True, align=PP_ALIGN.CENTER)
@@ -988,10 +1237,10 @@ def build_deck():
     add_footer(slide, "Primary planned endpoints: RMSE and base-2 Jensen–Shannon divergence (JSD).")
     add_notes(slide, "The colored bars make the metrics intuitive: the model should reproduce the known recipe. RMSE looks at individual proportion errors; JSD compares the full mixture. Rare-cell F1 asks whether uncommon populations are detected without too many false alarms.")
 
-    # 17 — Possible outcomes
+    # 18 — Possible outcomes
     slide = prs.slides.add_slide(blank)
     set_bg(slide, NAVY)
-    add_title(slide, "Every possible outcome teaches us something", "Interpreting the study", dark=True, slide_num=17)
+    add_title(slide, "Every possible outcome teaches us something", "Interpreting the study", dark=True, slide_num=18)
     outcomes = [
         ("SHAPE HELPS", "lower error", "Fragment length adds cell-type information beyond peak totals.", GREEN, GREEN_PALE, "↓"),
         ("ABOUT THE SAME", "similar error", "The extra clue may be too weak or redundant in this setting.", GOLD, GOLD_PALE, "≈"),
@@ -1009,10 +1258,10 @@ def build_deck():
     add_footer(slide, "Outcome cards describe interpretations only; they do not report study results.", dark=True)
     add_notes(slide, "Science does not require the hypothesis to win. If ShapeMix ties or loses, that still tells us that this particular fragment representation did not justify its complexity under the tested conditions.")
 
-    # 18 — Limitations and safeguards
+    # 19 — Limitations and safeguards
     slide = prs.slides.add_slide(blank)
     set_bg(slide, WHITE)
-    add_title(slide, "Known risks—and how the design handles them", "Scientific caution", slide_num=18)
+    add_title(slide, "Known risks—and how the design handles them", "Scientific caution", slide_num=19)
     pairs = [
         ("Sparse shape counts", "Use only three broad length bins and well-covered peaks.", GOLD),
         ("One main donor", "Limit claims; add multi-donor data before generalizing.", CORAL),
@@ -1034,10 +1283,10 @@ def build_deck():
     add_footer(slide, "These limitations are part of the planned interpretation, not after-the-fact excuses.")
     add_notes(slide, "Explain that limitations do not invalidate a project; they define what can be concluded. The biggest limitation is that the first benchmark uses one donor, so it cannot establish broad biological generalization by itself.")
 
-    # 19 — Results pending
+    # 20 — Results pending
     slide = prs.slides.add_slide(blank)
     set_bg(slide, CREAM)
-    add_title(slide, "This draft intentionally stops before the results", "Project status", slide_num=19)
+    add_title(slide, "This draft intentionally stops before the results", "Project status", slide_num=20)
     add_card(slide, 0.76, 1.47, 11.80, 1.08, fill=NAVY, line=NAVY)
     add_text(slide, "RESULTS PENDING", 1.05, 1.77, 2.70, 0.42, size=23, color=GOLD, bold=True)
     add_text(slide, "No performance claim is made in this slide deck.", 3.93, 1.78, 7.89, 0.38, size=19, color=WHITE, bold=True)
@@ -1059,7 +1308,7 @@ def build_deck():
     add_footer(slide, "Status language follows the requested results-free presentation scope.")
     add_notes(slide, "Be explicit with the audience: this is not a results talk. When results are ready, add the actual comparison, uncertainty, controls, and limitations rather than showing placeholder charts that could be mistaken for data.")
 
-    # 20 — Take-home
+    # 21 — Take-home
     slide = prs.slides.add_slide(blank)
     set_bg(slide, NAVY)
     add_pill(slide, "TAKE-HOME MESSAGE", 0.74, 0.56, 1.92, 0.38, TEAL, size=10.5)
@@ -1082,10 +1331,10 @@ def build_deck():
     add_footer(slide, "ShapeMix-ATAC project overview • Andy Zhuang • High School Science Research", dark=True)
     add_notes(slide, "Close by returning to the one-sentence question. The project is not trying to prove that a more complicated model must win; it is testing whether a specific ATAC-native clue adds measurable value.")
 
-    # 21 — References and glossary
+    # 22 — References and glossary
     slide = prs.slides.add_slide(blank)
     set_bg(slide, WHITE)
-    add_title(slide, "References and biological glossary", "Appendix", slide_num=21)
+    add_title(slide, "References and biological glossary", "Appendix", slide_num=22)
     add_text(slide, "Selected references", 0.77, 1.24, 5.85, 0.38, size=21, color=NAVY, bold=True)
     refs = [
         "Buenrostro JD et al. (2013). ATAC-seq and open chromatin. Nature Methods.",
@@ -1117,10 +1366,10 @@ def build_deck():
     add_footer(slide, "Links and full citations appear in the repository proposal and ShapeMix documentation.")
     add_notes(slide, "Use this slide if the audience asks about biological terms, datasets, or method sources. The algorithm papers are grouped compactly; full links and citations are in the repository proposal.")
 
-    # 22 — Bayesian glossary
+    # 23 — Bayesian glossary
     slide = prs.slides.add_slide(blank)
     set_bg(slide, CREAM)
-    add_title(slide, "Bayesian glossary: translating the ShapeMix model", "Appendix", slide_num=22)
+    add_title(slide, "Bayesian glossary: translating the ShapeMix model", "Appendix", slide_num=23)
     add_text(slide, "posterior  ∝  likelihood  ×  prior", 3.35, 1.17, 6.63, 0.48, size=24, color=NAVY, bold=True, align=PP_ALIGN.CENTER)
     glossary_bayes = [
         ("LATENT VARIABLE", "A quantity we cannot directly observe. Here, z is the hidden effective amount of each cell type.", BLUE, BLUE_PALE),
