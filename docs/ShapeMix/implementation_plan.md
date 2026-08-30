@@ -809,7 +809,7 @@ The external source acquisition originally anticipated here is complete for GSE1
 ### Implemented additions through Step 6
 
 ```text
-docs/ShapeMix/iimplementation_plan.md         # active roadmap and execution record
+docs/ShapeMix/implementation_plan.md          # active roadmap and execution record
 docs/ShapeMix/README.md
 docs/ShapeMix/model_specification.md
 docs/ShapeMix/benchmark_protocol.md
@@ -867,7 +867,7 @@ Gated extension files are excluded from the MVP list and should be added only wh
 .gitignore
 configs/data_sources/pbmc_granulocyte_sorted_10k_cellranger_arc_2.0.0.yaml
 docs/ShapeMix/README.md
-docs/ShapeMix/iimplementation_plan.md
+docs/ShapeMix/implementation_plan.md
 docs/ShapeMix/model_specification.md
 docs/recreate_data_directory (important).md
 
@@ -1178,6 +1178,11 @@ Do not tune labels, peaks, smoothing, or model parameters to maximize RNA/protei
 
 #### Evaluation stage E6 — Cross-family synthesis
 
+- Freeze the contributing campaign paths and claim limits in
+  `configs/experiments/shapemix_full_evaluation_v1.yaml`, then generate the
+  hash-anchored evidence, effect, and resource tables with
+  `scripts/summarize_shapemix_full_evaluation.py` only after every declared
+  campaign summary reports `complete` or `passed`.
 - Produce one summary per evidence class and a final cross-family table; never pool exact pseudo-truth, nominal physical truth, and qualitative spatial concordance into one effect estimate.
 - Treat GSE194122 donors as the population-level quantitative units. Present GSE129785 ratios and spatial sections individually because their small sample counts do not justify asymptotic uncertainty claims.
 - Relate gains or failures to depth, reference support, shape entropy/divergence, protocol mismatch, and residual diagnostics using predeclared analyses.
@@ -1240,6 +1245,17 @@ data/registry/datasets.yaml
 ```
 
 GSE194122 fold products must use `data/processed/shapemix/gse194122_bmmc/{fragment_shape_cache,labels,feature_axes,splits,manifests}/`. Each held-out-donor reference gets an immutable versioned ID under `data/processed/references/`, and each split/condition/seed combination gets a distinct dataset ID under `data/processed/datasets/`. GSE205055/GSE263333 reference-source preprocessing follows the same reusable tree before standardized reference H5ADs are promoted to `data/processed/references/`.
+
+GSE216371 uses a single-threaded compiled stream for its 76 GB tar of 68
+compressed fragment members. Reusable E13.5 fragments and reference-only cCRE
+statistics live together under
+`data/processed/shapemix/gse216371_embryo_reference/normalized_fragments/major_types_v1/`;
+the author and broad-label audits and the author and selected cCRE axes use the
+corresponding versioned `labels/` and `feature_axes/` directories. The helper
+binary and packed sparse events are restartable intermediates under
+`data/work/preprocessing/gse216371_reference/`. They never become registered
+inputs, and the immutable reference manifest embeds hashes and counters rather
+than depending on those work paths.
 
 Only exact source-cell pseudo-spot composition belongs in `truth/proportions.csv`. GSE129785 physical ratios live at `validation/nominal_broad_proportions.csv` and are referenced as nominal validation evidence, including the seven CD4-memory/CD8-naive samples. The legacy `truth` declarations and directories were removed on 2026-08-24, and `scripts/preprocess_gse129785.py` was updated so regeneration cannot recreate them. RNA, protein, histone, marker, image, and anatomical evidence for real spatial data also stays under `validation/`.
 
@@ -1337,7 +1353,16 @@ represented full-size workloads use paired CUDA configs.
 
 Co-tenant constraint, added 2026-08-24: another workload on this host may consume four to five physical cores. Treat that workload as higher priority and preserve at least one physical core of headroom. This constraint remains active until the user explicitly removes it.
 
-Only one deconvATAC process may run at a time, and only one fit process may own the RTX 3080. Do not overlap a GPU fit, NNLS baseline, preprocessing job, checksum pass, download, test suite, or summary job from this repository. Do not launch if `nvidia-smi` shows an unrelated compute process using the GPU; GPU sharing requires explicit approval.
+Only one material deconvATAC task may run at a time, and only one fit process
+may own the RTX 3080. A paired-read alignment may pipe one-thread BWA directly
+into one-thread pinned pysam/embedded-samtools name sorting, with a Python
+header-normalization streamer and no plain-SAM intermediate. These are at most
+three runnable single-threaded processes, but the complete process tree is pinned
+to logical CPUs 6 and 7, which are separate physical cores on this host. Do not
+overlap a GPU fit, NNLS baseline, preprocessing job, checksum pass, download,
+test suite, or summary job from this repository. Do not launch if `nvidia-smi`
+shows an unrelated compute process using the GPU; GPU sharing requires explicit
+approval.
 
 Before every job, record the one-minute load average, available RAM, and GPU process/memory state. On this eight-physical-core/16-logical-CPU host, do not start a new deconvATAC task while the one-minute load average is `>= 6.0`; leave it queued and recheck later. This is a conservative launch gate, not permission to interrupt either workload. A running job may finish, but no additional repository process starts while the gate is closed.
 
@@ -1352,7 +1377,11 @@ The launcher holds a host-wide deconvATAC lock, enforces the load/GPU/worker gat
 
 The runner must also call `torch.set_num_threads(1)` and `torch.set_num_interop_threads(1)` before fitting. GPU and CPU-only fits, including NNLS, are restricted to one host thread. The earlier two-thread GPU-input exception is disabled while the co-tenant constraint is active.
 
-Fragment counting, preprocessing, and downloads may use at most two workers (`--workers 2`) and must also run at lowered priority. Checksum scans use one process. If a stage cannot obey these limits, keep it gated rather than increasing parallelism. Never automatically fall back from CUDA to an unconstrained CPU fit.
+Fragment counting and preprocessing may use at most two CPU workers and must
+also run at lowered priority. The adult-read downloader may use four network
+transfer workers only because its enforced validation semaphore admits at most
+two gzip/checksum workers. If a stage cannot obey these limits, keep it gated
+rather than increasing CPU parallelism. Never automatically fall back from CUDA to an unconstrained CPU fit.
 
 Use one sequential GPU shard per campaign and resume by completed, hash-verified run. Record the launch-gate measurements, priority, worker/thread caps, wall time, CPU time, peak RSS, peak allocated/reserved VRAM, device-utilization samples, and any cache/chunk fallback. A load, temperature, memory-pressure, or GPU-occupancy monitor pauses launching the next run but does not terminate or rewrite a completed result.
 
@@ -1366,7 +1395,9 @@ The full campaign is complete only when:
 - all GSE129785 conclusions respect nominal versus absent truth, with no nominal or qualitative evidence stored under `truth/`;
 - GSE205055/GSE263333 use audited compatible references and make no exact-composition claim;
 - CPU/CUDA parity, repeated-CUDA determinism, memory fallback, and performance gates pass and are retained under `results/development/`;
-- resource manifests prove that only one deconvATAC process ran at a time, every fit used one host thread, preprocessing used at most two workers, and every launch passed the co-tenant load/GPU gate;
+- resource manifests prove that only one deconvATAC task ran at a time, every
+  fit used one host thread, preprocessing and download validation used at most
+  two CPU workers, and every launch passed the co-tenant load/GPU gate;
 - failed runs and optional-baseline gates remain visible in summaries;
 - the canonical layout validator passes for configs, work paths, reusable products, references, runnable datasets, registry entries, result scopes, and per-run provenance;
 - all result groups, configs, code/input hashes, and environment metadata revalidate; and

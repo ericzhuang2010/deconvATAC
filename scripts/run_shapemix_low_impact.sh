@@ -3,6 +3,7 @@ set -euo pipefail
 
 readonly MAX_ONE_MINUTE_LOAD="6.0"
 readonly MAX_WORKERS=2
+readonly MAX_DOWNLOAD_WORKERS=4
 readonly MIN_AVAILABLE_MEMORY_KIB=4194304
 readonly MAX_GPU_MEMORY_USED_MIB=2048
 readonly MAX_GPU_TEMPERATURE_C=79
@@ -39,6 +40,13 @@ if (( $# == 0 )); then
 fi
 
 arguments=("$@")
+worker_limit="$MAX_WORKERS"
+for argument in "${arguments[@]}"; do
+    if [[ "$argument" == "scripts/download_shapemix_spatial.py" ]]; then
+        worker_limit="$MAX_DOWNLOAD_WORKERS"
+        break
+    fi
+done
 for ((index = 0; index < ${#arguments[@]}; index++)); do
     argument="${arguments[index]}"
     worker_value=""
@@ -52,8 +60,8 @@ for ((index = 0; index < ${#arguments[@]}; index++)); do
         worker_value="${argument#--workers=}"
     fi
     if [[ -n "$worker_value" ]]; then
-        if [[ ! "$worker_value" =~ ^[0-9]+$ ]] || (( worker_value < 1 || worker_value > MAX_WORKERS )); then
-            echo "Refusing --workers=$worker_value; the active co-tenant limit is 1-$MAX_WORKERS." >&2
+        if [[ ! "$worker_value" =~ ^[0-9]+$ ]] || (( worker_value < 1 || worker_value > worker_limit )); then
+            echo "Refusing --workers=$worker_value; the active command limit is 1-$worker_limit." >&2
             exit 64
         fi
     fi
@@ -62,6 +70,15 @@ done
 exec 9>"$LOCK_PATH"
 if ! flock -n 9; then
     echo "Another deconvATAC task holds $LOCK_PATH; leaving this job queued." >&2
+    exit 75
+fi
+
+# A separate project on this host may leave long low-load gaps between its
+# download, trimming, and 12-thread alignment rules. Its persistent scheduler
+# is a stronger signal than instantaneous load, so never launch into that gap.
+if unrelated_schedulers="$(pgrep -u "$(id -u)" -x snakemake 2>/dev/null)" \
+    && [[ -n "${unrelated_schedulers//[$'\t\r\n ']/}" ]]; then
+    echo "Co-tenant scheduler gate closed: snakemake PID(s) $unrelated_schedulers are active." >&2
     exit 75
 fi
 
@@ -111,6 +128,7 @@ fi
 sleep "$STABILITY_SECONDS"
 stable_one_minute_load="$(awk '{print $1}' /proc/loadavg)"
 stable_available_kib="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
+stable_unrelated_schedulers="$(pgrep -u "$(id -u)" -x snakemake 2>/dev/null || true)"
 if ! stable_gpu_processes="$(nvidia-smi --query-compute-apps=pid,process_name,used_memory \
     --format=csv,noheader,nounits 2>/dev/null)"; then
     echo "Unable to repeat the GPU process query; refusing a fail-open launch." >&2
@@ -130,6 +148,7 @@ stable_gpu_temperature="${stable_gpu_temperature//[[:space:]]/}"
 if ! awk -v observed="$stable_one_minute_load" -v maximum="$MAX_ONE_MINUTE_LOAD" \
     'BEGIN { exit !(observed < maximum) }' \
     || (( stable_available_kib < MIN_AVAILABLE_MEMORY_KIB )) \
+    || [[ -n "${stable_unrelated_schedulers//[$'\t\r\n ']/}" ]] \
     || [[ -n "${stable_unrelated_processes//[$'\t\r\n ']/}" ]] \
     || (( stable_gpu_used_mib > MAX_GPU_MEMORY_USED_MIB \
         || stable_gpu_temperature > MAX_GPU_TEMPERATURE_C )); then
@@ -142,7 +161,7 @@ gpu_used_mib="$stable_gpu_used_mib"
 gpu_total_mib="$stable_gpu_total_mib"
 gpu_utilization="$stable_gpu_utilization"
 gpu_temperature="$stable_gpu_temperature"
-echo "resource_preflight one_minute_load=$one_minute_load available_memory_kib=$available_kib gpu_used_mib=$gpu_used_mib gpu_total_mib=$gpu_total_mib gpu_utilization=$gpu_utilization gpu_temperature_c=$gpu_temperature workers_max=$MAX_WORKERS cpu_threads=1"
+echo "resource_preflight one_minute_load=$one_minute_load available_memory_kib=$available_kib gpu_used_mib=$gpu_used_mib gpu_total_mib=$gpu_total_mib gpu_utilization=$gpu_utilization gpu_temperature_c=$gpu_temperature command_workers_max=$worker_limit cpu_workers_max=$MAX_WORKERS cpu_threads=1"
 
 project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 export CUDA_VISIBLE_DEVICES=0
@@ -155,7 +174,7 @@ export VECLIB_MAXIMUM_THREADS=1
 export BLIS_NUM_THREADS=1
 export RAYON_NUM_THREADS=1
 export POLARS_MAX_THREADS=1
-export PYTHONPATH="$project_root/src${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$project_root:$project_root/src${PYTHONPATH:+:$PYTHONPATH}"
 
 export DECONVATAC_RESOURCE_GUARD=1
 exec nice -n 10 ionice -c 2 -n 7 "${arguments[@]}"

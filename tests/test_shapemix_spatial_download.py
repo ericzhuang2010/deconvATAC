@@ -9,7 +9,9 @@ from scripts.download_shapemix_spatial import (
     normalize_etag,
     resources_from_config,
     safe_tar_member_name,
+    select_resources,
     validate_gzip_schema,
+    worker_limits,
 )
 
 
@@ -71,6 +73,36 @@ def test_reference_manifests_resolve_exact_frozen_scopes():
         assert sum(resource.expected_bytes or 0 for resource in resources) == total_bytes
         assert all(str(resource.destination).startswith(str(ROOT / "data/raw/sources")) for resource in resources)
         assert all(str(resource.staging_path).startswith(str(ROOT / "data/work/downloads")) for resource in resources)
+
+
+def test_resource_selector_retains_only_requested_representative_pair():
+    resources = resources_from_config(
+        load_config(ROOT / "configs/data_sources/shapemix_gse246791_fragment_reads.yaml")
+    )
+    selected = select_resources(resources, ["GSM7877011"])
+    assert [resource.name for resource in selected] == [
+        "SRR26585986_1.fastq.gz",
+        "SRR26585986_2.fastq.gz",
+    ]
+
+
+def test_resource_selector_rejects_unknown_or_repeated_accessions():
+    resources = resources_from_config(
+        load_config(ROOT / "configs/data_sources/shapemix_gse246791_fragment_reads.yaml")
+    )
+    with pytest.raises(ValueError, match="absent"):
+        select_resources(resources, ["GSM_missing"])
+    with pytest.raises(ValueError, match="unique"):
+        select_resources(resources, ["GSM7877011", "GSM7877011"])
+
+
+def test_adult_fragment_download_separates_transfer_and_cpu_worker_limits():
+    config = load_config(
+        ROOT / "configs/data_sources/shapemix_gse246791_fragment_reads.yaml"
+    )
+    assert worker_limits(config, 4) == (4, 2)
+    with pytest.raises(ValueError, match="must be <= 4"):
+        worker_limits(config, 5)
 
 
 def test_ucsc_mm10_reference_manifest_is_pinned_and_organized():

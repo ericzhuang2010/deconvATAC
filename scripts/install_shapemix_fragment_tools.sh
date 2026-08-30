@@ -58,7 +58,13 @@ if [[ "$(git -C "${BWA_SOURCE}" describe --tags --exact-match)" != "${BWA_TAG}" 
     exit 1
 fi
 
-make -C "${BWA_SOURCE}" -j1
+if [[ ! -x "${BWA_SOURCE}/bwa" ]]; then
+    # BWA 0.7.17 predates GCC 10's -fno-common default. Keep the pinned source
+    # unchanged and restore its historical common-symbol linkage explicitly.
+    make -C "${BWA_SOURCE}" clean
+    make -C "${BWA_SOURCE}" -j1 \
+        CFLAGS="-g -Wall -Wno-unused-function -O2 -fcommon"
+fi
 install -m 0755 "${BWA_SOURCE}/bwa" "${ENVIRONMENT}/bin/bwa"
 
 snapatac2_observed="$("${ENVIRONMENT}/bin/python" -c 'import snapatac2; print(snapatac2.__version__)')"

@@ -1,0 +1,32 @@
+schema_version: 1
+template_id: shapemix_gse263333_real_spatial_v1
+status: frozen_before_predictions
+source_manifest: configs/data_sources/shapemix_gse263333.yaml
+source_lock: configs/data_sources/shapemix_gse263333_lock.yaml
+builder: scripts/materialize_shapemix_real_spatial.py
+experiment: configs/experiments/shapemix_gse263333_real_spatial_v1.yaml
+reusable_root: data/processed/shapemix/gse263333_spatial_mux
+dataset_root: data/processed/datasets
+registry: data/registry/datasets.yaml
+truth_policy: orthogonal_validation_only
+sections:
+  - dataset_id: gse263333_shapemix_mouse_embryo_e13_50um_atac_v1
+    group: me13_50um_atac
+    atac_gsm: GSM8189706
+    reference_id: gse216371_mouse_embryo_e13_major_types_v1
+    rna_gsm: GSM8189707
+    validation_epigenome_gsms: [GSM8189706]
+  - dataset_id: gse263333_shapemix_five_month_eae_brain_20um_atac_v1
+    group: five_modality_5month_eae_brain_20um_atac
+    atac_gsm: GSM8494157
+    reference_id: gse246791_adult_mouse_brain_broad9_v1
+    rna_gsm: GSM8494158
+    protein_gsm: GSM8494159
+    validation_epigenome_gsms: [GSM8494157]
+    reference_caveat: adult healthy regional brain reference applied to five-month EAE brain
+materialization:
+  datasets: 2
+  selected_reference_features: 5000
+  exact_truth: false
+  copy_validation_modalities_into_dataset: true
+  no_overwrite: true

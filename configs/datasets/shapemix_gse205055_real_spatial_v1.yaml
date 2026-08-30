@@ -1,0 +1,54 @@
+schema_version: 1
+template_id: shapemix_gse205055_real_spatial_v1
+status: frozen_before_predictions
+source_manifest: configs/data_sources/shapemix_gse205055.yaml
+source_lock: configs/data_sources/shapemix_gse205055_lock.yaml
+builder: scripts/materialize_shapemix_real_spatial.py
+experiment: configs/experiments/shapemix_gse205055_real_spatial_v1.yaml
+reusable_root: data/processed/shapemix/gse205055_spatial
+dataset_root: data/processed/datasets
+registry: data/registry/datasets.yaml
+truth_policy: orthogonal_validation_only
+sections:
+  - dataset_id: gse205055_shapemix_mouse_brain_p21_20um_primary_v1
+    group: mouse_brain_p21_20um_primary
+    atac_gsm: GSM6204623
+    reference_id: gse246791_adult_mouse_brain_broad9_v1
+    rna_gsm: GSM6204636
+    validation_epigenome_gsms: [GSM6204621]
+  - dataset_id: gse205055_shapemix_mouse_embryo_e13_25um_v1
+    group: mouse_embryo_e13_25um
+    atac_gsm: GSM6204624
+    reference_id: gse216371_mouse_embryo_e13_major_types_v1
+    rna_gsm: GSM6204637
+    validation_epigenome_gsms: []
+  - dataset_id: gse205055_shapemix_mouse_brain_p21_20um_rep2_v1
+    group: mouse_brain_p21_20um_rep2
+    atac_gsm: GSM6758284
+    reference_id: gse246791_adult_mouse_brain_broad9_v1
+    rna_gsm: GSM6753041
+    validation_epigenome_gsms: [GSM6704977]
+  - dataset_id: gse205055_shapemix_mouse_brain_p22_20um_100barcodes_rep2_v1
+    group: mouse_brain_p22_20um_100barcodes_rep2
+    atac_gsm: GSM6758285
+    reference_id: gse246791_adult_mouse_brain_broad9_v1
+    rna_gsm: GSM6753043
+    validation_epigenome_gsms: [GSM6704978, GSM6704979, GSM6704980]
+  - dataset_id: gse205055_shapemix_mouse_embryo_e13_50um_v1
+    group: mouse_embryo_e13_50um
+    atac_gsm: GSM6801813
+    reference_id: gse216371_mouse_embryo_e13_major_types_v1
+    rna_gsm: GSM6799937
+    validation_epigenome_gsms: []
+  - dataset_id: gse205055_shapemix_human_hippocampus_50um_v1
+    group: human_hippocampus_50um
+    atac_gsm: GSM6206884
+    reference_id: gse244618_human_hippocampus_donor3_region3_v1
+    rna_gsm: GSM6206885
+    validation_epigenome_gsms: []
+materialization:
+  datasets: 6
+  selected_reference_features: 5000
+  exact_truth: false
+  copy_validation_modalities_into_dataset: true
+  no_overwrite: true

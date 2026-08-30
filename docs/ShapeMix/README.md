@@ -13,7 +13,7 @@ Use these files in this order:
 1. [Model specification](model_specification.md) — normative data semantics and statistical model.
 2. [Benchmark protocol](benchmark_protocol.md) — normative data split, peak selection, seeds, metrics, and comparison rules.
 3. [Current Bayesian tutorial source](tutorials/ShapeMix_ATAC_Bayesian_Model_Tutorial.tex) and [generated PDF](tutorials/ShapeMix_ATAC_Bayesian_Model_Tutorial.pdf) — canonical explanatory derivation of the MVP and labeled extensions.
-4. [Implementation plan](iimplementation_plan.md) — file-level engineering roadmap, full-evaluation campaign, GPU strategy, and acceptance gates.
+4. [Implementation plan](implementation_plan.md) — file-level engineering roadmap, full-evaluation campaign, GPU strategy, and acceptance gates.
 5. [Data and results organization](file_organization.md) — canonical placement, lifecycle, naming, tracking, and provenance policy.
 6. [Additional dataset plan](additional_datasets.md) — external source selection, storage layout, preprocessing requirements, and acquisition gates.
 7. [GSE129785 preprocessing record](gse129785_preprocessing.md) — frozen immune scope, commands, cell calls, feature selection, outputs, and validation gates.

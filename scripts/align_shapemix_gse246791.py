@@ -10,6 +10,7 @@ import os
 import queue
 import re
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -20,10 +21,13 @@ from typing import Any, Mapping
 import pysam
 import yaml
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from scripts.preprocess_gse246791_fragment_reads import iter_normalized_pairs
 
 
-ROOT = Path(__file__).resolve().parents[1]
 CHUNK_BYTES = 8 * 1024 * 1024
 BARCODE_QNAME_RE = re.compile(r"^[ACGT]{32}:")
 QUEUE_RECORDS = 512
@@ -86,7 +90,13 @@ def sample_pair(config: Mapping[str, Any], gsm: str) -> dict[str, Any]:
     }
 
 
-def validate_inputs(sample: Mapping[str, Any], reference: Path, bwa: Path) -> None:
+def validate_inputs(
+    sample: Mapping[str, Any],
+    reference: Path,
+    bwa: Path,
+    sorter_python: Path,
+    sorter_script: Path,
+) -> None:
     for read_number in (1, 2):
         path = Path(sample[f"read{read_number}"])
         if not path.is_file():
@@ -97,6 +107,10 @@ def validate_inputs(sample: Mapping[str, Any], reference: Path, bwa: Path) -> No
         raise FileNotFoundError(reference)
     if not bwa.is_file() or not os.access(bwa, os.X_OK):
         raise FileNotFoundError(f"BWA is missing or not executable: {bwa}")
+    if not sorter_python.is_file() or not os.access(sorter_python, os.X_OK):
+        raise FileNotFoundError(f"Sorter Python is missing: {sorter_python}")
+    if not sorter_script.is_file():
+        raise FileNotFoundError(f"Sorter driver is missing: {sorter_script}")
     missing_index = [
         suffix
         for suffix in (".amb", ".ann", ".bwt", ".pac", ".sa")
@@ -104,6 +118,17 @@ def validate_inputs(sample: Mapping[str, Any], reference: Path, bwa: Path) -> No
     ]
     if missing_index:
         raise FileNotFoundError(f"Reference lacks BWA index files: {missing_index}")
+
+
+def validate_cpu_affinity(maximum_cpus: int = 2) -> list[int]:
+    if not hasattr(os, "sched_getaffinity"):
+        raise RuntimeError("CPU affinity cannot be audited on this platform")
+    allowed_cpus = sorted(os.sched_getaffinity(0))
+    if len(allowed_cpus) > maximum_cpus:
+        raise RuntimeError(
+            f"Alignment affinity spans {len(allowed_cpus)} CPUs; cap it to {maximum_cpus}"
+        )
+    return allowed_cpus
 
 
 def _writer(
@@ -128,10 +153,13 @@ def _safe_put(
     *,
     process: subprocess.Popen[bytes],
     writer: threading.Thread,
+    downstream: subprocess.Popen[bytes] | None = None,
 ) -> None:
     while True:
         if not writer.is_alive():
             raise RuntimeError("FASTQ writer stopped before the input stream completed")
+        if downstream is not None and downstream.poll() is not None:
+            raise RuntimeError(f"Alignment sorter stopped early: {downstream.returncode}")
         if process.poll() is not None:
             raise RuntimeError(f"BWA stopped before the input stream completed: {process.returncode}")
         try:
@@ -141,23 +169,17 @@ def _safe_put(
             continue
 
 
-def stream_bwa_sam(
+def alignment_commands(
     *,
-    read1: Path,
-    read2: Path,
-    srr: str,
     reference: Path,
     bwa: Path,
-    sam_output: Path,
-    stderr_output: Path,
-) -> dict[str, Any]:
-    """Validate pairs and stream normalized records without materializing FASTQs."""
-    read_fd1, write_fd1 = os.pipe()
-    read_fd2, write_fd2 = os.pipe()
-    queue1: "queue.Queue[bytes | None]" = queue.Queue(maxsize=QUEUE_RECORDS)
-    queue2: "queue.Queue[bytes | None]" = queue.Queue(maxsize=QUEUE_RECORDS)
-    errors: "queue.Queue[BaseException]" = queue.Queue()
-    command = [
+    sorter_python: Path,
+    sorter_script: Path,
+    read_fd1: int,
+    read_fd2: int,
+    bam_output: Path,
+) -> tuple[list[str], list[str]]:
+    bwa_command = [
         str(bwa),
         "mem",
         "-t",
@@ -166,21 +188,69 @@ def stream_bwa_sam(
         f"/dev/fd/{read_fd1}",
         f"/dev/fd/{read_fd2}",
     ]
+    sort_command = [
+        str(sorter_python),
+        str(sorter_script),
+        "--output",
+        str(bam_output),
+    ]
+    return bwa_command, sort_command
+
+
+def stream_bwa_name_sorted_bam(
+    *,
+    read1: Path,
+    read2: Path,
+    srr: str,
+    reference: Path,
+    bwa: Path,
+    sorter_python: Path,
+    sorter_script: Path,
+    bam_output: Path,
+    bwa_stderr_output: Path,
+    sort_stderr_output: Path,
+) -> dict[str, Any]:
+    """Validate pairs and stream BWA SAM stdout directly into name-sorted BAM."""
+    read_fd1, write_fd1 = os.pipe()
+    read_fd2, write_fd2 = os.pipe()
+    queue1: "queue.Queue[bytes | None]" = queue.Queue(maxsize=QUEUE_RECORDS)
+    queue2: "queue.Queue[bytes | None]" = queue.Queue(maxsize=QUEUE_RECORDS)
+    errors: "queue.Queue[BaseException]" = queue.Queue()
+    bwa_command, sort_command = alignment_commands(
+        reference=reference,
+        bwa=bwa,
+        sorter_python=sorter_python,
+        sorter_script=sorter_script,
+        read_fd1=read_fd1,
+        read_fd2=read_fd2,
+        bam_output=bam_output,
+    )
     pair_count = 0
     first_ordinal: int | None = None
     last_ordinal: int | None = None
     unique_h5_barcodes: set[str] = set()
-    sam_output.parent.mkdir(parents=True, exist_ok=True)
-    stderr_output.parent.mkdir(parents=True, exist_ok=True)
-    if sam_output.exists():
-        raise FileExistsError(f"Unresolved or existing SAM output: {sam_output}")
-    with sam_output.open("xb") as sam_handle, stderr_output.open("xb") as stderr_handle:
+    bam_output.parent.mkdir(parents=True, exist_ok=True)
+    bwa_stderr_output.parent.mkdir(parents=True, exist_ok=True)
+    sort_stderr_output.parent.mkdir(parents=True, exist_ok=True)
+    if bam_output.exists():
+        raise FileExistsError(f"Unresolved or existing BAM partial: {bam_output}")
+    with bwa_stderr_output.open("xb") as bwa_stderr, sort_stderr_output.open(
+        "xb"
+    ) as sort_stderr:
+        sort_process = subprocess.Popen(
+            sort_command,
+            stdin=subprocess.PIPE,
+            stderr=sort_stderr,
+        )
+        if sort_process.stdin is None:
+            raise RuntimeError("pysam/samtools sorter stdin pipe is unavailable")
         process = subprocess.Popen(
-            command,
-            stdout=sam_handle,
-            stderr=stderr_handle,
+            bwa_command,
+            stdout=sort_process.stdin,
+            stderr=bwa_stderr,
             pass_fds=(read_fd1, read_fd2),
         )
+        sort_process.stdin.close()
         os.close(read_fd1)
         os.close(read_fd2)
         writer1 = threading.Thread(
@@ -207,29 +277,48 @@ def stream_bwa_sam(
                         b"".join(record1),
                         process=process,
                         writer=writer1,
+                        downstream=sort_process,
                     )
                     _safe_put(
                         queue2,
                         b"".join(record2),
                         process=process,
                         writer=writer2,
+                        downstream=sort_process,
                     )
-            _safe_put(queue1, None, process=process, writer=writer1)
-            _safe_put(queue2, None, process=process, writer=writer2)
+            _safe_put(
+                queue1,
+                None,
+                process=process,
+                writer=writer1,
+                downstream=sort_process,
+            )
+            _safe_put(
+                queue2,
+                None,
+                process=process,
+                writer=writer2,
+                downstream=sort_process,
+            )
             writer1.join()
             writer2.join()
             return_code = process.wait()
             if not errors.empty():
                 raise errors.get()
             if return_code != 0:
-                raise subprocess.CalledProcessError(return_code, command)
+                raise subprocess.CalledProcessError(return_code, bwa_command)
+            sort_return_code = sort_process.wait()
+            if sort_return_code != 0:
+                raise subprocess.CalledProcessError(sort_return_code, sort_command)
         except BaseException:
-            process.terminate()
-            try:
-                process.wait(timeout=30)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait()
+            for child in (process, sort_process):
+                if child.poll() is None:
+                    child.terminate()
+                    try:
+                        child.wait(timeout=30)
+                    except subprocess.TimeoutExpired:
+                        child.kill()
+                        child.wait()
             for records in (queue1, queue2):
                 try:
                     records.put_nowait(None)
@@ -240,9 +329,14 @@ def stream_bwa_sam(
             raise
     if pair_count == 0:
         raise ValueError("No read pairs were streamed to BWA")
+    if not bam_output.is_file() or bam_output.stat().st_size == 0:
+        raise ValueError("Streaming BWA/pysam-sort pipeline produced no BAM")
     return {
-        "command": command,
+        "command": bwa_command,
         "threads": 1,
+        "sort_command": sort_command,
+        "sort_extra_threads": 0,
+        "materialized_sam": False,
         "read_pairs": pair_count,
         "first_ordinal": first_ordinal,
         "last_ordinal": last_ordinal,
@@ -251,14 +345,11 @@ def stream_bwa_sam(
     }
 
 
-def sort_and_validate_bam(sam: Path, bam: Path) -> dict[str, Any]:
+def validate_and_promote_bam(temporary: Path, bam: Path) -> dict[str, Any]:
     if bam.exists():
         raise FileExistsError(f"Final BAM already exists: {bam}")
-    temporary = bam.with_suffix(bam.suffix + ".partial")
-    if temporary.exists():
-        raise FileExistsError(f"Unresolved BAM partial: {temporary}")
-    bam.parent.mkdir(parents=True, exist_ok=True)
-    pysam.sort("-n", "-o", str(temporary), str(sam))
+    if not temporary.is_file() or temporary.stat().st_size == 0:
+        raise FileNotFoundError(f"Name-sorted BAM partial is absent: {temporary}")
     alignments = 0
     checked = 0
     with pysam.AlignmentFile(temporary, "rb") as handle:
@@ -280,6 +371,17 @@ def sort_and_validate_bam(sam: Path, bam: Path) -> dict[str, Any]:
         "bytes": bam.stat().st_size,
         "sha256": file_digest(bam),
     }
+
+
+def sort_and_validate_bam(sam: Path, bam: Path) -> dict[str, Any]:
+    if bam.exists():
+        raise FileExistsError(f"Final BAM already exists: {bam}")
+    temporary = bam.with_suffix(bam.suffix + ".partial")
+    if temporary.exists():
+        raise FileExistsError(f"Unresolved BAM partial: {temporary}")
+    bam.parent.mkdir(parents=True, exist_ok=True)
+    pysam.sort("-n", "-o", str(temporary), str(sam))
+    return validate_and_promote_bam(temporary, bam)
 
 
 def atomic_yaml(path: Path, value: Mapping[str, Any]) -> None:
@@ -312,6 +414,16 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=ROOT / ".venv-shapemix-fragments/bin/bwa",
     )
+    parser.add_argument(
+        "--sorter-python",
+        type=Path,
+        default=ROOT / ".venv-shapemix-fragments/bin/python",
+    )
+    parser.add_argument(
+        "--sorter-script",
+        type=Path,
+        default=ROOT / "scripts/sort_shapemix_bam_stream.py",
+    )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--audit-output", type=Path)
     return parser.parse_args()
@@ -321,11 +433,14 @@ def main() -> None:
     args = parse_args()
     if os.environ.get("DECONVATAC_RESOURCE_GUARD") != "1":
         raise RuntimeError("Run alignment through scripts/run_shapemix_low_impact.sh")
+    allowed_cpus = validate_cpu_affinity()
     config = load_yaml(args.config)
     sample = sample_pair(config, args.gsm)
     reference = args.reference.absolute()
     bwa = args.bwa.absolute()
-    validate_inputs(sample, reference, bwa)
+    sorter_python = args.sorter_python.absolute()
+    sorter_script = args.sorter_script.absolute()
+    validate_inputs(sample, reference, bwa, sorter_python, sorter_script)
     work_root = (
         ROOT
         / "data/work/preprocessing/gse246791_mouse_brain_reference"
@@ -344,20 +459,23 @@ def main() -> None:
         return
     if output.exists() or audit_output.exists():
         raise FileExistsError(f"Partial immutable alignment state for {args.gsm}")
-    sam = work_root / "alignment.sam.partial"
-    stderr = work_root / "bwa.stderr.log"
+    temporary_bam = output.with_suffix(output.suffix + ".partial")
+    bwa_stderr = work_root / "bwa.stderr.log"
+    sort_stderr = work_root / "pysam_sort.stderr.log"
     started = time.monotonic()
-    stream = stream_bwa_sam(
+    stream = stream_bwa_name_sorted_bam(
         read1=Path(sample["read1"]),
         read2=Path(sample["read2"]),
         srr=str(sample["srr"]),
         reference=reference,
         bwa=bwa,
-        sam_output=sam,
-        stderr_output=stderr,
+        sorter_python=sorter_python,
+        sorter_script=sorter_script,
+        bam_output=temporary_bam,
+        bwa_stderr_output=bwa_stderr,
+        sort_stderr_output=sort_stderr,
     )
-    bam_validation = sort_and_validate_bam(sam, output)
-    sam.unlink()
+    bam_validation = validate_and_promote_bam(temporary_bam, output)
     record = {
         "schema_version": 1,
         "completed_at": datetime.now(timezone.utc).isoformat(),
@@ -385,11 +503,21 @@ def main() -> None:
             "path": repository_path(output),
             **bam_validation,
         },
-        "stderr_log": repository_path(stderr),
+        "bwa_stderr_log": repository_path(bwa_stderr),
+        "pysam_sort_stderr_log": repository_path(sort_stderr),
         "elapsed_seconds": time.monotonic() - started,
         "resource_policy": {
             "bwa_threads": 1,
-            "pysam_sort_extra_threads": 0,
+            "sort_extra_threads": 0,
+            "maximum_runnable_cpu_processes": 3,
+            "maximum_cpu_cores": 2,
+            "allowed_logical_cpus": allowed_cpus,
+            "affinity_inherited_by_children": True,
+            "materialized_sam": False,
+            "sorter_python": repository_path(sorter_python),
+            "sorter_script": repository_path(sorter_script),
+            "pysam_version": pysam.__version__,
+            "embedded_samtools_version": pysam.__samtools_version__,
             "guard": "scripts/run_shapemix_low_impact.sh",
         },
     }

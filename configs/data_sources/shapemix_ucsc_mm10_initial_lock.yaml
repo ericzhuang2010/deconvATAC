@@ -1,0 +1,33 @@
+schema_version: 1
+source_dataset_id: shapemix_ucsc_mm10_initial_reference
+accession: UCSC_mm10_initial
+completed_at: '2026-08-27T11:19:55.538965+00:00'
+config: configs/data_sources/shapemix_ucsc_mm10_initial.yaml
+resources: 2
+requested_accessions: null
+total_bytes: 870142765
+files:
+- name: mm10.fa.gz
+  role: immutable_soft_masked_reference_fasta
+  accession: UCSC_mm10_initial
+  url: https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/mm10.fa.gz
+  path: data/raw/sources/ucsc/mm10_initial/mm10.fa.gz
+  bytes: 870141360
+  remote_etag: 33dd4db0-5c05d90cc825f
+  provider_md5: db005b65828db31735f384e4c5787be5
+  observed_md5: db005b65828db31735f384e4c5787be5
+  sha256: 2e5e57b19d65e896435c14190b30036f579f9882d90ef82430e1a37a0d671f71
+  integrity: passed_full_gzip_stream_and_schema
+  tar_members: null
+- name: mm10.chrom.sizes
+  role: immutable_reference_sequence_sizes
+  accession: UCSC_mm10_initial
+  url: https://hgdownload.soe.ucsc.edu/goldenPath/mm10/bigZips/mm10.chrom.sizes
+  path: data/raw/sources/ucsc/mm10_initial/mm10.chrom.sizes
+  bytes: 1405
+  remote_etag: 57d-4b850ea801680
+  provider_md5: 5a103c9a15dd660c295a089ef5035672
+  observed_md5: 5a103c9a15dd660c295a089ef5035672
+  sha256: 55463d59f400b2c8260d100f4b521800ee773fa9711fe3f6dad9c7887db2574f
+  integrity: passed_exact_byte_transfer
+  tar_members: null

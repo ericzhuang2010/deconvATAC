@@ -1,0 +1,85 @@
+schema_version: 1
+protocol_id: shapemix_real_spatial_validation_v1
+status: frozen_before_predictions
+frozen_at: '2026-08-27'
+outcome_data_used: false
+description: >-
+  Outcome-blind marker panels, spatial diagnostics, and replicate comparisons
+  for the eight GSE205055/GSE263333 real-spatial ShapeMix sections. These are
+  orthogonal or descriptive endpoints, never exact composition truth.
+
+spatial_graph:
+  nearest_neighbors: 6
+  boundary_edge_quantile: 0.90
+
+score_construction:
+  library_scale_factor: 10000
+  minimum_present_features: 2
+
+residual_warning:
+  normalized_absolute_error_threshold: 0.05
+
+reference_panels:
+  gse216371_mouse_embryo_e13_major_types_v1:
+    marker_features: data/processed/shapemix/real_spatial_validation/marker_features_v1/gse216371_mouse_embryo_e13_major_types_v1/marker_features.yaml
+    rna_markers:
+      Mesenchymal: [Col1a1, Col1a2, Dcn, Pdgfra]
+      Chondro-osteogenic: [Sox9, Col2a1, Acan, Runx2]
+      Muscle: [Myod1, Myog, Des, Acta1]
+      Endothelial: [Pecam1, Kdr, Cdh5, Emcn]
+      Epithelial: [Epcam, Krt8, Krt18, Krt19]
+      Hepatocyte: [Alb, Afp, Ttr, Hnf4a]
+      Erythroid: [Hbb-bs, Hba-a1, Gata1, Klf1]
+      Immune: [Ptprc, Lyz2, Aif1, Csf1r]
+      Neural progenitor/regional CNS: [Sox2, Nes, Pax6, Fabp7]
+      Excitatory neuron: [Slc17a6, Slc17a7, Tbr1, Neurod2]
+      Inhibitory neuron: [Gad1, Gad2, Dlx1, Dlx2]
+      Peripheral/sensory/motor neural: [Sox10, Plp1, Phox2b, Isl1]
+    protein_markers: {}
+
+  gse246791_adult_mouse_brain_broad9_v1:
+    marker_features: data/processed/shapemix/real_spatial_validation/marker_features_v1/gse246791_adult_mouse_brain_broad9_v1/marker_features.yaml
+    rna_markers:
+      Excitatory neurons: [Slc17a7, Satb2, Tbr1, Cux2]
+      Inhibitory neurons: [Gad1, Gad2, Slc6a1, Pvalb]
+      Other neurons: [Slc17a6, Chat, Th, Dbh]
+      Astroglia/ependymal: [Aqp4, Gfap, Slc1a3, Foxj1]
+      Oligodendrocytes: [Mbp, Plp1, Mog, Mag]
+      OPCs: [Pdgfra, Cspg4, Olig1, Olig2]
+      Microglia/macrophages: [C1qa, C1qb, Aif1, Cx3cr1]
+      Other immune: [Ptprc, Cd3d, Cd79a, Nkg7]
+      Vascular/stromal: [Pecam1, Kdr, Col1a1, Rgs5]
+    protein_markers:
+      Microglia/macrophages:
+        - CD11b-TGAAGGCTCATTTGT
+        - F4/80-TTAACTTCAGCCCGT
+        - CX3CR1-CACTCTCAGTCCTAT
+        - CD68-CTTTCTTTCACGGGA
+      Other immune:
+        - CD45-TGGCTATGGAGCAGA
+        - CD3-GTATGTCCGCTCGAT
+        - CD19-ATCAGCCATGTCAGT
+        - NK-1.1-GTAACATTACTCGTC
+      Vascular/stromal:
+        - CD31-GCTGTAGTATCATGT
+        - CD140a-GTCATTGCGGTCCTA
+        - CD106-CGTTCCTACCTACCT
+        - CD49f-TTCCGAGGATGATCT
+
+  gse244618_human_hippocampus_donor3_region3_v1:
+    marker_features: data/processed/shapemix/real_spatial_validation/marker_features_v1/gse244618_human_hippocampus_donor3_region3_v1/marker_features.yaml
+    rna_markers:
+      Inhibitory neurons: [GAD1, GAD2, SLC6A1, DLX1]
+      Excitatory neurons: [SLC17A7, SATB2, TBR1, CUX2]
+      Astrocytes: [AQP4, GFAP, SLC1A3, ALDH1L1]
+      Oligodendrocytes: [MBP, PLP1, MOG, MAG]
+      OPCs: [PDGFRA, CSPG4, OLIG1, OLIG2]
+      Microglia: [C1QA, C1QB, AIF1, CX3CR1]
+    protein_markers: {}
+
+replicate_pairs:
+  - id: gse205055_mouse_brain_p21_primary_vs_rep2
+    left: gse205055_shapemix_mouse_brain_p21_20um_primary_v1
+    right: gse205055_shapemix_mouse_brain_p21_20um_rep2_v1
+    minimum_shared_spots: 100
+    interpretation: descriptive_independent_section_consistency

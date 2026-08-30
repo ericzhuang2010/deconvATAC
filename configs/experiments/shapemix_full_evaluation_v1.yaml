@@ -1,0 +1,74 @@
+schema_version: 1
+campaign_id: shapemix_full_evaluation_v1
+status: frozen_before_remaining_predictions
+output_directory: results/external_validation/shapemix_full_evaluation_v1
+pooling_policy: never_pool_across_evidence_classes
+effect_definition: shapemix_length_minus_shapemix_count_only
+sources:
+  - stage: E0
+    family: PBMC protocol-v1 primary
+    evidence_class: exact_heldout_pseudospot_truth
+    analysis_unit: outer_split_seed_within_one_donor
+    exact_truth: true
+    summary: results/primary/shapemix_primary_ablation_protocol_v1_summary/summary.yaml
+    effect_table: results/primary/shapemix_primary_ablation_protocol_v1_summary/primary_summary.csv
+    effect_adapter: primary_outer_effects
+    resources: results/primary/shapemix_primary_ablation_protocol_v1_summary/performance.csv
+    claim_limit: Conditional resampling evidence from one donor; not population-level generalization.
+  - stage: E1
+    family: CUDA qualification
+    evidence_class: computational_backend_qualification
+    analysis_unit: fixed_repeated_fit
+    exact_truth: null
+    summary: results/development/shapemix_gpu_qualification_v2/qualification_report.yaml
+    claim_limit: Numerical agreement, repeatability, and runtime qualification only.
+  - stage: E2
+    family: GSE129785 physical dilution
+    evidence_class: nominal_physical_mixture
+    analysis_unit: physical_sample
+    exact_truth: false
+    summary: results/external_validation/shapemix_gse129785_v2/shapemix_gse129785_external_protocol_v2_cpu_log_abundance/evidence_summary.yaml
+    effect_table: results/external_validation/shapemix_gse129785_v2/shapemix_gse129785_external_protocol_v2_cpu_log_abundance/paired_shape_count_nominal.csv
+    effect_adapter: nominal_physical
+    resources: results/external_validation/shapemix_gse129785_v2/shapemix_gse129785_external_protocol_v2_cpu_log_abundance/runs.csv
+    claim_limit: Descriptive agreement with nominal input ratios; no exact sorted-cell composition truth.
+  - stage: E3
+    family: GSE194122 donor-held-out
+    evidence_class: external_donor_heldout_exact_truth
+    analysis_unit: donor
+    exact_truth: true
+    summary: results/external_validation/shapemix_gse194122_lodo_v1/shapemix_gse194122_broad7_lodo_protocol_v1_cuda/evidence_summary.yaml
+    effect_table: results/external_validation/shapemix_gse194122_lodo_v1/shapemix_gse194122_broad7_lodo_protocol_v1_cuda/donor_level_summary.csv
+    effect_adapter: donor_heldout
+    resources: results/external_validation/shapemix_gse194122_lodo_v1/shapemix_gse194122_broad7_lodo_protocol_v1_cuda/run_resources.csv
+    claim_limit: Donors are the population-level units; inner mixtures are averaged within donor.
+  - stage: E4
+    family: PBMC diagnostic stress
+    evidence_class: exact_heldout_pseudospot_truth
+    analysis_unit: mixture_seed_within_one_donor
+    exact_truth: true
+    summary: results/sensitivity/shapemix_pbmc_stress_v1/shapemix_pbmc_stress_protocol_v1_cuda/evidence_summary.yaml
+    effect_table: results/sensitivity/shapemix_pbmc_stress_v1/shapemix_pbmc_stress_protocol_v1_cuda/paired_shape_count_dataset_effects.csv
+    effect_adapter: diagnostic_stress
+    resources: results/sensitivity/shapemix_pbmc_stress_v1/shapemix_pbmc_stress_protocol_v1_cuda/run_resources.csv
+    claim_limit: One-factor diagnostic sensitivity in one donor; not a search for a favorable subset.
+  - stage: E5
+    family: GSE205055 real spatial
+    evidence_class: real_spatial_orthogonal_validation
+    analysis_unit: spatial_section
+    exact_truth: false
+    summary: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/evidence_summary.yaml
+    effect_table: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/map_concordance.csv
+    effect_adapter: real_spatial
+    resources: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/run_resources.csv
+    claim_limit: Descriptive cross-modality and map stability only; no exact composition truth or spot-level inference.
+  - stage: E5
+    family: GSE263333 real spatial
+    evidence_class: real_spatial_orthogonal_validation
+    analysis_unit: spatial_section
+    exact_truth: false
+    summary: results/real_spatial/shapemix_gse263333_v1/shapemix_gse263333_real_spatial_protocol_v1_cuda/evidence_summary.yaml
+    effect_table: results/real_spatial/shapemix_gse263333_v1/shapemix_gse263333_real_spatial_protocol_v1_cuda/map_concordance.csv
+    effect_adapter: real_spatial
+    resources: results/real_spatial/shapemix_gse263333_v1/shapemix_gse263333_real_spatial_protocol_v1_cuda/run_resources.csv
+    claim_limit: Descriptive cross-modality and map stability only; no exact composition truth or spot-level inference.

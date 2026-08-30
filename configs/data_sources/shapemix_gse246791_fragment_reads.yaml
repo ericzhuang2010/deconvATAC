@@ -52,8 +52,13 @@ preprocessing_policy:
   author_snaptools_repository: https://github.com/r3fang/SnapTools
   author_snaptools_commit: eecfa5653020b80e31eed1ae5d2b13068e17a2df
   author_snaptools_version: 1.4.8
-  alignment: BWA-MEM 0.7.17-r1188 against UCSC mm10/GRCm38 initial; restore the ENA second header field as the original barcode-first QNAME before streaming
+  alignment: BWA-MEM 0.7.17-r1188 against UCSC mm10/GRCm38 initial, streamed directly into pysam 0.24.0 with embedded samtools 1.23.1 name sorting; restore the ENA second header field as the original barcode-first QNAME before streaming
   alignment_threads: 1
+  alignment_sort_extra_threads: 0
+  alignment_runnable_cpu_processes_max: 3
+  alignment_cpu_cores_max: 2
+  alignment_logical_cpu_affinity: [6, 7]
+  alignment_storage: no normalized FASTQ or plain SAM is materialized; only the temporary name-sorted BAM is retained until fragment validation
   alignment_thread_departure: author used 4 threads; one thread changes resources only and protects the co-tenant workload
   fragment_construction: SnapATAC2 2.4.0 make_fragment_file with is_paired=true, barcode_regex='^(\w+):.+', min_mapq=30, shift_left=4, shift_right=-5, and deduplication
   fragment_sort_chunk_size: 5000000
@@ -74,4 +79,5 @@ validation_gates:
   - mm10 coordinate, proper-pair, MAPQ, duplicate, and Tn5-shift audit
   - retained fragment barcodes map exactly to deposited H5AD observations
   - reconstructed per-cell unique-fragment counts agree with deposited n_fragment within the frozen tolerance
-download_workers_max: 1
+download_workers_max: 4
+validation_workers_max: 2

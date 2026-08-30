@@ -353,6 +353,93 @@ def test_coordinate_validation_accepts_exact_strand_aware_bedpe_semantics() -> N
     validate_deconvolution_input(data)
 
 
+def test_coordinate_validation_accepts_exact_bed_parent_fragment_semantics() -> None:
+    data = _shape_input()
+    semantic_validation = {
+        "selected_right_cut_offset": 0,
+        "matrix_match": "not_available",
+        "validation_method": "deposited_bed_half_open_parent_fragments",
+        "semantic_match": "exact",
+        "fragment_total_match": "exact",
+        "audit": "data/processed/shapemix/example/manifests/coordinate_audit.yaml",
+    }
+    for adata in (data.reference, data.spatial):
+        adata.uns["fragment_shape"]["coordinate_validation"] = semantic_validation.copy()
+
+    validate_deconvolution_input(data)
+
+
+def test_bed_parent_fragment_source_basename_is_accepted() -> None:
+    data = _shape_input()
+    semantic_validation = {
+        "selected_right_cut_offset": 0,
+        "matrix_match": "not_available",
+        "validation_method": "deposited_bed_half_open_parent_fragments",
+        "semantic_match": "exact",
+        "fragment_total_match": "exact",
+        "audit": "data/processed/shapemix/example/manifests/coordinate_audit.yaml",
+    }
+    for adata in (data.reference, data.spatial):
+        adata.uns["fragment_shape"]["source_sha256"] = {
+            "GSM6671097_E11A.bed.gz": "a" * 64
+        }
+        adata.uns["fragment_shape"]["coordinate_validation"] = (
+            semantic_validation.copy()
+        )
+
+    validate_deconvolution_input(data)
+
+
+def test_coordinate_validation_rejects_bed_parent_fragments_without_total_match() -> None:
+    data = _shape_input()
+    semantic_validation = {
+        "selected_right_cut_offset": 0,
+        "matrix_match": "not_available",
+        "validation_method": "deposited_bed_half_open_parent_fragments",
+        "semantic_match": "exact",
+        "fragment_total_match": "mismatch",
+        "audit": "data/processed/shapemix/example/manifests/coordinate_audit.yaml",
+    }
+    data.reference.uns["fragment_shape"]["coordinate_validation"] = semantic_validation
+    with pytest.raises(ValueError, match="fragment_total_match must be 'exact'"):
+        validate_deconvolution_input(data)
+
+
+def test_coordinate_validation_accepts_passed_representative_matrix_concordance() -> None:
+    data = _shape_input()
+    representative_validation = {
+        "selected_right_cut_offset": 0,
+        "matrix_match": "representative_recovered_read_concordance",
+        "validation_method": "deposited_matrix_concordance_thresholds",
+        "passed": True,
+        "audit": "data/processed/shapemix/example/manifests/coordinate_audit.yaml",
+    }
+    for adata in (data.reference, data.spatial):
+        adata.uns["fragment_shape"]["coordinate_validation"] = (
+            representative_validation.copy()
+        )
+
+    validate_deconvolution_input(data)
+
+
+def test_coordinate_validation_rejects_failed_representative_matrix_concordance() -> None:
+    data = _shape_input()
+    representative_validation = {
+        "selected_right_cut_offset": 0,
+        "matrix_match": "representative_recovered_read_concordance",
+        "validation_method": "deposited_matrix_concordance_thresholds",
+        "passed": False,
+        "audit": "data/processed/shapemix/example/manifests/coordinate_audit.yaml",
+    }
+    for adata in (data.reference, data.spatial):
+        adata.uns["fragment_shape"]["coordinate_validation"] = (
+            representative_validation.copy()
+        )
+
+    with pytest.raises(ValueError, match="passed must be true"):
+        validate_deconvolution_input(data)
+
+
 def test_multisample_fragment_source_hashes_preserve_source_names() -> None:
     data = _shape_input()
     multisample_sources = {
