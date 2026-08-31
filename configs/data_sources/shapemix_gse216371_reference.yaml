@@ -16,6 +16,67 @@ selection:
   policy: retain every author-annotated E13.5 cell from all 68 combinatorial wells
   label_resolution: frozen broad major-cell-type ontology derived from the author annotation workbook
   rationale: matches the whole-embryo scope and stage of the real-spatial E13 sections
+broad_ontology:
+  ontology_version: major_types_v1
+  frozen_after_author_audit: '2026-08-27'
+  ordered_cell_types:
+    - Mesenchymal
+    - Chondro-osteogenic
+    - Muscle
+    - Endothelial
+    - Epithelial
+    - Hepatocyte
+    - Erythroid
+    - Immune
+    - Neural progenitor/regional CNS
+    - Excitatory neuron
+    - Inhibitory neuron
+    - Peripheral/sensory/motor neural
+  minimum_cells_per_type: 500
+  author_main_cluster_mapping:
+    Amniochorionic mesoderm A: Mesenchymal
+    Amniochorionic mesoderm B: Mesenchymal
+    Anterior floor plate: Neural progenitor/regional CNS
+    Cardiac muscle lineage: Muscle
+    Chondrocyte and osteoblast progenitors: Chondro-osteogenic
+    Connective tissue progenitors: Mesenchymal
+    Definitive erythroid lineage: Erythroid
+    Di/mesencephalon excitatory neurons: Excitatory neuron
+    Di/mesencephalon inhibitory neurons: Inhibitory neuron
+    Di/telencephalon: Neural progenitor/regional CNS
+    Early chondrocytes: Chondro-osteogenic
+    Endothelial cells: Endothelial
+    Epithelial cells: Epithelial
+    Hepatocytes: Hepatocyte
+    Hindbrain: Neural progenitor/regional CNS
+    Inhibitory interneurons: Inhibitory neuron
+    Intermediate mesoderm: Mesenchymal
+    Intermediate progenitor cells: Neural progenitor/regional CNS
+    Limb mesenchyme progenitors: Mesenchymal
+    Mesencephalon/MHB: Neural progenitor/regional CNS
+    Motor neurons: Peripheral/sensory/motor neural
+    Myocytes: Muscle
+    Neural crest (PNS glia): Peripheral/sensory/motor neural
+    Neural crest (PNS neurons): Peripheral/sensory/motor neural
+    Neuron progenitor cells: Neural progenitor/regional CNS
+    Noradrenergic neurons: Peripheral/sensory/motor neural
+    Olfactory sensory neurons: Peripheral/sensory/motor neural
+    Osteoblast progenitors A: Chondro-osteogenic
+    Osteoblast progenitors B: Chondro-osteogenic
+    Posterior floor plate: Neural progenitor/regional CNS
+    Primitive erythroid lineage: Erythroid
+    Retinal neurons: Peripheral/sensory/motor neural
+    Retinal pigment cells: Epithelial
+    Retinal primordium: Neural progenitor/regional CNS
+    Roof plate: Neural progenitor/regional CNS
+    Skeletal muscle progenitors: Muscle
+    Somatic mesoderm: Mesenchymal
+    Spinal cord (dorsal): Neural progenitor/regional CNS
+    Spinal cord (ventral): Neural progenitor/regional CNS
+    Spinal cord excitatory neurons: Excitatory neuron
+    Spinal cord inhibitory neurons: Inhibitory neuron
+    Splanchnic mesoderm: Mesenchymal
+    White blood cells: Immune
 resources:
   - name: GSE216371_family.soft.gz
     role: geo_family_metadata
@@ -40,14 +101,16 @@ preprocessing_policy:
   extract_scope: stream the tar and retain E13.5 labeled-cell fragments only in derived caches
   peak_selection: reference-only ranking from author cCREs
   fragment_bins_bp: [[0, 100], [100, 250], [250, null]]
-  right_cut_offset: audit against the author accessibility matrix before freezing
+  right_cut_offset: 0
+  coordinate_semantics: deposited BED zero-based half-open unique parent fragments; cuts at start and end; read support ignored for model counts
   truth_policy: reference labels are not spatial composition truth
 validation_gates:
   - exact remote byte size and complete source stream
   - safe complete tar traversal with exactly the GEO-declared BED members
   - exact E13.5 annotation-to-fragment barcode mapping
   - mm10 chromosome and coordinate validation
-  - positive parent-fragment lengths and frozen right-cut convention
+  - positive parent-fragment lengths, positive integer read support, and frozen half-open right-cut convention
+  - exactly one of per-cell BED row count or read-support sum matches workbook Fragments for every retained E13.5 cell
   - minimum broad-label support before feature selection
   - nonnegative integer CSR layers whose sum equals X
 download_workers_max: 2

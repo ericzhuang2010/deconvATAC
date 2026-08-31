@@ -220,7 +220,32 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bam", type=Path)
     parser.add_argument("--h5ad", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--cleanup-bam", action="store_true")
     return parser.parse_args()
+
+def cleanup_alignment_bam(bam: Path, gsm: str, *, enabled: bool) -> None:
+    if not enabled:
+        return
+    expected = (
+        ROOT
+        / "data/work/preprocessing/gse246791_mouse_brain_reference"
+        / gsm
+        / "alignment/name_sorted.bam"
+    ).absolute()
+    if bam.absolute() != expected:
+        raise ValueError("--cleanup-bam is restricted to the canonical generated work BAM")
+    if bam.is_symlink():
+        raise ValueError(f"Refusing to remove a symlinked work BAM: {bam}")
+    if bam.exists():
+        if not bam.is_file():
+            raise ValueError(f"Canonical work BAM is not a regular file: {bam}")
+        removed_bytes = bam.stat().st_size
+        bam.unlink()
+        print(
+            f"alignment_work_cleanup gsm={gsm} bytes={removed_bytes} status=completed",
+            flush=True,
+        )
+
 
 
 def main() -> None:
@@ -236,8 +261,6 @@ def main() -> None:
         / args.gsm
         / "alignment/name_sorted.bam"
     )
-    if not bam.is_file():
-        raise FileNotFoundError(bam)
     if args.h5ad is None:
         matches = sorted(
             (
@@ -250,16 +273,19 @@ def main() -> None:
         h5ad = matches[0]
     else:
         h5ad = args.h5ad
-    family_root = project_path(str(config["processed_directory"])).parent
+    family_root = project_path(str(config["processed_directory"]))
     output = args.output or (
         family_root / "normalized_fragments" / args.gsm / "fragments.tsv.gz"
     )
     audit_output = output.parent / "manifest.yaml"
     if output.is_file() and audit_output.is_file():
+        cleanup_alignment_bam(bam, args.gsm, enabled=args.cleanup_bam)
         print(f"fragments gsm={args.gsm} status=reused", flush=True)
         return
     if output.exists() or audit_output.exists():
         raise FileExistsError(f"Partial immutable fragment state for {args.gsm}")
+    if not bam.is_file():
+        raise FileNotFoundError(bam)
     work_root = (
         ROOT
         / "data/work/preprocessing/gse246791_mouse_brain_reference"
@@ -342,6 +368,7 @@ def main() -> None:
     os.replace(candidate, output)
     atomic_yaml(audit_output, record)
     raw_fragments.unlink()
+    cleanup_alignment_bam(bam, args.gsm, enabled=args.cleanup_bam)
     print(
         f"fragments gsm={args.gsm} rows={filtering['kept_rows']} "
         f"spearman={concordance['spearman_r']:.6f} "

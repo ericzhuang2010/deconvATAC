@@ -38,6 +38,12 @@ data/
       splits/
       manifests/
 
+    shapemix/real_spatial_validation/
+      marker_features_v1/<reference_id>/
+        marker_features.tsv
+        selected_features.txt
+        manifest.yaml
+
     references/<reference_id>/
       reference.yaml
       atac/reference.h5ad
@@ -51,6 +57,10 @@ data/
       simulation/source_cells_by_spot.jsonl
       simulation/manifest.yaml
       validation/                        # orthogonal real-spatial evidence
+        alignment.yaml
+        rna/rna.h5ad                    # when available
+        protein/protein.h5ad            # when available
+        epigenome/*.h5ad                # when available
 
   registry/
     datasets.yaml
@@ -61,6 +71,11 @@ results/
   sensitivity/<campaign_id>/
   external_validation/<campaign_id>/
   real_spatial/<campaign_id>/
+
+  external_validation/shapemix_full_evaluation_v1/
+    evidence_summary.yaml
+    evidence_table.tsv
+    resource_table.tsv
 
 /tmp/deconvatac-<task>-<unique_id>/
 ```
@@ -111,6 +126,35 @@ data/processed/shapemix/<family>/
 
 These products may be expensive to rebuild but remain derived data. Each stage must record its input hashes, parameters, code revision, software versions, random seeds, dimensions, and validation results.
 
+Reference-only marker panels used to score orthogonal real-spatial evidence are reusable derived products, not runnable datasets or experiment results. They therefore belong under `data/processed/shapemix/real_spatial_validation/marker_features_v1/<reference_id>/`. The panel manifest must record the reference hash and selection parameters, and feature selection must never inspect spatial outcomes.
+
+The large GSE216371 embryo-reference stream uses these exact locations:
+
+```text
+data/processed/shapemix/gse216371_embryo_reference/
+  labels/author_e13_5_v1/                 # author-label audit
+  labels/major_types_v1/                  # frozen broad ontology
+  feature_axes/author_ccres_v1/            # audited 830,873-cCRE source axis
+  feature_axes/major_types_v1/             # selected 5,000-cCRE axis
+  normalized_fragments/major_types_v1/     # retained E13.5 fragments and statistics
+  manifests/embryo_fragment_coordinate_audit.yaml
+
+data/work/preprocessing/gse216371_reference/
+  bin/                                     # compiled streaming helper
+  shape_events/major_types_v1/             # disposable packed sparse events
+
+data/processed/references/gse216371_mouse_embryo_e13_major_types_v1/
+  reference.yaml
+  atac/reference.h5ad
+```
+
+The normalized-fragment cache retains its member hashes, per-cell
+fragment-total audit, and reference-only aggregate feature statistics because
+they are expensive reusable derivations. The compiled executable and packed
+event stream are restartable work and are not authoritative inputs; immutable
+manifests record their source/binary hashes and final counters without
+depending on a surviving `data/work/` path.
+
 ### 3.5 Standardized references
 
 Reference H5ADs produced or standardized by repository scripts go under:
@@ -131,6 +175,8 @@ data/processed/datasets/<dataset_id>/
 
 Family caches and incomplete preprocessing outputs must not be placed here. Register a dataset in `data/registry/datasets.yaml` only after reference/spatial feature alignment, shape-layer semantics, declared cell types, truth, split disjointness, and required provenance have passed validation. Never overwrite an ID used by a completed campaign.
 
+For real-spatial datasets, the ShapeMix model input remains under `atac/`. Copied RNA, protein, histone, anatomical-alignment, or other cross-modality objects belong under `validation/` and must be declared as orthogonal evidence rather than exact composition truth. The dataset manifest records their hashes and alignment checks.
+
 ### 3.7 Experiment results
 
 Development, primary, sensitivity, external-validation, and real-spatial outputs are separated by scope under `results/`. Each completed run should retain:
@@ -150,6 +196,8 @@ Development, primary, sensitivity, external-validation, and real-spatial outputs
 ```
 
 A campaign should also retain its resolved protocol, batch manifest, run table, comparison table, failures, summary tables, logs needed to interpret failures, and provenance hashes. Completed result directories are append-free and must not be silently overwritten; reruns use a new campaign ID or a clearly versioned campaign directory.
+
+The cross-family synthesis for the frozen full evaluation belongs at `results/external_validation/shapemix_full_evaluation_v1/`. It links to, but does not copy or pool, the primary, sensitivity, external-validation, and real-spatial campaign evidence classes.
 
 ## 4. Naming rules
 

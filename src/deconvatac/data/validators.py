@@ -186,10 +186,12 @@ def _validate_source_sha256(value: Any) -> None:
     elif not any(
         "fragment" in str(source_name).lower()
         or "bedpe" in str(source_name).lower()
+        or str(source_name).lower().endswith((".bed", ".bed.gz"))
         for source_name in value
     ):
         raise ValueError(
-            "fragment_shape.source_sha256 must identify at least one fragments or BEDPE source."
+            "fragment_shape.source_sha256 must identify at least one fragments, "
+            "BED, or BEDPE source."
         )
 
 
@@ -365,9 +367,48 @@ def _validate_coordinate_provenance(
             )
         return
 
+    if matrix_match == "not_available" and value.get("validation_method") == (
+        "deposited_bed_half_open_parent_fragments"
+    ):
+        if value.get("semantic_match") != "exact":
+            raise ValueError(
+                "fragment_shape.coordinate_validation.semantic_match must be 'exact' "
+                "for deposited BED parent-fragment validation."
+            )
+        if value.get("fragment_total_match") != "exact":
+            raise ValueError(
+                "fragment_shape.coordinate_validation.fragment_total_match must be "
+                "'exact' for deposited BED parent-fragment validation."
+            )
+        audit = value.get("audit")
+        if not isinstance(audit, str) or not audit:
+            raise ValueError(
+                "fragment_shape.coordinate_validation.audit must identify the "
+                "BED parent-fragment semantic audit."
+            )
+        return
+
+    if matrix_match == "representative_recovered_read_concordance" and value.get(
+        "validation_method"
+    ) == "deposited_matrix_concordance_thresholds":
+        if value.get("passed") is not True:
+            raise ValueError(
+                "fragment_shape.coordinate_validation.passed must be true for "
+                "representative recovered-read concordance."
+            )
+        audit = value.get("audit")
+        if not isinstance(audit, str) or not audit:
+            raise ValueError(
+                "fragment_shape.coordinate_validation.audit must identify the "
+                "representative concordance record."
+            )
+        return
+
     raise ValueError(
-        "fragment_shape.coordinate_validation must record either an exact matrix "
-        "match or exact deposited strand-aware BEDPE semantics."
+        "fragment_shape.coordinate_validation must record an exact matrix match, "
+        "exact deposited strand-aware BEDPE semantics, exact deposited BED "
+        "parent-fragment semantics with total concordance, or a passed "
+        "representative recovered-read matrix-concordance gate."
     )
 
 

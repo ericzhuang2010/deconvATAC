@@ -3,7 +3,7 @@
 Status: frozen before production external predictions; CUDA routing and optimizer coordinate amended 2026-08-25
 Frozen: 2026-08-24  
 Canonical layout: [file_organization.md](file_organization.md)  
-Execution roadmap: [iimplementation_plan.md](iimplementation_plan.md), Section 13
+Execution roadmap: [implementation_plan.md](implementation_plan.md), Section 13
 
 ## Purpose
 
@@ -158,6 +158,91 @@ The source scopes are frozen before acquisition:
   major brain regions; and
 - GSE244618: GEO metadata, author Tables S1-S6, and exactly nine BEDPE samples
   spanning HiT, HiB, and Sub for donors 1, 2, and 4, using rep1 where needed.
+
+### GSE216371 embryo fragment-coordinate freeze
+
+Frozen 2026-08-26 before spatial prediction, each deposited five-column BED
+record is one mm10, zero-based, half-open parent fragment with columns
+`chrom`, `start`, `end`, `cell barcode`, and positive integer read support.
+ShapeMix treats each deposited row as one unique parent fragment, ignores read
+support for model counts, uses one left cut at `start`, one right cut at `end`,
+`right_cut_offset=0`, and length `end-start`. The exact archive-member set must
+match all 68 GEO-declared BED files. The retained E13.5 annotation barcode must
+join exactly once to its declared Round-4 well. The audit computes both BED
+row count and read-support sum per cell and must identify exactly one convention
+that equals the author's workbook `Fragments` value for every retained cell.
+The source does not deposit an aligned per-cell accessibility
+matrix, so a coordinate gate may pass only through these exact BED semantics
+and all-cell fragment-total concordance; it must not claim a matrix match.
+
+### GSE216371 embryo ontology freeze
+
+Frozen 2026-08-27 after the outcome-blind author-label audit and before
+fragment feature selection or spatial prediction, the reference uses the
+following 12 classes in exact output order. Parentheses give the audited
+E13.5 cell support.
+
+1. Mesenchymal (23,913): amniochorionic A/B, connective-tissue, intermediate,
+   limb, somatic, and splanchnic mesoderm/mesenchyme clusters.
+2. Chondro-osteogenic (20,128): chondrocyte/osteoblast progenitors, early
+   chondrocytes, and osteoblast progenitors A/B.
+3. Muscle (5,132): cardiac muscle, myocytes, and skeletal-muscle progenitors.
+4. Endothelial (2,611): the author endothelial main cluster.
+5. Epithelial (4,289): epithelial cells and retinal pigment cells.
+6. Hepatocyte (980): the author hepatocyte main cluster.
+7. Erythroid (8,328): definitive and primitive erythroid lineages.
+8. Immune (840): the author white-blood-cell main cluster.
+9. Neural progenitor/regional CNS (16,968): floor/roof plates, di/telencephalon,
+   hindbrain, mesencephalon/MHB, neural/intermediate progenitors, retinal
+   primordium, and dorsal/ventral spinal-cord regional clusters.
+10. Excitatory neuron (6,936): di/mesencephalon and spinal-cord excitatory
+    neurons.
+11. Inhibitory neuron (11,094): di/mesencephalon inhibitory neurons,
+    inhibitory interneurons, and spinal-cord inhibitory neurons.
+12. Peripheral/sensory/motor neural (2,975): motor, neural-crest PNS glial and
+    neuronal, noradrenergic, olfactory-sensory, and retinal-neuron clusters.
+
+The mapping consumes all 43 audited E13.5 author main clusters exactly once,
+retains all 104,194 annotated cells, excludes no author cluster, and requires
+at least 500 cells per output class before reference-only feature selection.
+
+### GSE246791 adult mouse-brain ontology freeze
+
+Frozen 2026-08-26 before feature selection or any spatial prediction, the
+reference uses these nine classes in exact output order: excitatory neurons,
+inhibitory neurons, other neurons, astroglia/ependymal, oligodendrocytes,
+OPCs, microglia/macrophages, other immune, and vascular/stromal. Author
+`NeuronTransmitter` values containing `Glut` map to excitatory neurons;
+values containing `Gaba` or `Gly` map to inhibitory neurons; remaining
+neuronal transmitter classes map to other neurons. For author non-neuronal
+subclass IDs, 316--325 map to astroglia/ependymal, 326 to OPCs, 327--328 to
+oligodendrocytes, 329--333 to vascular/stromal, 334--335 to
+microglia/macrophages, and 336--338 to other immune. Author subclass 339 is a
+predeclared low-quality exclusion. A reference build fails before feature
+selection if any retained class except other immune has fewer than 100 cells
+across the selected 12 samples.
+
+The outcome-blind reference-label audit on 2026-08-27 found 22 other-immune
+cells in that immutable region-balanced subset: four author dendritic cells,
+18 lymphoid cells, and no monocytes. Before feature selection or any spatial
+prediction, the rare-class gate was therefore amended and frozen at 20 cells
+for other immune while remaining at 100 for all eight other classes. The
+source-selection rule and nine-class ontology did not change, and no spatial
+composition or concordance outcome was consulted.
+
+The mapping is validated by an exact sample-plus-barcode join between every
+deposited H5AD observation and author SI Table 2, plus a per-cell fragment
+count cross-check. Neither the adult spatial section nor any RNA concordance
+value participates in labels or feature selection.
+The recovered-read coordinate convention is frozen using the STR
+representative before the remaining samples are counted. Both right-end
+offsets 0 and -1 are compared with the deposited 500-bp matrix on the
+reference-only selected axis. The lower normalized L1 error is selected
+(offset 0 wins an exact tie), and the reference is gated unless normalized L1
+error is at most 0.25 and both per-cell and per-feature total-count Spearman
+correlations are at least 0.95.
+
+
 ### GSE244618 human-hippocampus ontology freeze
 
 Frozen 2026-08-26 before feature selection or any spatial prediction, the
@@ -301,7 +386,9 @@ Every material task is launched through
 `scripts/run_shapemix_low_impact.sh`. Only one deconvATAC task runs at a time.
 The launcher requires one-minute load below 6.0, at least 4 GiB available host
 memory, and no unrelated GPU compute process. It applies low CPU/I/O priority,
-one host math thread, one GPU owner, and at most two preprocessing workers.
+one host math thread, one GPU owner, and at most two preprocessing or validation
+workers. Adult-read acquisition alone may use four network transfers while its
+validation semaphore remains capped at two CPU workers.
 A closed gate pauses the next launch and never interrupts the other workflow.
 The persistent `gnome-remote-desktop-daemon` is treated as display overhead,
 not a competing scientific job, only while its reported allocation is at most

@@ -11,6 +11,7 @@ import os
 import subprocess
 import tarfile
 import tempfile
+import threading
 import urllib.request
 import zipfile
 from dataclasses import asdict, dataclass
@@ -162,6 +163,24 @@ def resources_from_config(config: Mapping[str, Any]) -> tuple[Resource, ...]:
     return tuple(resources)
 
 
+def select_resources(
+    resources: tuple[Resource, ...], accessions: Optional[list[str]]
+) -> tuple[Resource, ...]:
+    if not accessions:
+        return resources
+    if len(accessions) != len(set(accessions)):
+        raise ValueError("Requested accessions must be unique")
+    requested = set(accessions)
+    selected = tuple(
+        resource for resource in resources if resource.accession in requested
+    )
+    observed = {resource.accession for resource in selected}
+    missing = sorted(requested.difference(observed))
+    if missing:
+        raise ValueError(f"Requested accessions are absent from the source manifest: {missing}")
+    return selected
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -299,7 +318,11 @@ def download_once(resource: Resource, expected_bytes: int, timeout: int) -> None
         )
 
 
-def acquire(resource: Resource, timeout: int) -> DownloadResult:
+def acquire(
+    resource: Resource,
+    timeout: int,
+    validation_slots: threading.Semaphore,
+) -> DownloadResult:
     official_bytes, remote_etag = remote_metadata(resource.url, timeout)
     if resource.expected_bytes is not None and official_bytes != resource.expected_bytes:
         raise ValueError(
@@ -320,32 +343,33 @@ def acquire(resource: Resource, timeout: int) -> DownloadResult:
         download_once(resource, official_bytes, timeout)
         source = resource.staging_path
 
-    tar_members: Optional[int] = None
-    if resource.payload == "tar":
-        tar_members = validate_tar(source)
-        integrity = "passed_tar_stream_and_safe_member_audit"
-    elif resource.payload == "gzip":
-        validate_gzip(source)
-        validate_gzip_schema(source, resource.name)
-        integrity = "passed_full_gzip_stream_and_schema"
-    elif resource.payload == "xlsx":
-        validate_xlsx(source)
-        integrity = "passed_xlsx_zip_crc_and_manifest"
-    elif resource.payload in {"text", "csv", "tsv"}:
-        integrity = "passed_exact_byte_transfer"
-    else:
-        raise ValueError(
-            f"Unsupported payload type for {resource.name}: {resource.payload}"
-        )
-    digest = sha256_file(source)
-    observed_md5 = md5_file(source) if resource.expected_md5 is not None else None
-    if observed_md5 != resource.expected_md5:
-        raise ValueError(
-            f"Provider MD5 changed for {resource.name}: "
-            f"{observed_md5!r} != frozen {resource.expected_md5!r}"
-        )
-    if source == resource.staging_path:
-        os.replace(source, resource.destination)
+    with validation_slots:
+        tar_members: Optional[int] = None
+        if resource.payload == "tar":
+            tar_members = validate_tar(source)
+            integrity = "passed_tar_stream_and_safe_member_audit"
+        elif resource.payload == "gzip":
+            validate_gzip(source)
+            validate_gzip_schema(source, resource.name)
+            integrity = "passed_full_gzip_stream_and_schema"
+        elif resource.payload == "xlsx":
+            validate_xlsx(source)
+            integrity = "passed_xlsx_zip_crc_and_manifest"
+        elif resource.payload in {"text", "csv", "tsv"}:
+            integrity = "passed_exact_byte_transfer"
+        else:
+            raise ValueError(
+                f"Unsupported payload type for {resource.name}: {resource.payload}"
+            )
+        digest = sha256_file(source)
+        observed_md5 = md5_file(source) if resource.expected_md5 is not None else None
+        if observed_md5 != resource.expected_md5:
+            raise ValueError(
+                f"Provider MD5 changed for {resource.name}: "
+                f"{observed_md5!r} != frozen {resource.expected_md5!r}"
+            )
+        if source == resource.staging_path:
+            os.replace(source, resource.destination)
     return DownloadResult(
         name=resource.name,
         role=resource.role,
@@ -381,22 +405,43 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=int, default=120)
     parser.add_argument("--lock-output", type=Path)
     parser.add_argument("--audit-output", type=Path)
+    parser.add_argument(
+        "--accession",
+        action="append",
+        help="Acquire only records with this frozen resource accession; may be repeated.",
+    )
     return parser.parse_args()
+
+
+def worker_limits(
+    config: Mapping[str, Any], requested_transfer_workers: int
+) -> tuple[int, int]:
+    if requested_transfer_workers < 1:
+        raise ValueError("--workers must be positive")
+    transfer_limit = min(4, int(config.get("download_workers_max", 2)))
+    if requested_transfer_workers > transfer_limit:
+        raise ValueError(
+            f"--workers must be <= {transfer_limit} for this campaign"
+        )
+    validation_limit = min(2, int(config.get("validation_workers_max", 2)))
+    if validation_limit < 1:
+        raise ValueError("validation_workers_max must be positive")
+    return requested_transfer_workers, validation_limit
 
 
 def main() -> None:
     args = parse_args()
-    if args.workers < 1:
-        raise ValueError("--workers must be positive")
     config = load_config(args.config)
-    worker_limit = min(2, int(config.get("download_workers_max", 2)))
-    if args.workers > worker_limit:
-        raise ValueError(f"--workers must be <= {worker_limit} for this campaign")
-    resources = resources_from_config(config)
+    transfer_workers, validation_workers = worker_limits(config, args.workers)
+    validation_slots = threading.BoundedSemaphore(validation_workers)
+    resources = select_resources(resources_from_config(config), args.accession)
     results: list[DownloadResult] = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=transfer_workers) as executor:
         pending = {
-            executor.submit(acquire, resource, args.timeout): resource for resource in resources
+            executor.submit(
+                acquire, resource, args.timeout, validation_slots
+            ): resource
+            for resource in resources
         }
         for future in concurrent.futures.as_completed(pending):
             result = future.result()
@@ -412,7 +457,12 @@ def main() -> None:
         "completed_at": datetime.now(timezone.utc).isoformat(),
         "config": str(config_path),
         "resources": len(results),
+        "requested_accessions": args.accession,
         "total_bytes": sum(result.bytes for result in results),
+        "resource_policy": {
+            "transfer_workers": transfer_workers,
+            "validation_workers_max": validation_workers,
+        },
         "files": [asdict(result) for result in results],
     }
     default_lock = args.config.with_name(f"{args.config.stem}_lock.yaml")

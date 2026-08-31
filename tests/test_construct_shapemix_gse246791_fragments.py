@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from scripts.construct_shapemix_gse246791_fragments import (
+    cleanup_alignment_bam,
     filter_fragments,
     fragment_count_concordance,
     load_h5ad_fragment_counts,
@@ -119,3 +120,30 @@ def test_filter_fragments_rejects_malformed_selected_rows(tmp_path: Path, line: 
             barcodes=[BARCODE1],
             chrom_sizes={"chr1": 100},
         )
+
+
+def test_cleanup_alignment_bam_is_restricted_to_canonical_generated_work(
+    tmp_path: Path, monkeypatch
+):
+    project = tmp_path / "project"
+    canonical = (
+        project
+        / "data/work/preprocessing/gse246791_mouse_brain_reference"
+        / "GSM1/alignment/name_sorted.bam"
+    )
+    canonical.parent.mkdir(parents=True)
+    canonical.write_bytes(b"generated")
+    monkeypatch.setattr(
+        "scripts.construct_shapemix_gse246791_fragments.ROOT",
+        project,
+    )
+
+    cleanup_alignment_bam(canonical, "GSM1", enabled=True)
+    assert not canonical.exists()
+
+    outside = project / "data/work/preprocessing/other/name_sorted.bam"
+    outside.parent.mkdir(parents=True)
+    outside.write_bytes(b"preserve")
+    with pytest.raises(ValueError, match="restricted"):
+        cleanup_alignment_bam(outside, "GSM1", enabled=True)
+    assert outside.read_bytes() == b"preserve"

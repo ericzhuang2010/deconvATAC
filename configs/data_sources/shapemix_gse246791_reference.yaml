@@ -10,12 +10,13 @@ assay: snATAC-seq
 raw_directory: data/raw/sources/ncbi_geo/GSE246791
 work_directory: data/work/downloads/gse246791_reference
 processed_directory: data/processed/shapemix/gse246791_mouse_brain_reference
-standardized_reference_id: gse246791_adult_mouse_brain_major12_v1
+standardized_reference_id: gse246791_adult_mouse_brain_broad9_v1
 selection:
   policy: lexicographically first author sample with biorep=early within each of the 12 MajorRegion values in SI Table 1
   major_regions: [AMY, CB, HPF, HY, Isocortex, MB, MY, OLF, PAL, Pons, STR, TH]
   expected_samples: 12
   rationale: region-balanced source-independent subset with one sample per atlas major region
+  label_resolution: frozen broad9_v1 mapping from author NeuronTransmitter and Subclass fields
 resources:
   - {name: GSE246791_family.soft.gz, role: geo_family_metadata, url: "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE246nnn/GSE246791/soft/GSE246791_family.soft.gz", expected_bytes: 26931, payload: gzip, destination: series_metadata/GSE246791_family.soft.gz}
   - {name: SI_Table_1.xlsx, role: author_sample_dissection_metadata, url: "https://decoder-genetics.wustl.edu/catlasv1/wholemousebrain/data/Supplementary_Tables/SI%20Table%201%20Sample%20and%20dissection%20summary.xlsx", expected_bytes: 30092, expected_etag: 758c-6091649a8e580, payload: xlsx, destination: portal_metadata/SI_Table_1.xlsx}
@@ -136,11 +137,16 @@ preprocessing_policy:
   peak_selection: reference-only ranking on the selected samples
   fragment_bins_bp: [[0, 100], [100, 250], [250, null]]
   right_cut_offset: audit against the deposited 500-bp matrices before freezing
+  representative_matrix_concordance_gate:
+    normalized_l1_error_max: 0.25
+    cell_total_spearman_r_min: 0.95
+    feature_total_spearman_r_min: 0.95
   truth_policy: reference labels are not spatial composition truth
 validation_gates:
   - exact remote byte size and complete gzip streams
   - exact reproducibility of the frozen SI-Table-1 subset rule
   - exact selected-cell mapping to SI Table 2
+  - at least 100 retained cells in each broad9 class except at least 20 Other immune cells, per the frozen reference-only audit amendment
   - mm10 coordinate and parent-fragment validation
   - one selected sample for every declared major region
   - nonnegative integer CSR layers whose sum equals X

@@ -128,3 +128,12 @@ def test_spatial_layout_mapping_rewrites_nested_authoritative_paths():
     assert updated["files"][0]["path"] == (
         "data/processed/shapemix/gse205055_spatial/"
         "normalized_fragments/GSM1/fragments.tsv.gz"
+    )
+    assert changes == [
+        (
+            "data/processed/shapemix/gse205055_spatial/"
+            "normalized_atac_fragments/GSM1/fragments.tsv.gz",
+            "data/processed/shapemix/gse205055_spatial/"
+            "normalized_fragments/GSM1/fragments.tsv.gz",
+        )
+    ]
