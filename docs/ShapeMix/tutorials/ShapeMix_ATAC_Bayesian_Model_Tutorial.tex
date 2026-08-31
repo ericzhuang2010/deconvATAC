@@ -173,8 +173,8 @@ version of the model until every part of this example makes sense.
 \end{bigidea}
 
 \vfill
-{\large Progressive rewrite, version 2.1\par}
-{\large August 28, 2026\par}
+{\large Progressive rewrite, version 2.2\par}
+{\large August 30, 2026\par}
 \end{titlepage}
 
 \hypersetup{pageanchor=true}
@@ -217,6 +217,15 @@ The colors show each quantity's job:
 The normative executable definition remains
 \texttt{docs/ShapeMix/model\_specification.md}. This document explains that model;
 it does not replace the specification.
+\end{watchout}
+
+\begin{watchout}
+\textbf{Notation update in version 2.2.} The fixed reference peak rate is now
+written \(R\), because \textbf{R}eference and \textbf{R}ate both start with R;
+versions up to 2.1 called it \(A\). To free the letter, the raw
+training-reference cut-site counts, previously \(R_{i,p,b}\), are now
+\(x_{i,p,b}\). The specification and the software still use the older letters
+(\texttt{A} for the rate, \texttt{R} for the raw reference counts).
 \end{watchout}
 
 \section{Before equations: what goes in and what comes out?}
@@ -289,11 +298,12 @@ Imagine, temporarily, that only one cell type exists and we examine only one
 peak. A labeled reference cell typically contributes 12 cut sites to this peak.
 Our mixed spot contains 24 observed cut sites.
 
-\begin{newvar}{\(\fixedq{A}\)}
+\begin{newvar}{\(\fixedq{R}\)}
 \textbf{Name:} reference peak rate.\\
+\textbf{Letter:} \(R\) because \textbf{R}eference and \textbf{R}ate both start with R.\\
 \textbf{Job:} a fixed input learned from labeled reference cells.\\
 \textbf{Units:} expected cut sites per effective reference unit.\\
-\textbf{Running value:} \(A=12\).
+\textbf{Running value:} \(R=12\).
 \end{newvar}
 
 \begin{newvar}{\(\unknownq{z}\)}
@@ -324,7 +334,7 @@ Now insert the running numbers:
 \]
 Only then write the compact equation:
 \[
-\boxed{\mu=zA.}
+\boxed{\mu=zR.}
 \]
 
 \begin{newvar}{\(\obsq{N}\)}
@@ -341,7 +351,7 @@ Only then write the compact equation:
     {\textbf{hidden amount}\\\(z=2\)};
   \node[font=\Large] at (3.0,0) {\(\times\)};
   \node[draw,rounded corners,fill=fixedpale,minimum width=3.2cm,minimum height=1.2cm] (a) at (5.1,0)
-    {\textbf{reference rate}\\\(A=12\)};
+    {\textbf{reference rate}\\\(R=12\)};
   \node[font=\Large] at (8.1,0) {\(=\)};
   \node[draw,rounded corners,fill=calcpale,minimum width=3.0cm,minimum height=1.2cm] (mu) at (9.9,0)
     {\textbf{predicted mean}\\\(\mu=24\)};
@@ -353,7 +363,7 @@ Only then write the compact equation:
 \end{figure}
 
 \begin{checkpoint}
-If \(A=5\) cut sites per unit and \(N\) is near 20, what effective abundance is
+If \(R=5\) cut sites per unit and \(N\) is near 20, what effective abundance is
 a sensible first guess?
 
 \textbf{Answer:} \(z\approx20/5=4\).
@@ -366,7 +376,7 @@ a sensible first guess?
 \toprule
 Symbol & Meaning & Role \\
 \midrule
-\(A\) & reference rate & fixed \\
+\(R\) & reference rate & fixed \\
 \(z\) & effective abundance & unknown \\
 \(\mu\) & predicted mean count & calculated \\
 \(N\) & observed total count & data \\
@@ -380,7 +390,7 @@ Now allow T cells and B cells. We use the letters T and B as readable labels;
 the generic cell-type index will come much later.
 
 \[
-A_T=12,\qquad A_B=12.
+R_T=12,\qquad R_B=12.
 \]
 
 Try this hidden recipe:
@@ -390,7 +400,7 @@ z_T=1.5,\qquad z_B=0.5.
 
 The predicted total becomes:
 \[
-\boxed{\mu=z_TA_T+z_BA_B.}
+\boxed{\mu=z_TR_T+z_BR_B.}
 \]
 With the running numbers:
 \[
@@ -443,7 +453,7 @@ are the standardized biological output.
 \begin{checkpoint}
 Why can \(N=24\) not distinguish the three recipes in the table?
 
-\textbf{Answer:} \(A_T=A_B\), so moving one unit from T to B leaves the predicted
+\textbf{Answer:} \(R_T=R_B\), so moving one unit from T to B leaves the predicted
 total unchanged.
 \end{checkpoint}
 
@@ -510,14 +520,14 @@ T-cell cuts are more often short-parent; B-cell cuts are more often long-parent.
 
 The T contribution is:
 \[
-z_TA_T\boldsymbol{\omega}_T
+z_TR_T\boldsymbol{\omega}_T
 =1.5(12)
 \left(\frac12,\frac13,\frac16\right)
 =(9,6,3).
 \]
 The B contribution is:
 \[
-z_BA_B\boldsymbol{\omega}_B
+z_BR_B\boldsymbol{\omega}_B
 =0.5(12)
 \left(\frac16,\frac13,\frac12\right)
 =(1,2,3).
@@ -584,7 +594,7 @@ from.” This is not 24 new observations: it is a second question about the same
 
 \begin{bigidea}
 The total asks “how many?” The conditional shape term asks “how split?” When
-\(A_T=A_B\), the total cannot distinguish T from B, but the short/mono/long split
+\(R_T=R_B\), the total cannot distinguish T from B, but the short/mono/long split
 can.
 \end{bigidea}
 
@@ -815,15 +825,15 @@ index at a time because real data contain many peaks and spots.
 \textbf{Capital \(P\):} the number of selected peaks.
 \end{newvar}
 
-Adding \(p\) turns \(A_T\) into \(A_{T,p}\) and \(\mu\) into \(\mu_p\):
+Adding \(p\) turns \(R_T\) into \(R_{T,p}\) and \(\mu\) into \(\mu_p\):
 \[
-\mu_p=z_TA_{T,p}+z_BA_{B,p}.
+\mu_p=z_TR_{T,p}+z_BR_{B,p}.
 \]
 
 \begin{center}
 \begin{tabular}{C{0.14\linewidth}C{0.20\linewidth}C{0.20\linewidth}L{0.30\linewidth}}
 \toprule
-Peak & \(A_{T,p}\) & \(A_{B,p}\) & Teaching purpose \\
+Peak & \(R_{T,p}\) & \(R_{B,p}\) & Teaching purpose \\
 \midrule
 1 & 12 & 12 & total is ambiguous; shape can help \\
 2 & 8 & 16 & total itself helps distinguish types \\
@@ -871,7 +881,7 @@ scored using that spot's own observed counts.  Spot 1's \(N,Y\) help estimate
 \toprule
 Shared across all spots & Different for each spot \\
 \midrule
-reference peak rates \(A\) & observed counts \(N,Y\) \\
+reference peak rates \(R\) & observed counts \(N,Y\) \\
 reference length shapes \(\omega\) & inferred abundances \(z\) \\
 reference inverse-dispersion \(\phi_{\mathrm{ref}}\) & total effective abundance \(e\) \\
 Gamma-prior parameters & predictions \(\mu,\rho\) and output \(\pi\) \\
@@ -913,7 +923,7 @@ Examples:
 
 \begin{itemize}[leftmargin=2em]
   \item \(Y_{3,12,2}\): observed cut-site count in spot 3, peak 12, bin 2.
-  \item \(A_{T,12}\): fixed T-reference total rate at peak 12.
+  \item \(R_{T,12}\): fixed T-reference total rate at peak 12.
   \item \(\omega_{B,12,3}\): fixed B-reference long-bin fraction at peak 12.
   \item \(z_{3,T}\): inferred T-like effective abundance in spot 3.
 \end{itemize}
@@ -931,7 +941,7 @@ Bayes section denotes a probability density. Context distinguishes them.
 Quantity & Dimensions & Role \\
 \midrule
 \(z\) & \(S\times C\) & inferred spot-by-type amounts \\
-\(A\) & \(C\times P\) & fixed type-by-peak rates \\
+\(R\) & \(C\times P\) & fixed type-by-peak rates \\
 \(\omega\) & \(C\times P\times B\) & fixed type-by-peak-by-bin fractions \\
 \(N,\mu\) & \(S\times P\) & observed and predicted peak totals \\
 \(Y,v,\rho\) & \(S\times P\times B\) & observed counts, predicted counts, predicted fractions \\
@@ -957,7 +967,7 @@ For one spot, add the effective amounts across all declared cell types.
 \boxed{
 v_{s,p,b}
 =
-\sum_cz_{s,c}A_{c,p}\omega_{c,p,b}.
+\sum_cz_{s,c}R_{c,p}\omega_{c,p,b}.
 }
 \]
 
@@ -967,7 +977,7 @@ add them.
 \[
 \underbrace{z}_{\text{effective units}}
 \times
-\underbrace{A}_{\text{cuts/unit}}
+\underbrace{R}_{\text{cuts/unit}}
 \times
 \underbrace{\omega}_{\text{fraction}}
 =
@@ -1070,7 +1080,7 @@ one score for each spot:
 
 The first sum measures how well \(z_s\) explains every peak in spot \(s\); the
 last sum supplies that spot's Gamma-prior score.  The fixed
-\(A,\omega,\phi_{\mathrm{ref}}\) are shared by all spots and are left implicit in
+\(R,\omega,\phi_{\mathrm{ref}}\) are shared by all spots and are left implicit in
 the probability notation.
 
 No spot score contains another spot's abundance.  Consequently, maximizing the
@@ -1091,7 +1101,7 @@ abundances over every declared cell type in the same spot.
 \centering
 \begin{tikzpicture}[>=Latex,every node/.style={align=center,font=\small}]
   \node[draw,rounded corners,fill=fixedpale,minimum width=3.3cm,minimum height=1.35cm] (ref) at (0,1.0)
-    {\textbf{fixed rates + shapes}\\\(A,\omega\)};
+    {\textbf{fixed rates + shapes}\\\(R,\omega\)};
   \node[draw,rounded corners,fill=unknownpale,minimum width=3.3cm,minimum height=1.35cm] (z) at (0,-1.0)
     {\textbf{hidden mixture}\\\(z\)};
   \node[draw,rounded corners,fill=calcpale,minimum width=3.6cm,minimum height=1.35cm] (pred) at (5.3,0)
@@ -1120,7 +1130,7 @@ tell this story:
 
 \begin{enumerate}[leftmargin=2em]
   \item Start with one possible hidden mixture \(z\).
-  \item Combine \(z\) with the fixed reference rates and shapes \(A,\omega\) to
+  \item Combine \(z\) with the fixed reference rates and shapes \(R,\omega\) to
   calculate the predicted total \(\mu\) and predicted bin fractions \(\rho\).
   \item Allow random experimental variation, controlled partly by
   \(\phi_{\mathrm{ref}}\), to produce possible observed counts \(N,Y\).
@@ -1134,7 +1144,7 @@ The boxes therefore have these jobs:
 Box & Meaning \\
 \midrule
 \(z\) & hidden effective cell-type amounts \\
-\(A,\omega\) & fixed reference information that turns a mixture into count and shape predictions \\
+\(R,\omega\) & fixed reference information that turns a mixture into count and shape predictions \\
 \(\mu,\rho\) & predicted peak total and predicted short/mono/long fractions \\
 \(\phi_{\mathrm{ref}}\) & fixed reference noise scale used in the negative-binomial draw \\
 \(N,Y\) & total and length-bin counts actually observed \\
@@ -1370,7 +1380,7 @@ In symbols, NNLS chooses starting values by minimizing
 \quad
 \sum_p
 \left(
-N_p-\sum_c z_cA_{c,p}
+N_p-\sum_c z_cR_{c,p}
 \right)^2.
 }
 \]
@@ -1384,7 +1394,7 @@ Suppose the two fixed reference fingerprints and observed totals are:
 \begin{center}
 \begin{tabular}{C{0.18\linewidth}C{0.20\linewidth}C{0.20\linewidth}C{0.20\linewidth}}
 \toprule
-Peak & T rate \(A_{T,p}\) & B rate \(A_{B,p}\) & observed \(N_p\) \\
+Peak & T rate \(R_{T,p}\) & B rate \(R_{B,p}\) & observed \(N_p\) \\
 \midrule
 1 & 12 & 12 & 24 \\
 2 & 8 & 16 & 20 \\
@@ -1625,7 +1635,7 @@ so ShapeMix should agree with count-only within numerical tolerance.
 \section{Where the fixed reference quantities come from}
 
 You can understand and use the core model without memorizing this section's
-estimation formulas. Its purpose is to show why \(A\), \(\omega\), and
+estimation formulas. Its purpose is to show why \(R\), \(\omega\), and
 \(\phi_{\mathrm{ref}}\) are fixed before a held-out spot is analyzed.
 
 \subsection{The missing index: an individual reference cell}
@@ -1636,20 +1646,21 @@ estimation formulas. Its purpose is to show why \(A\), \(\omega\), and
 It is different from \(c\): \(i\) identifies one cell; \(c\) identifies its type.
 \end{newvar}
 
-\begin{newvar}{\(\obsq{R_{i,p,b}}\) and \(\obsq{T_{i,p}}\)}
-\(R_{i,p,b}\) is the training-reference cut-site count for cell \(i\), peak \(p\),
+\begin{newvar}{\(\obsq{x_{i,p,b}}\) and \(\obsq{T_{i,p}}\)}
+\(x_{i,p,b}\) is the training-reference cut-site count for cell \(i\), peak \(p\),
 and bin \(b\).\\
-\(T_{i,p}=\sum_bR_{i,p,b}\) is that reference cell's total at the peak.
+\(T_{i,p}=\sum_bx_{i,p,b}\) is that reference cell's total at the peak.\\
+\textbf{Letter:} \(x\) is statistics' usual letter for raw data values.
 \end{newvar}
 
-If reference cell 17 is labeled T and \(R_{17,42,\mathrm{short}}=3\), that cell
+If reference cell 17 is labeled T and \(x_{17,42,\mathrm{short}}=3\), that cell
 contributed three short-parent cut sites to peak 42.
 
 Let \(\mathcal I_c\) denote the set of training-reference cells labeled as type
 \(c\). Conceptually:
 
 \[
-A_{c,p}
+R_{c,p}
 \approx
 \text{average of }T_{i,p}\text{ over }i\in\mathcal I_c,
 \]
@@ -1760,7 +1771,7 @@ cell-type-stratified 70/30 split:
 
 \begin{itemize}[leftmargin=2em]
   \item the 70\% training-reference pool selects peaks and estimates
-  \(A,\omega,\phi_{\mathrm{ref}}\);
+  \(R,\omega,\phi_{\mathrm{ref}}\);
   \item the held-out 30\% pool supplies cells for pseudo-spots; and
   \item inner mixture seeds are nested inside each outer split.
 \end{itemize}
@@ -1803,7 +1814,7 @@ We now repeat the entire running example without introducing any new symbols.
 \subsection{Step 1: fixed reference information}
 
 \[
-A_T=A_B=12,
+R_T=R_B=12,
 \]
 \[
 \boldsymbol\omega_T=
@@ -1912,7 +1923,7 @@ Symbol & Meaning & Role \\
 Symbol & Meaning & Role \\
 \midrule
 \endhead
-\(A\) & reference peak rate & fixed reference input \\
+\(R\) & reference peak rate & fixed reference input \\
 \(z\) & effective abundance & inferred by MAP \\
 \(\mu\) & predicted mean peak total & calculated \\
 \(N\) & observed peak total & data \\
@@ -1929,8 +1940,8 @@ Symbol & Meaning & Role \\
 \(c\) & cell-type index & index \\
 \(\epsilon\) & small positive numerical guard & fixed setting \\
 \(i\) & individual training-reference cell index & index \\
-\(R_{i,p,b}\) & training-reference bin count & observed reference data \\
-\(T_{i,p}\) & training-reference peak total & observed, calculated from \(R\) \\
+\(x_{i,p,b}\) & training-reference bin count & observed reference data \\
+\(T_{i,p}\) & training-reference peak total & observed, calculated from \(x\) \\
 \bottomrule
 \end{longtable}
 
@@ -1962,7 +1973,7 @@ You understand the core ShapeMix model if you can explain these six lines in
 ordinary language:
 \[
 \begin{aligned}
-v_{s,p,b}&=\sum_cz_{s,c}A_{c,p}\omega_{c,p,b}, &
+v_{s,p,b}&=\sum_cz_{s,c}R_{c,p}\omega_{c,p,b}, &
 \mu_{s,p}&=\sum_bv_{s,p,b}, &
 \rho_{s,p,b}&=\frac{v_{s,p,b}}{\mu_{s,p}}.
 \end{aligned}
@@ -1991,33 +2002,33 @@ let \(h_i=1\) be the same-protocol exposure. Define the pooled peak target:
 \[
 g_p=\frac{\sum_iT_{i,p}}{\sum_ih_i}.
 \]
-With \(\alpha_A=0.5\):
+With \(\alpha_R=0.5\):
 \[
-A_{c,p}
+R_{c,p}
 =
-\frac{\sum_{i\in\mathcal I_c}T_{i,p}+\alpha_Ag_p}
-{\sum_{i\in\mathcal I_c}h_i+\alpha_A}.
+\frac{\sum_{i\in\mathcal I_c}T_{i,p}+\alpha_Rg_p}
+{\sum_{i\in\mathcal I_c}h_i+\alpha_R}.
 \]
 
 Define the dataset-global length distribution:
 \[
 u_b^{\mathrm{global}}
 =
-\frac{\sum_{i,p}R_{i,p,b}}
-{\sum_{i,p,b'}R_{i,p,b'}}.
+\frac{\sum_{i,p}x_{i,p,b}}
+{\sum_{i,p,b'}x_{i,p,b'}}.
 \]
 With the frozen \(\alpha_\omega=1\), first smooth each pooled peak:
 \[
 u_{p,b}
 =
-\frac{\sum_iR_{i,p,b}+\alpha_\omega u_b^{\mathrm{global}}}
-{\sum_{i,b'}R_{i,p,b'}+\alpha_\omega},
+\frac{\sum_ix_{i,p,b}+\alpha_\omega u_b^{\mathrm{global}}}
+{\sum_{i,b'}x_{i,p,b'}+\alpha_\omega},
 \]
 then smooth each cell-type/peak fingerprint:
 \[
 \omega_{c,p,b}
 =
-\frac{\sum_{i\in\mathcal I_c}R_{i,p,b}
+\frac{\sum_{i\in\mathcal I_c}x_{i,p,b}
 +\alpha_\omega u_{p,b}}
 {\sum_{i\in\mathcal I_c}T_{i,p}
 +\alpha_\omega}.
@@ -2077,14 +2088,14 @@ sampling and not a proof of the global maximum.
 \[
 \mathcal L_{\mathrm{count}}(z)
 =
-\log p(N\mid z,A,\phi_{\mathrm{ref}})
+\log p(N\mid z,R,\phi_{\mathrm{ref}})
 +\log p(z),
 \]
 \[
 \mathcal L_{\mathrm{shape}}(z)
 =
 \mathcal L_{\mathrm{count}}(z)
-+\log p(Y\mid N,z,A,\omega).
++\log p(Y\mid N,z,R,\omega).
 \]
 Only the final conditional-shape term differs.
 \end{advanced}
@@ -2147,7 +2158,7 @@ improves deconvolution beyond the same cut sites collapsed to peak totals.
 
 \begin{enumerate}[leftmargin=2em]
   \item A spot has hidden positive effective cell-type amounts \(z\).
-  \item Fixed reference rates \(A\) predict how many cut sites each type contributes.
+  \item Fixed reference rates \(R\) predict how many cut sites each type contributes.
   \item Fixed reference shapes \(\omega\) predict how those cuts divide among
   short, mono, and long parent-fragment bins.
   \item A negative binomial models each noisy peak total \(N\).
@@ -2160,7 +2171,7 @@ improves deconvolution beyond the same cut sites collapsed to peak totals.
 
 \[
 \boxed{
-v_{s,p,b}=\sum_cz_{s,c}A_{c,p}\omega_{c,p,b},
+v_{s,p,b}=\sum_cz_{s,c}R_{c,p}\omega_{c,p,b},
 \qquad
 \rho_{s,p,b}=\frac{v_{s,p,b}}{\sum_{b'}v_{s,p,b'}}
 }
