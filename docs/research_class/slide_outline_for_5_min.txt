@@ -1,0 +1,36 @@
+#Slide 1: Open close DNA region and impact on gene expression
+Introduce open region and closed region (open/closed chromatin) on DNA sequence, how is that related to gene expression, different cell type behave differently, including cancer cells, which express differently, this is also related to many diseases.
+
+
+#Slide 2: ATAC sequencing, and cut profile
+Then talk about ATAC sequencing, a widely used technology for identifying open/closed regions.
+Tn5 enzyme can only cut at open regions. We build a cut (or peak) profile that count the number of cuts made to each region to identify open/closed regions. X-axis is region, y-axis is the number of cuts by the enzyme in the corresponding region.
+
+Then talk about that for each cell type, the approximate cut profile is typically known and given ahead-of-time.
+
+#Slide 3: Spatial ATAC
+Ție ATAC cut profile with location information, allow scientists to see exactly where diseases like cancer are developing and how a cell's physical neighborhood changes its behavior.
+It is a recent technology started in 2022 and is getting very popular. 
+
+#Slide 4: The deconvolution problem for spatial ATAC
+Location are identified as spots in a grid, but each spot is much larger than one cell, so we get a the cut profile which is a mixture of the cut profiles of all cells in that spot.
+The deconvolution problem is to unmix it and get the number of cells for each cell type in the spot.
+Deconvolution works like identifying ingredients in a smoothie
+
+Novelty of problem: Most recent technology is from 2025, which uses existing deconvolution for spatial RNA-sequencing. 
+
+#Slide 5: my approach and hypothesis
+My approach is include addditional information, it is called cut length, the distance between two nearby cut points, which is not available for spatial RNA seq.
+
+I then use a Bayesian model to statically estimate the composition of number of cell of different cell types at a spot.
+
+Hypothesis: A Bayesian model using with the additional ATAC cut-length signals will be more accurate than using the cut counts alone.
+
+
+#Slide 6: Experiments and project status
+
+Public datasets such as PBMC human peripheral blood cells
+Human tissue with tumor, bone marrow, immune cells.
+And mouse tissues.
+
+The current status is that I have implemented the Bayesian model with the cut length information, and tried on the PBMC datasets and the results look promising.
