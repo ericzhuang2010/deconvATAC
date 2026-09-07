@@ -9,6 +9,9 @@ reusable_root: data/processed/shapemix/gse263333_spatial_mux
 dataset_root: data/processed/datasets
 registry: data/registry/datasets.yaml
 truth_policy: orthogonal_validation_only
+shapemix_seeds:
+  outer_split_seed: 0
+  inner_mixture_seed: 0
 sections:
   - dataset_id: gse263333_shapemix_mouse_embryo_e13_50um_atac_v1
     group: me13_50um_atac
@@ -26,7 +29,9 @@ sections:
     reference_caveat: adult healthy regional brain reference applied to five-month EAE brain
 materialization:
   datasets: 2
-  selected_reference_features: 5000
+  selected_reference_features:
+    maximum: 5000
+    require_positive_reconstructed_reference_total: true
   exact_truth: false
   copy_validation_modalities_into_dataset: true
   fragment_count_partition: tabix_contig

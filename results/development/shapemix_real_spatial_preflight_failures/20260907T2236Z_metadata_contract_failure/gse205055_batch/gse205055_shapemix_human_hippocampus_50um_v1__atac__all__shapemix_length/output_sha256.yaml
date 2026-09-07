@@ -1,0 +1,8 @@
+schema_version: 1
+algorithm: sha256
+exclusions:
+- run.yaml
+- output_sha256.yaml
+run_metadata_sha256: 61f37f3daade166f38ee70a2ea4049ca53ec72a596c529f9eb2fbc2fe143c1f8
+run_metadata_hash_encoding: canonical_json_sorted_keys_compact_utf8
+files: {}

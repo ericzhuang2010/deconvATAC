@@ -1,0 +1,96 @@
+dataset_id: gse205055_shapemix_mouse_brain_p21_20um_primary_v1
+modality: atac
+feature_set: all
+registry: data/registry/datasets.yaml
+dataset_config:
+  dataset_id: gse205055_shapemix_mouse_brain_p21_20um_primary_v1
+  source: GSE205055 spatial ATAC section GSM6204623
+  description: Real spatial ATAC section projected onto a frozen, reference-only 5,000-feature
+    axis for ShapeMix prediction and orthogonal cross-modality validation.
+  labels_key: cell_type
+  spatial_key: spatial
+  benchmark_scope: real_spatial_orthogonal_validation
+  shapemix_seeds:
+    outer_split_seed: 0
+    inner_mixture_seed: 0
+  evaluation_design:
+    comparison_key: section
+    group: mouse_brain_p21_20um_primary
+    atac_gsm: GSM6204623
+    coordinate_gsm: GSM6204623
+    reference_id: gse246791_adult_mouse_brain_broad9_v1
+    truth_limitation: No exact per-spot cell-type composition truth is available;
+      RNA, protein, histone, anatomy, and spatial-continuity endpoints are orthogonal
+      validation only.
+  modalities:
+    atac:
+      reference:
+        path: data/processed/references/gse246791_adult_mouse_brain_broad9_v1/atac/reference.h5ad
+      spatial:
+        path: data/processed/datasets/gse205055_shapemix_mouse_brain_p21_20um_primary_v1/atac/spatial.h5ad
+      labels_key: cell_type
+      spatial_key: spatial
+      cell_types:
+      - Excitatory neurons
+      - Inhibitory neurons
+      - Other neurons
+      - Astroglia/ependymal
+      - Oligodendrocytes
+      - OPCs
+      - Microglia/macrophages
+      - Other immune
+      - Vascular/stromal
+      fragment_shape:
+        schema_version: 1
+        axis: parent_fragment_length_bp
+        count_unit: deduplicated_cut_sites
+        read_support_policy: ignore
+        peak_assignment: containing_nonoverlapping_peak
+        left_cut_offset: 0
+        right_cut_offset: -1
+        bins:
+        - name: short
+          min_inclusive: 0
+          max_exclusive: 100
+          layer: fragment_length_lt_100
+        - name: mono
+          min_inclusive: 100
+          max_exclusive: 250
+          layer: fragment_length_100_249
+        - name: long
+          min_inclusive: 250
+          layer: fragment_length_ge_250
+        feature_sha256: 75f0bb2b11a5e035de4d83712873ee85595be77241223e3e59e2e9a016264cf5
+        coordinate_validation:
+          audit: data/processed/shapemix/gse246791_mouse_brain_reference/manifests/representative_coordinate_audit.yaml
+          matrix_match: representative_recovered_read_concordance
+          passed: true
+          selected_right_cut_offset: -1
+          validation_method: deposited_matrix_concordance_thresholds
+      feature_sets:
+        all:
+          mode: all
+        selected_reference_features:
+          path: data/processed/datasets/gse205055_shapemix_mouse_brain_p21_20um_primary_v1/atac/features/selected_reference_features.txt
+  validation:
+    truth_status: orthogonal_validation_not_exact_composition_truth
+    exact_truth: false
+    alignment_manifest:
+      path: data/processed/datasets/gse205055_shapemix_mouse_brain_p21_20um_primary_v1/validation/alignment.yaml
+      sha256: 1f0e67f09957681f2256e8a21d1a92f937800bd0fab7c8db6605abd5daf80f8f
+    epigenome:
+    - gsm: GSM6204621
+      assay: h3k27ac
+      path: data/processed/datasets/gse205055_shapemix_mouse_brain_p21_20um_primary_v1/validation/epigenome/h3k27ac__GSM6204621.h5ad
+      sha256: 3dc9af67bef7a2dcfc440bb6bb39394f8092506ef1e010825f49e806c1f96f5e
+      spots: 2500
+      features: 5000
+      interpretation: orthogonal_validation_only
+    rna:
+      gsm: GSM6204636
+      path: data/processed/datasets/gse205055_shapemix_mouse_brain_p21_20um_primary_v1/validation/rna/rna.h5ad
+      sha256: 4bd6e6ee919f2c47ef593b445e0a3c535ce6134b6a6e9c0ad1bda92d26159407
+      observations: 2373
+      features: 19859
+      spatial_barcode_overlap: 2373
+  config_path: /home/ericzhuang2010/VscodeProjects/deconvATAC/data/processed/datasets/gse205055_shapemix_mouse_brain_p21_20um_primary_v1/dataset.yaml

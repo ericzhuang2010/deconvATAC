@@ -289,12 +289,23 @@ def file_digest(path: Path) -> str:
     return digest.hexdigest()
 
 
+def yaml_builtin(value: Any) -> Any:
+    """Recursively convert NumPy metadata scalars at the YAML boundary."""
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, Mapping):
+        return {yaml_builtin(key): yaml_builtin(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [yaml_builtin(item) for item in value]
+    return value
+
+
 def atomic_yaml(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
     try:
         with os.fdopen(descriptor, "w") as handle:
-            yaml.safe_dump(dict(value), handle, sort_keys=False)
+            yaml.safe_dump(yaml_builtin(dict(value)), handle, sort_keys=False)
         os.replace(temporary_name, path)
     except BaseException:
         Path(temporary_name).unlink(missing_ok=True)
@@ -396,6 +407,56 @@ def alignment_manifest(template: Mapping[str, Any], section: Mapping[str, Any]) 
     return path, record
 
 
+def validate_coordinate_source_alignment(
+    alignment: Mapping[str, Any],
+    atac_gsm: str,
+    atac_record: Mapping[str, Any],
+    coordinate_gsm: str,
+    expected_barcodes: int,
+) -> dict[str, Any]:
+    """Require an audited exact match between ATAC fragments and coordinates."""
+    fragment_label = (
+        f"{atac_gsm}:fragments:{Path(str(atac_record['barcode_path'])).name}"
+    )
+    coordinate_label = f"{coordinate_gsm}:coordinates"
+    sources = alignment.get("barcode_sources", {})
+    for label in (fragment_label, coordinate_label):
+        if int(sources.get(label, -1)) != expected_barcodes:
+            raise ValueError(
+                f"Alignment audit lacks {expected_barcodes} barcodes for coordinate source {label}"
+            )
+    matches = [
+        pair
+        for pair in alignment.get("pairwise", [])
+        if {str(pair.get("left")), str(pair.get("right"))}
+        == {fragment_label, coordinate_label}
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            "Alignment audit must contain exactly one ATAC-fragment/coordinate comparison "
+            f"for {atac_gsm} and {coordinate_gsm}; found {len(matches)}"
+        )
+    match = matches[0]
+    if not (
+        int(match.get("overlap", -1)) == expected_barcodes
+        and int(match.get("left_only", -1)) == 0
+        and int(match.get("right_only", -1)) == 0
+        and float(match.get("jaccard", -1.0)) == 1.0
+    ):
+        raise ValueError(
+            "ATAC fragments and coordinate source are not an audited exact barcode match: "
+            f"{atac_gsm} versus {coordinate_gsm}"
+        )
+    return {
+        "atac_fragment_source": fragment_label,
+        "coordinate_source": coordinate_label,
+        "overlap": expected_barcodes,
+        "left_only": 0,
+        "right_only": 0,
+        "jaccard": 1.0,
+    }
+
+
 def load_coordinates(
     work_root: Path,
     gsm: str,
@@ -434,6 +495,30 @@ def load_coordinates(
     return selected
 
 
+def validate_reference_feature_count(manifest: Mapping[str, Any], observed: int) -> None:
+    if observed < 1 or observed > 5_000:
+        raise ValueError(f"Real-spatial reference feature count must be in 1..5000; observed {observed}")
+    if int(manifest.get("counts", {}).get("peaks", -1)) != observed:
+        raise ValueError("Reference manifest peak count does not match the H5AD feature axis")
+    if observed == 5_000:
+        return
+    gate = manifest.get("feature_support_gate")
+    if not isinstance(gate, Mapping):
+        raise ValueError("A sub-5000 reference must declare feature_support_gate")
+    excluded = gate.get("excluded_zero_total_intervals")
+    if not isinstance(excluded, list) or len(excluded) != 5_000 - observed:
+        raise ValueError("Reference feature_support_gate excluded-feature count is inconsistent")
+    required = {
+        "source_selected_intervals": 5_000,
+        "minimum_reconstructed_reference_total": 1,
+        "retained_intervals": observed,
+        "outcome_data_used": False,
+    }
+    for name, expected in required.items():
+        if gate.get(name) != expected:
+            raise ValueError(f"Reference feature_support_gate.{name} must be {expected!r}")
+
+
 def reference_inputs(reference_id: str) -> tuple[Path, dict[str, Any], pd.DataFrame, FragmentShapeSpec]:
     manifest_path = ROOT / "data/processed/references" / reference_id / "reference.yaml"
     manifest = read_yaml(require_file(manifest_path, "standardized reference manifest"))
@@ -454,8 +539,7 @@ def reference_inputs(reference_id: str) -> tuple[Path, dict[str, Any], pd.DataFr
     if missing:
         raise ValueError(f"Reference feature axis lacks columns {missing}: {reference_id}")
     var.index = pd.Index(feature_names, name=var.index.name or "peak")
-    if len(var) != 5_000:
-        raise ValueError(f"Frozen real-spatial protocol requires exactly 5,000 reference features: {reference_id}")
+    validate_reference_feature_count(manifest, len(var))
     spec = FragmentShapeSpec.from_mapping(metadata)
     validate_fragment_shape_spec(spec)
     if spec.right_cut_offset is None:
@@ -488,10 +572,9 @@ def shape_provenance(
             Path(str(record["normalized"])).name: str(record["normalized_sha256"]),
             Path(repository_path(audit_path)).name: file_digest(audit_path),
         },
-        "feature_sha256": ordered_feature_sha256(var.index.astype(str)),
-        # This field is part of the strictly aligned model-input contract and
-        # must equal the reference metadata byte-for-value. Spatial alignment
-        # provenance belongs in the dataset/section manifests instead.
+        # The feature hash is reserved and computed from the exact ordered
+        # result peak axis by FragmentShapeResult.fragment_shape_metadata().
+        # Spatial alignment provenance belongs in the dataset/section manifests.
         "coordinate_validation": copy.deepcopy(spec.coordinate_validation),
         "split_sha256": file_digest(alignment_path),
         "software_versions": software_versions(),
@@ -614,6 +697,19 @@ def write_features(path: Path, names: Iterable[str]) -> None:
             handle.write(f"{name}\n")
 
 
+def shapemix_seed_metadata(template: Mapping[str, Any]) -> dict[str, int]:
+    block = template.get("shapemix_seeds")
+    if not isinstance(block, Mapping):
+        raise ValueError("Real-spatial template must declare shapemix_seeds")
+    result: dict[str, int] = {}
+    for name in ("outer_split_seed", "inner_mixture_seed"):
+        value = block.get(name)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"shapemix_seeds.{name} must be a nonnegative integer")
+        result[name] = value
+    return result
+
+
 def descriptor(
     template: Mapping[str, Any],
     section: Mapping[str, Any],
@@ -630,6 +726,7 @@ def descriptor(
         "comparison_key": "section",
         "group": str(section["group"]),
         "atac_gsm": str(section["atac_gsm"]),
+        "coordinate_gsm": str(section.get("coordinate_gsm", section["atac_gsm"])),
         "reference_id": str(section["reference_id"]),
         "truth_limitation": (
             "No exact per-spot cell-type composition truth is available; RNA, protein, "
@@ -654,12 +751,14 @@ def descriptor(
         "dataset_id": dataset_id,
         "source": f"{accession} spatial ATAC section {section['atac_gsm']}",
         "description": (
-            "Real spatial ATAC section projected onto a frozen, reference-only 5,000-feature "
-            "axis for ShapeMix prediction and orthogonal cross-modality validation."
+            "Real spatial ATAC section projected onto a frozen, reference-only feature "
+            "axis with positive reconstructed reference support for ShapeMix prediction "
+            "and orthogonal cross-modality validation."
         ),
         "labels_key": "cell_type",
         "spatial_key": "spatial",
         "benchmark_scope": "real_spatial_orthogonal_validation",
+        "shapemix_seeds": shapemix_seed_metadata(template),
         "evaluation_design": evaluation_design,
         "modalities": {
             "atac": {
@@ -722,7 +821,23 @@ def materialize_section(template: Mapping[str, Any], section: Mapping[str, Any])
     )
     raw_barcodes = read_barcodes(atac_record)
     canonical_barcodes = canonicalize_barcodes(raw_barcodes, barcode_policy)
-    coordinates = load_coordinates(work_root, atac_gsm, canonical_barcodes)
+    coordinate_gsm = str(section.get("coordinate_gsm", atac_gsm))
+    if coordinate_gsm != atac_gsm:
+        coordinate_alignment = validate_coordinate_source_alignment(
+            alignment,
+            atac_gsm,
+            atac_record,
+            coordinate_gsm,
+            len(canonical_barcodes),
+        )
+    else:
+        coordinate_alignment = {
+            "coordinate_source": f"{coordinate_gsm}:coordinates",
+            "relationship": "same_sample_all_fragment_barcodes_have_coordinates",
+            "required_fragment_barcodes": len(canonical_barcodes),
+        }
+    coordinates = load_coordinates(work_root, coordinate_gsm, canonical_barcodes)
+    coordinate_path = work_root / "spatial_coordinates" / coordinate_gsm / "coordinates.csv"
     reference_path, reference_manifest, var, reference_spec = reference_inputs(
         str(section["reference_id"])
     )
@@ -876,6 +991,12 @@ def materialize_section(template: Mapping[str, Any], section: Mapping[str, Any])
                 "reference_manifest_sha256": file_digest(reference_path.parents[1] / "reference.yaml"),
                 "atac_gsm": atac_gsm,
                 "atac_source_sha256": str(atac_record["normalized_sha256"]),
+                "coordinate_source": {
+                    "gsm": coordinate_gsm,
+                    "path": repository_path(coordinate_path),
+                    "sha256": file_digest(coordinate_path),
+                    "alignment": coordinate_alignment,
+                },
                 "spots": spatial.n_obs,
                 "features": spatial.n_vars,
                 "fragment_count_execution": {

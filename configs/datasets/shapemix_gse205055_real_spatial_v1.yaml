@@ -9,6 +9,9 @@ reusable_root: data/processed/shapemix/gse205055_spatial
 dataset_root: data/processed/datasets
 registry: data/registry/datasets.yaml
 truth_policy: orthogonal_validation_only
+shapemix_seeds:
+  outer_split_seed: 0
+  inner_mixture_seed: 0
 sections:
   - dataset_id: gse205055_shapemix_mouse_brain_p21_20um_primary_v1
     group: mouse_brain_p21_20um_primary
@@ -25,12 +28,14 @@ sections:
   - dataset_id: gse205055_shapemix_mouse_brain_p21_20um_rep2_v1
     group: mouse_brain_p21_20um_rep2
     atac_gsm: GSM6758284
+    coordinate_gsm: GSM6753041
     reference_id: gse246791_adult_mouse_brain_broad9_v1
     rna_gsm: GSM6753041
     validation_epigenome_gsms: [GSM6704977]
   - dataset_id: gse205055_shapemix_mouse_brain_p22_20um_100barcodes_rep2_v1
     group: mouse_brain_p22_20um_100barcodes_rep2
     atac_gsm: GSM6758285
+    coordinate_gsm: GSM6753043
     reference_id: gse246791_adult_mouse_brain_broad9_v1
     rna_gsm: GSM6753043
     validation_epigenome_gsms: [GSM6704978, GSM6704979, GSM6704980]
@@ -48,7 +53,9 @@ sections:
     validation_epigenome_gsms: []
 materialization:
   datasets: 6
-  selected_reference_features: 5000
+  selected_reference_features:
+    maximum: 5000
+    require_positive_reconstructed_reference_total: true
   exact_truth: false
   copy_validation_modalities_into_dataset: true
   fragment_count_partition: tabix_contig

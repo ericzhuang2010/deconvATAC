@@ -47,6 +47,14 @@ The runner mode is `exact_truth` for exact pseudo-spots and
 `prediction_only` for all other classes. Prediction-only campaigns request
 `metrics: []`; the runner must not produce truth-based metric rows.
 
+Reference-only ATAC marker panels use 25 ranked intervals per cell type. A
+feature must be enriched over all other reference types and supported in at
+least `min(10, n_type_cells, max(3, ceil(0.10 * n_type_cells)))` cells of that
+reference type. Thus well-supported types retain the original ten-cell gate,
+while an audited rare type can use a proportional gate with a three-cell
+floor. The per-type threshold is recorded in the marker manifest. This rule
+uses only the standardized reference and never spatial outcomes.
+
 ## Analysis units
 
 - GSE194122: donor. The two inner mixtures and any repeated sites are first
@@ -286,6 +294,43 @@ incompatible universal atlas.
 
 No labels, peaks, smoothing, or model parameters may be selected by maximizing
 RNA/protein/histone concordance on a section later used for reporting.
+
+### Real-spatial execution-metadata clarification (2026-09-07)
+
+Before any ShapeMix spatial fit and before inspecting any spatial prediction
+values, the production input preflight exposed three metadata-only contract
+gaps. Every GSE205055/GSE263333 descriptor now declares
+`outer_split_seed: 0` and `inner_mixture_seed: 0`. For these observed,
+prediction-only sections the pair seeds deterministic ShapeMix initialization;
+it does not represent a simulated split, mixture replicate, or biological
+replicate.
+
+GSM6758284 and GSM6758285 deposit ATAC fragments without separate spatial
+coordinate archives. Their templates therefore declare the matched RNA
+coordinate sources GSM6753041 and GSM6753043, respectively. The frozen
+cross-modality audits require exact ATAC-fragment/coordinate barcode matches
+(2,500/2,500 and 10,000/10,000, with zero records unique to either side) before
+those coordinates may be used. All other sections use their same-GSM deposited
+coordinate table and require a coordinate for every retained fragment barcode.
+
+The GSE246791 combined-reference source map uses unique flat identifiers of the
+form `GSM*_fragments.tsv.gz`; each value is the audited normalized-fragment
+SHA-256. Flat identifiers are required because `/` in an AnnData `.uns`
+mapping key is interpreted as an HDF5 group separator. A reference-only
+signature preflight also found four adjacent ranked intervals
+(`chr1:24613500-24614000`, `chr1:24615000-24615500`,
+`chr1:24614000-24614500`, and `chr1:24614500-24615000`) with zero total counts
+in the independently reconstructed parent-fragment layers. The adult reference
+therefore retains the original rank order while excluding only those zero-total
+features, yielding 4,996 positive-support intervals. The embryo and
+hippocampus references remain at 5,000. This positive-support gate and its
+excluded identifiers are stored in the reference manifest; spatial data do not
+participate.
+
+The rejected metadata objects and failed preflight batches remain in
+recoverable work/development quarantine. These corrections were based only on
+contract exceptions, reference counts, and run status; no biological
+prediction value was consulted.
 
 ## CUDA qualification
 

@@ -408,6 +408,13 @@ def fragment_path(gsm: str) -> Path:
     return FAMILY_ROOT / "normalized_fragments" / gsm / "fragments.tsv.gz"
 
 
+def fragment_source_identifier(gsm: str) -> str:
+    """Return a unique flat identifier that names the normalized fragment file."""
+    if not re.fullmatch(r"GSM[0-9]+", gsm):
+        raise ValueError(f"Invalid GSM accession for fragment provenance: {gsm!r}")
+    return f"{gsm}_fragments.tsv.gz"
+
+
 def fragment_manifest(gsm: str) -> dict[str, Any]:
     path = fragment_path(gsm).parent / "manifest.yaml"
     record = read_yaml(path)
@@ -631,6 +638,23 @@ def build_coordinate_audit() -> int:
     return selected_offset
 
 
+def positive_reference_feature_mask(
+    layers: Mapping[str, sparse.csr_matrix],
+) -> tuple[np.ndarray, np.ndarray]:
+    if not layers:
+        raise ValueError("Reference feature support requires at least one shape layer")
+    widths = {int(matrix.shape[1]) for matrix in layers.values()}
+    if len(widths) != 1:
+        raise ValueError("Reference shape layers do not share one feature axis")
+    totals = np.zeros(widths.pop(), dtype=np.int64)
+    for matrix in layers.values():
+        totals += np.asarray(matrix.sum(axis=0), dtype=np.int64).ravel()
+    keep = totals > 0
+    if not keep.any():
+        raise ValueError("All candidate reference features have zero reconstructed counts")
+    return keep, totals
+
+
 def combined_metadata(
     values: Iterable[Mapping[str, Any]],
     layers: Mapping[str, sparse.csr_matrix],
@@ -798,7 +822,7 @@ def build_reference() -> Path:
                 sparse.csr_matrix(cache.layers[layer_name], dtype=np.int64)
             )
         metadata_parts.append(cache.uns["fragment_shape"])
-        source_hashes[source.gsm] = str(
+        source_hashes[fragment_source_identifier(source.gsm)] = str(
             read_yaml(cache_path.parent / "manifest.yaml")["source_fragment_sha256"]
         )
     obs = pd.concat(obs_parts, axis=0)
@@ -809,6 +833,19 @@ def build_reference() -> Path:
         for name, parts in layer_parts.items()
     }
     var = selected.set_index("peak_id")[["chrom", "start", "end"]].copy()
+    candidate_features = len(var)
+    keep, recovered_totals = positive_reference_feature_mask(layers)
+    zero_reference_features = var.index[~keep].astype(str).tolist()
+    if zero_reference_features:
+        layers = {name: matrix[:, keep].tocsr() for name, matrix in layers.items()}
+        var = var.iloc[np.flatnonzero(keep)].copy()
+    feature_support_filter = {
+        "source_selected_intervals": candidate_features,
+        "minimum_reconstructed_reference_total": 1,
+        "retained_intervals": len(var),
+        "excluded_zero_total_intervals": zero_reference_features,
+        "outcome_data_used": False,
+    }
     x = sparse.csr_matrix((len(obs), len(var)), dtype=np.int64)
     for matrix in layers.values():
         x = (x + matrix).tocsr()
@@ -823,6 +860,7 @@ def build_reference() -> Path:
         label_sha256,
         source_hashes,
     )
+    reference.uns["reference_feature_support_filter"] = feature_support_filter
     validate_fragment_shape_spec(
         FragmentShapeSpec.from_mapping(reference.uns["fragment_shape"])
     )
@@ -845,13 +883,15 @@ def build_reference() -> Path:
                 "reference_id": CONFIG["standardized_reference_id"],
                 "source_dataset_id": CONFIG["source_dataset_id"],
                 "description": (
-                    "Twelve-region adult mouse-brain snATAC reference on a "
-                    "reference-only 5,000-interval mm10 axis."
+                    "Twelve-region adult mouse-brain snATAC reference on an "
+                    f"outcome-blind {reference.n_vars:,}-interval mm10 axis with "
+                    "positive reconstructed reference support."
                 ),
                 "labels_key": "cell_type",
                 "genome_build": "mm10",
                 "cell_types": list(CELL_TYPES),
                 "counts": {"cells": reference.n_obs, "peaks": reference.n_vars},
+                "feature_support_gate": feature_support_filter,
                 "modalities": {
                     "atac": {
                         "path": repository_path(

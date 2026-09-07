@@ -89,6 +89,11 @@ def _is_integer(value: Any) -> bool:
     return isinstance(value, Integral) and not isinstance(value, (bool, np.bool_))
 
 
+def _is_true_bool(value: Any) -> bool:
+    """Accept native and NumPy booleans while rejecting truthy non-booleans."""
+    return isinstance(value, (bool, np.bool_)) and bool(value)
+
+
 def _validate_complete_fragment_length_partition(
     bins: tuple[FragmentShapeBin, ...],
 ) -> None:
@@ -458,7 +463,7 @@ def _validate_coordinate_provenance(
     if matrix_match == "representative_recovered_read_concordance" and value.get(
         "validation_method"
     ) == "deposited_matrix_concordance_thresholds":
-        if value.get("passed") is not True:
+        if not _is_true_bool(value.get("passed")):
             raise ValueError(
                 "fragment_shape.coordinate_validation.passed must be true for "
                 "representative recovered-read concordance."

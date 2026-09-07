@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import math
 import os
 import shutil
 import tempfile
@@ -29,9 +30,22 @@ DEFAULT_REFERENCES = (
     "gse244618_human_hippocampus_donor3_region3_v1",
 )
 MIN_NONZERO_CELLS = 10
+MIN_NONZERO_CELL_FRACTION = 0.10
+MIN_NONZERO_CELLS_FLOOR = 3
 MARKERS_PER_TYPE = 25
 ROW_CHUNK = 4_096
 RATE_PSEUDOCOUNT = 1.0e-4
+
+
+def marker_support_minimum(n_cells: int) -> int:
+    """Return the frozen reference-only support gate for one cell type."""
+    if n_cells <= 0:
+        raise ValueError("Marker support requires at least one reference cell")
+    return min(
+        MIN_NONZERO_CELLS,
+        n_cells,
+        max(MIN_NONZERO_CELLS_FLOOR, math.ceil(MIN_NONZERO_CELL_FRACTION * n_cells)),
+    )
 
 
 def repository_path(path: Path) -> str:
@@ -54,12 +68,23 @@ def digest(path: Path) -> str:
     return value.hexdigest()
 
 
+def yaml_builtin(value: Any) -> Any:
+    """Recursively convert NumPy metadata scalars at the YAML boundary."""
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, Mapping):
+        return {yaml_builtin(key): yaml_builtin(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [yaml_builtin(item) for item in value]
+    return value
+
+
 def atomic_yaml(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
     try:
         with os.fdopen(descriptor, "w") as handle:
-            yaml.safe_dump(dict(value), handle, sort_keys=False)
+            yaml.safe_dump(yaml_builtin(dict(value)), handle, sort_keys=False)
         os.replace(temporary_name, path)
     except BaseException:
         Path(temporary_name).unlink(missing_ok=True)
@@ -74,6 +99,7 @@ def rank_marker_indices(
     feature_names: Iterable[str],
     *,
     n_markers: int = MARKERS_PER_TYPE,
+    minimum_nonzero_cells: int = MIN_NONZERO_CELLS,
 ) -> list[int]:
     """Rank reference-only marker features with deterministic identifier ties."""
     mean_type = np.asarray(mean_type, dtype=np.float64)
@@ -86,18 +112,21 @@ def rank_marker_indices(
         and mean_type.shape == mean_rest.shape == coverage.shape == totals.shape == names.shape
     ):
         raise ValueError("Marker-ranker inputs must be aligned one-dimensional arrays")
+    if minimum_nonzero_cells <= 0:
+        raise ValueError("minimum_nonzero_cells must be positive")
     score = np.log2(
         (mean_type + RATE_PSEUDOCOUNT) / (mean_rest + RATE_PSEUDOCOUNT)
     )
     eligible = np.flatnonzero(
         np.isfinite(score)
-        & (coverage >= MIN_NONZERO_CELLS)
+        & (coverage >= minimum_nonzero_cells)
         & (mean_type > mean_rest)
         & (totals > 0)
     )
     if len(eligible) < n_markers:
         raise ValueError(
-            f"Only {len(eligible)} features pass the marker-support gate; need {n_markers}"
+            f"Only {len(eligible)} features pass the marker-support gate "
+            f"at minimum_nonzero_cells={minimum_nonzero_cells}; need {n_markers}"
         )
     ordered = sorted(
         eligible.tolist(),
@@ -151,6 +180,30 @@ def aggregate_reference(
     return totals, coverage, cells
 
 
+def validate_marker_reference_feature_count(
+    manifest: Mapping[str, Any], observed: int
+) -> None:
+    if observed < 1 or observed > 5_000:
+        raise ValueError(f"Marker reference feature count must be in 1..5000; observed {observed}")
+    if int(manifest.get("counts", {}).get("peaks", -1)) != observed:
+        raise ValueError("Reference manifest peak count does not match marker-source H5AD")
+    if observed == 5_000:
+        return
+    gate = manifest.get("feature_support_gate")
+    if not isinstance(gate, Mapping):
+        raise ValueError("A sub-5000 marker reference must declare feature_support_gate")
+    excluded = gate.get("excluded_zero_total_intervals")
+    if (
+        gate.get("source_selected_intervals") != 5_000
+        or gate.get("minimum_reconstructed_reference_total") != 1
+        or gate.get("retained_intervals") != observed
+        or gate.get("outcome_data_used") is not False
+        or not isinstance(excluded, list)
+        or len(excluded) != 5_000 - observed
+    ):
+        raise ValueError("Marker reference feature_support_gate is inconsistent")
+
+
 def build_reference_markers(reference_id: str) -> Path:
     output_root = OUTPUT_ROOT / reference_id
     marker_path = output_root / "marker_features.yaml"
@@ -175,8 +228,7 @@ def build_reference_markers(reference_id: str) -> Path:
     cell_types = [str(value) for value in manifest["cell_types"]]
     reference = ad.read_h5ad(reference_path, backed="r")
     try:
-        if reference.n_vars != 5_000:
-            raise ValueError(f"Expected 5,000 reference features: {reference_id}")
+        validate_marker_reference_feature_count(manifest, reference.n_vars)
         validate_fragment_shape_feature_axis(reference, f"{reference_id} marker source")
         shape_spec = FragmentShapeSpec.from_mapping(reference.uns["fragment_shape"])
         names = reference.var_names.astype(str).tolist()
@@ -186,18 +238,22 @@ def build_reference_markers(reference_id: str) -> Path:
     all_totals = totals.sum(axis=0)
     all_cells = int(cells.sum())
     markers: dict[str, Any] = {}
+    support_minimums: dict[str, int] = {}
     for type_index, cell_type in enumerate(cell_types):
         mean_type = totals[type_index] / int(cells[type_index])
         rest_cells = all_cells - int(cells[type_index])
         if rest_cells <= 0:
             raise ValueError("Marker selection requires at least two reference cell types")
         mean_rest = (all_totals - totals[type_index]) / rest_cells
+        support_minimum = marker_support_minimum(int(cells[type_index]))
+        support_minimums[cell_type] = support_minimum
         selected = rank_marker_indices(
             mean_type,
             mean_rest,
             coverage[type_index],
             totals[type_index],
             names,
+            minimum_nonzero_cells=support_minimum,
         )
         markers[cell_type] = {
             "features": [names[index] for index in selected],
@@ -211,6 +267,7 @@ def build_reference_markers(reference_id: str) -> Path:
                 for index in selected
             ],
             "nonzero_reference_cells": [int(coverage[type_index, index]) for index in selected],
+            "minimum_nonzero_reference_cells": support_minimum,
         }
 
     output_root.parent.mkdir(parents=True, exist_ok=True)
@@ -224,7 +281,13 @@ def build_reference_markers(reference_id: str) -> Path:
             "outcome_data_used": False,
             "selection": {
                 "markers_per_cell_type": MARKERS_PER_TYPE,
-                "minimum_nonzero_reference_cells": MIN_NONZERO_CELLS,
+                "minimum_nonzero_reference_cells_policy": (
+                    "min(10, n_type_cells, max(3, ceil(0.10 * n_type_cells)))"
+                ),
+                "minimum_nonzero_reference_cells_cap": MIN_NONZERO_CELLS,
+                "minimum_nonzero_reference_cell_fraction": MIN_NONZERO_CELL_FRACTION,
+                "minimum_nonzero_reference_cells_floor": MIN_NONZERO_CELLS_FLOOR,
+                "minimum_nonzero_reference_cells_by_cell_type": support_minimums,
                 "score": "log2((mean_type+1e-4)/(mean_all_other_types+1e-4))",
                 "eligibility": "mean_type_gt_mean_rest",
                 "tie_breaks": [

@@ -1073,6 +1073,21 @@ Evidence classes must remain separate:
 
 The minimum new core is therefore 192 jobs, of which NNLS jobs should be short. This count excludes separately versioned PBMC stress datasets and optional Cell2location/RCTD/SpatialDWLS runs. Do not launch the 192-job campaign as one undifferentiated batch: each stage below has a fail-closed gate and its own summary.
 
+Execution-metadata amendment, 2026-09-07: every observed real-spatial descriptor
+uses the explicit seed pair `(outer_split_seed=0, inner_mixture_seed=0)` solely
+for deterministic ShapeMix initialization; these are not simulation or
+replication factors. GSE205055 ATAC-only accessions GSM6758284 and GSM6758285
+use the paired RNA coordinate sources GSM6753041 and GSM6753043 only after
+frozen exact barcode audits. The GSE246791 combined source-hash map uses unique
+flat `GSM*_fragments.tsv.gz` identifiers so AnnData/HDF5 round-trips preserve
+the mapping. A reference-only signature preflight excludes exactly four
+zero-total reconstructed intervals from the original ranked GSE246791 axis,
+retaining 4,996 positive-support adult-brain features in unchanged rank order;
+the four identifiers and outcome-blind gate are stored in the reference
+manifest. Embryo and hippocampus retain 5,000 features. These changes were
+triggered by fail-closed metadata/reference-count preflight, before any ShapeMix
+spatial fit or inspection of spatial prediction values.
+
 ### 13.4 Ordered execution stages
 
 #### Evaluation stage E0 — Freeze the external protocol and preflight inputs
@@ -1184,6 +1199,14 @@ For each section, freeze the reference, label universe, feature axis, and cross-
 - off-reference mass or residual warnings rather than forcing every spatial signal into a known type.
 
 Do not tune labels, peaks, smoothing, or model parameters to maximize RNA/protein concordance on the same section later used for reporting.
+
+The outcome-blind ATAC marker panels use 25 ranked intervals per reference
+cell type. Marker support is frozen as
+`min(10, n_type_cells, max(3, ceil(0.10 * n_type_cells)))`: the ten-cell gate
+is unchanged for ordinary classes, while the intentionally retained 22-cell
+adult-brain `Other immune` class uses a three-cell support gate. Each marker
+manifest records the resolved threshold per type; spatial outcomes never enter
+feature selection.
 
 #### Evaluation stage E6 — Cross-family synthesis
 

@@ -2,11 +2,30 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from scipy import sparse
 
 from scripts.materialize_shapemix_gse246791_reference import (
+    fragment_source_identifier,
     parse_interval,
+    positive_reference_feature_mask,
     rank_selected_indices,
 )
+
+
+def test_gse246791_combined_source_identifier_names_the_fragment_file() -> None:
+    identifier = fragment_source_identifier("GSM7876902")
+    assert identifier == "GSM7876902_fragments.tsv.gz"
+    assert "/" not in identifier
+
+
+def test_gse246791_positive_reference_support_filter_is_order_preserving() -> None:
+    layers = {
+        "short": sparse.csr_matrix([[1, 0, 0], [0, 0, 2]]),
+        "long": sparse.csr_matrix([[0, 0, 3], [0, 0, 0]]),
+    }
+    keep, totals = positive_reference_feature_mask(layers)
+    np.testing.assert_array_equal(keep, [True, False, True])
+    np.testing.assert_array_equal(totals, [1, 0, 5])
 
 
 def test_gse246791_deposited_interval_parser_is_fail_closed() -> None:

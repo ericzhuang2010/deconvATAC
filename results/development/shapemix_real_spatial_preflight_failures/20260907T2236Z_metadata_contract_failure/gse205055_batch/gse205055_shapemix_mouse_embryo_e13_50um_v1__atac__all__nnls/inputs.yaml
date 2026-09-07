@@ -1,0 +1,90 @@
+dataset_id: gse205055_shapemix_mouse_embryo_e13_50um_v1
+modality: atac
+feature_set: all
+registry: data/registry/datasets.yaml
+dataset_config:
+  dataset_id: gse205055_shapemix_mouse_embryo_e13_50um_v1
+  source: GSE205055 spatial ATAC section GSM6801813
+  description: Real spatial ATAC section projected onto a frozen, reference-only 5,000-feature
+    axis for ShapeMix prediction and orthogonal cross-modality validation.
+  labels_key: cell_type
+  spatial_key: spatial
+  benchmark_scope: real_spatial_orthogonal_validation
+  evaluation_design:
+    comparison_key: section
+    group: mouse_embryo_e13_50um
+    atac_gsm: GSM6801813
+    coordinate_gsm: GSM6801813
+    reference_id: gse216371_mouse_embryo_e13_major_types_v1
+    truth_limitation: No exact per-spot cell-type composition truth is available;
+      RNA, protein, histone, anatomy, and spatial-continuity endpoints are orthogonal
+      validation only.
+  modalities:
+    atac:
+      reference:
+        path: data/processed/references/gse216371_mouse_embryo_e13_major_types_v1/atac/reference.h5ad
+      spatial:
+        path: data/processed/datasets/gse205055_shapemix_mouse_embryo_e13_50um_v1/atac/spatial.h5ad
+      labels_key: cell_type
+      spatial_key: spatial
+      cell_types:
+      - Mesenchymal
+      - Chondro-osteogenic
+      - Muscle
+      - Endothelial
+      - Epithelial
+      - Hepatocyte
+      - Erythroid
+      - Immune
+      - Neural progenitor/regional CNS
+      - Excitatory neuron
+      - Inhibitory neuron
+      - Peripheral/sensory/motor neural
+      fragment_shape:
+        schema_version: 1
+        axis: parent_fragment_length_bp
+        count_unit: deduplicated_cut_sites
+        read_support_policy: ignore
+        peak_assignment: containing_nonoverlapping_peak
+        left_cut_offset: 0
+        right_cut_offset: 0
+        bins:
+        - name: short
+          min_inclusive: 0
+          max_exclusive: 100
+          layer: fragment_length_lt_100
+        - name: mono
+          min_inclusive: 100
+          max_exclusive: 250
+          layer: fragment_length_100_249
+        - name: long
+          min_inclusive: 250
+          layer: fragment_length_ge_250
+        feature_sha256: 20d6e8587939ea52a65df1d93b036c055335a54217414b5fe1a29d8bbaa32580
+        coordinate_validation:
+          audit: data/processed/shapemix/gse216371_embryo_reference/manifests/embryo_fragment_coordinate_audit.yaml
+          fragment_total_match: exact
+          matrix_match: not_available
+          selected_right_cut_offset: 0
+          semantic_match: exact
+          validation_method: deposited_bed_half_open_parent_fragments
+      feature_sets:
+        all:
+          mode: all
+        selected_reference_features:
+          path: data/processed/datasets/gse205055_shapemix_mouse_embryo_e13_50um_v1/atac/features/selected_reference_features.txt
+  validation:
+    truth_status: orthogonal_validation_not_exact_composition_truth
+    exact_truth: false
+    alignment_manifest:
+      path: data/processed/datasets/gse205055_shapemix_mouse_embryo_e13_50um_v1/validation/alignment.yaml
+      sha256: 2e4ed9e8cac2e3e722e48f30ef3d50dcc1022f7488063c7cb4787697db3c24c1
+    epigenome: []
+    rna:
+      gsm: GSM6799937
+      path: data/processed/datasets/gse205055_shapemix_mouse_embryo_e13_50um_v1/validation/rna/rna.h5ad
+      sha256: 5d512e851df48c56d436325c9e871dfb5b01a2c6a7ada49a56bec3e2a459d762
+      observations: 2187
+      features: 20900
+      spatial_barcode_overlap: 2187
+  config_path: /home/ericzhuang2010/VscodeProjects/deconvATAC/data/processed/datasets/gse205055_shapemix_mouse_embryo_e13_50um_v1/dataset.yaml

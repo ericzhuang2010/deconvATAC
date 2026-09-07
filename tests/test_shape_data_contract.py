@@ -407,13 +407,16 @@ def test_coordinate_validation_rejects_bed_parent_fragments_without_total_match(
         validate_deconvolution_input(data)
 
 
-def test_coordinate_validation_accepts_passed_representative_matrix_concordance() -> None:
+@pytest.mark.parametrize("passed", [True, np.bool_(True)])
+def test_coordinate_validation_accepts_passed_representative_matrix_concordance(
+    passed,
+) -> None:
     data = _shape_input()
     representative_validation = {
         "selected_right_cut_offset": 0,
         "matrix_match": "representative_recovered_read_concordance",
         "validation_method": "deposited_matrix_concordance_thresholds",
-        "passed": True,
+        "passed": passed,
         "audit": "data/processed/shapemix/example/manifests/coordinate_audit.yaml",
     }
     for adata in (data.reference, data.spatial):
