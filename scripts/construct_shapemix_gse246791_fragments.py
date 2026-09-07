@@ -12,7 +12,7 @@ import time
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, TextIO
+from typing import Any, Callable, Mapping, TextIO
 
 import h5py
 import numpy as np
@@ -49,6 +49,18 @@ def file_digest(path: Path) -> str:
         for chunk in iter(lambda: handle.read(CHUNK_BYTES), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def run_fragment_builder(
+    builder: Callable[..., Any], *, work_root: Path, **kwargs: Any
+) -> Any:
+    """Run SnapATAC2 with disposable scratch rooted in preprocessing work."""
+    previous_directory = Path.cwd()
+    os.chdir(work_root)
+    try:
+        return builder(**kwargs)
+    finally:
+        os.chdir(previous_directory)
 
 
 def load_h5ad_fragment_counts(path: Path) -> tuple[list[str], np.ndarray, dict[str, int]]:
@@ -252,8 +264,14 @@ def main() -> None:
     args = parse_args()
     if os.environ.get("DECONVATAC_RESOURCE_GUARD") != "1":
         raise RuntimeError("Run fragment construction through run_shapemix_low_impact.sh")
-    if os.environ.get("RAYON_NUM_THREADS") != "1":
-        raise RuntimeError("RAYON_NUM_THREADS=1 is required for SnapATAC2 containment")
+    try:
+        rayon_threads = int(os.environ["RAYON_NUM_THREADS"])
+    except (KeyError, ValueError) as exc:
+        raise RuntimeError("RAYON_NUM_THREADS must be a positive integer") from exc
+    if rayon_threads < 1:
+        raise RuntimeError("RAYON_NUM_THREADS must be a positive integer")
+    if hasattr(os, "sched_getaffinity") and rayon_threads > len(os.sched_getaffinity(0)):
+        raise RuntimeError("RAYON_NUM_THREADS exceeds the allowed CPU affinity")
     config = load_yaml(args.config)
     bam = args.bam or (
         ROOT
@@ -302,7 +320,9 @@ def main() -> None:
     import snapatac2 as snap
 
     started = time.monotonic()
-    statistics = snap.pp.make_fragment_file(
+    statistics = run_fragment_builder(
+        snap.pp.make_fragment_file,
+        work_root=work_root,
         bam_file=bam,
         output_file=raw_fragments,
         is_paired=True,
@@ -355,7 +375,8 @@ def main() -> None:
         },
         "elapsed_seconds": time.monotonic() - started,
         "resource_policy": {
-            "rayon_threads": int(os.environ["RAYON_NUM_THREADS"]),
+            "rayon_threads": rayon_threads,
+            "scratch_directory": repository_path(work_root),
             "guard": "scripts/run_shapemix_low_impact.sh",
         },
     }

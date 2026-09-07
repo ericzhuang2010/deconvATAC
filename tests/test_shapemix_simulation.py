@@ -14,6 +14,8 @@ import pytest
 import yaml
 from scipy import sparse
 
+import scripts.regenerate_shapemix_pbmc_simulations as simulation_module
+
 from deconvatac.data import (
     DeconvolutionInput,
     FragmentShapeSpec,
@@ -349,6 +351,21 @@ def test_shape_subsetting_preserves_source_qc_and_refreshes_matrix_metadata() ->
     assert metadata["feature_sha256"] == ordered_feature_sha256(selected.var_names)
     assert metadata["matrix_counters"]["assigned_cut_sites"] == int(selected.X.sum())
     assert cells.uns["fragment_shape"] == source_metadata
+
+
+def test_repository_path_preserves_lexical_path_through_symlink(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repository = tmp_path / "repository"
+    storage = tmp_path / "storage"
+    repository.mkdir()
+    storage.mkdir()
+    (repository / "data").symlink_to(storage, target_is_directory=True)
+    monkeypatch.setattr(simulation_module, "ROOT", repository)
+
+    assert simulation_module._repository_path(repository / "data" / "artifact.h5ad") == (
+        "data/artifact.h5ad"
+    )
 
 
 def test_atomic_writer_records_hashes_and_refuses_overwrite(tmp_path: Path) -> None:

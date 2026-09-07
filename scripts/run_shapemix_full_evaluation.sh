@@ -17,6 +17,22 @@ require_file() {
     fi
 }
 
+report_is_passed() {
+    local path="$1"
+    [[ -s "$path" ]] && \
+        [[ "$(awk '$1 == "status:" {print $2; exit}' "$path")" == "passed" ]]
+}
+
+require_passed_report() {
+    local path="$1"
+    local label="$2"
+    require_file "$path" "$label"
+    if ! report_is_passed "$path"; then
+        printf '%s did not pass: %s\n' "$label" "$path" >&2
+        return 1
+    fi
+}
+
 wait_for_file() {
     local path="$1"
     local label="$2"
@@ -101,7 +117,7 @@ wait_for_file "$ADULT_GATE" adult_preacquisition_gate
 run_guarded_until_file "$ADULT_READ_AUDIT" adult_fragment_read_acquisition \
     .venv/bin/python scripts/download_shapemix_spatial.py \
     --config configs/data_sources/shapemix_gse246791_fragment_reads.yaml \
-    --workers 4 \
+    --workers 8 \
     --timeout 1800
 run_guarded adult_alignment_tests .venv/bin/python -m pytest -q tests/test_align_shapemix_gse246791.py tests/test_construct_shapemix_gse246791_fragments.py
 run_guarded adult_alignment_compile_check .venv/bin/python -m py_compile scripts/align_shapemix_gse246791.py scripts/sort_shapemix_bam_stream.py
@@ -123,7 +139,27 @@ adult_samples=(
 for gsm in "${adult_samples[@]}"; do
     fragment_manifest="data/processed/shapemix/gse246791_mouse_brain_reference/normalized_fragments/$gsm/manifest.yaml"
     if [[ ! -s "$fragment_manifest" ]]; then
-        run_guarded "adult_align_$gsm" taskset --cpu-list 6,7 .venv-shapemix-fragments/bin/python scripts/align_shapemix_gse246791.py --gsm "$gsm"
+        if [[ "${DECONVATAC_RESOURCE_PROFILE:-co_tenant}" == "exclusive" ]]; then
+            logical_cpus="$(nproc)"
+            bwa_threads=$(( logical_cpus / 2 ))
+            sort_extra_threads=$(( logical_cpus / 4 ))
+            if (( bwa_threads < 1 )); then
+                bwa_threads=1
+            fi
+            if (( sort_extra_threads < 1 )); then
+                sort_extra_threads=1
+            fi
+            run_guarded "adult_align_$gsm" \
+                .venv-shapemix-fragments/bin/python scripts/align_shapemix_gse246791.py \
+                --gsm "$gsm" \
+                --bwa-threads "$bwa_threads" \
+                --sort-extra-threads "$sort_extra_threads" \
+                --maximum-cpus "$logical_cpus"
+        else
+            run_guarded "adult_align_$gsm" taskset --cpu-list 6,7 \
+                .venv-shapemix-fragments/bin/python scripts/align_shapemix_gse246791.py \
+                --gsm "$gsm"
+        fi
         run_guarded "adult_fragments_$gsm" .venv-shapemix-fragments/bin/python scripts/construct_shapemix_gse246791_fragments.py --gsm "$gsm" --cleanup-bam
     else
         log "full_evaluation_stage_reused label=adult_fragments_$gsm"
@@ -137,8 +173,10 @@ if [[ ! -s "$CUDA_REPORT" ]]; then
     run_guarded cuda_v2_layout .venv/bin/python scripts/validate_shapemix_file_layout.py --experiment-config configs/experiments/shapemix_cuda_full_qualification_v2.yaml --allow-existing-results
     run_guarded cuda_v2_full .venv/bin/python scripts/run_deconvolution.py --experiment-config configs/experiments/shapemix_cuda_full_qualification_v2.yaml --overwrite
     run_guarded cuda_v2_summary .venv/bin/python scripts/summarize_shapemix_cuda_qualification.py --root results/development/shapemix_gpu_qualification_v2
+elif ! report_is_passed "$CUDA_REPORT"; then
+    run_guarded cuda_v2_summary .venv/bin/python scripts/summarize_shapemix_cuda_qualification.py --root results/development/shapemix_gpu_qualification_v2
 fi
-require_file "$CUDA_REPORT" cuda_qualification_report
+require_passed_report "$CUDA_REPORT" cuda_qualification_report
 
 if [[ ! -s "$HUMAN_REFERENCE" ]]; then
     run_guarded human_reference_tests .venv/bin/python -m pytest -q tests/test_prepare_shapemix_gse244618.py
@@ -171,7 +209,7 @@ fi
 require_file "$EMBRYO_REFERENCE" embryo_reference
 
 if [[ ! -s "$GSE205055_SUMMARY" || ! -s "$GSE263333_SUMMARY" ]]; then
-    run_guarded real_spatial_tests .venv/bin/python -m pytest -q tests/test_shapemix_real_spatial_validation.py tests/test_shapemix_spatial_preprocessing.py
+    run_guarded real_spatial_tests .venv/bin/python -m pytest -q tests/test_materialize_shapemix_real_spatial.py tests/test_prepare_shapemix_reference_marker_features.py tests/test_shapemix_spatial_preprocessing.py tests/test_summarize_shapemix_real_spatial.py
     run_guarded real_spatial_marker_features .venv/bin/python scripts/prepare_shapemix_reference_marker_features.py
     run_guarded real_spatial_materialize .venv/bin/python scripts/materialize_shapemix_real_spatial.py
     run_guarded real_spatial_layout .venv/bin/python scripts/validate_shapemix_file_layout.py --experiment-config configs/experiments/shapemix_gse205055_real_spatial_v1.yaml --experiment-config configs/experiments/shapemix_gse263333_real_spatial_v1.yaml --allow-existing-results

@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 import copy
+import ctypes
+import gc
 import hashlib
 import json
 import os
@@ -296,9 +298,97 @@ def _rank_fold(
     return result
 
 
+def _validate_existing_feature_axes() -> None:
+    manifest_path = AXIS_ROOT / "manifest.yaml"
+    union_table_path = AXIS_ROOT / "union" / "peaks.tsv.gz"
+    union_list_path = AXIS_ROOT / "union" / "selected_peaks.txt"
+    required = (manifest_path, union_table_path, union_list_path)
+    missing = [path for path in required if not path.is_file()]
+    if missing:
+        raise FileExistsError(
+            f"{AXIS_ROOT} is incomplete; missing "
+            + ", ".join(path.relative_to(AXIS_ROOT).as_posix() for path in missing)
+        )
+
+    manifest = _read_yaml(manifest_path)
+    if manifest.get("schema_version") != 1 or manifest.get("status") != "complete":
+        raise ValueError(f"{manifest_path} is not a complete schema-v1 manifest.")
+    if tuple(manifest.get("label_ontology", ())) != CELL_TYPES:
+        raise ValueError("Existing GSE194122 feature-axis ontology has changed.")
+    if tuple(int(value) for value in manifest.get("donors", ())) != DONORS:
+        raise ValueError("Existing GSE194122 feature-axis donor set has changed.")
+    selector = manifest.get("selector")
+    if (
+        not isinstance(selector, dict)
+        or int(selector.get("n_top_peaks", -1)) != N_TOP_PEAKS
+    ):
+        raise ValueError("Existing GSE194122 feature-axis selector has changed.")
+
+    fold_records = manifest.get("folds")
+    if not isinstance(fold_records, list):
+        raise ValueError("Existing GSE194122 feature-axis manifest has no fold records.")
+    try:
+        folds_by_donor = {int(record["donor"]): record for record in fold_records}
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("Existing GSE194122 fold records are malformed.") from exc
+    if (
+        len(folds_by_donor) != len(fold_records)
+        or set(folds_by_donor) != set(DONORS)
+    ):
+        raise ValueError("Existing GSE194122 fold records do not match the donor set.")
+
+    union = pd.read_csv(union_table_path, sep="\t")
+    if "feature_id" not in union or union["feature_id"].duplicated().any():
+        raise ValueError("Existing GSE194122 union feature table is invalid.")
+    union_ids = union["feature_id"].astype(str).tolist()
+    if union_list_path.read_text().splitlines() != union_ids:
+        raise ValueError("Existing GSE194122 union feature list and table disagree.")
+    if int(manifest.get("union_peaks", -1)) != len(union_ids):
+        raise ValueError(
+            "Existing GSE194122 union feature count disagrees with its manifest."
+        )
+    union_set = set(union_ids)
+
+    for donor in DONORS:
+        donor_dir = AXIS_ROOT / f"donor_{donor}"
+        table_path = donor_dir / "peak_selection.tsv.gz"
+        list_path = donor_dir / "selected_peaks.txt"
+        if not table_path.is_file() or not list_path.is_file():
+            raise FileExistsError(f"Existing donor-{donor} feature axis is incomplete.")
+        table = pd.read_csv(table_path, sep="\t")
+        if "feature_id" not in table or table["feature_id"].duplicated().any():
+            raise ValueError(f"Existing donor-{donor} feature table is invalid.")
+        selected_ids = table["feature_id"].astype(str).tolist()
+        record = folds_by_donor[donor]
+        if (
+            len(selected_ids) != N_TOP_PEAKS
+            or int(record.get("selected_peaks", -1)) != N_TOP_PEAKS
+        ):
+            raise ValueError(f"Existing donor-{donor} feature count is invalid.")
+        if list_path.read_text().splitlines() != selected_ids:
+            raise ValueError(
+                f"Existing donor-{donor} feature list and table disagree."
+            )
+        if not set(selected_ids).issubset(union_set):
+            raise ValueError(
+                f"Existing donor-{donor} features are absent from the union."
+            )
+        if (
+            record.get("selected_feature_sha256")
+            != ordered_feature_sha256(selected_ids)
+        ):
+            raise ValueError(f"Existing donor-{donor} feature hash is invalid.")
+        if record.get("peak_selection_sha256") != _sha256(table_path):
+            raise ValueError(
+                f"Existing donor-{donor} selection-table hash is invalid."
+            )
+
+
 def build_feature_axes() -> None:
     if AXIS_ROOT.exists():
-        raise FileExistsError(f"{AXIS_ROOT} already exists; feature axes are immutable.")
+        _validate_existing_feature_axes()
+        print("feature_axes status=reused", flush=True)
+        return
     labels = _load_labels()
     candidates = _candidate_features()
     summed, coverage = _aggregate_donor_type_counts(labels, candidates)
@@ -598,6 +688,39 @@ def _dataset_id(donor: int, condition: str, mixture_seed: int) -> str:
     )
 
 
+def _fold_split(labels: pd.DataFrame, donor: int) -> pd.DataFrame:
+    split = labels[
+        [
+            "cell_id",
+            "sample_key",
+            "site",
+            "donor",
+            "author_cell_type",
+            "cell_type",
+        ]
+    ].copy()
+    split["partition"] = np.where(split["donor"] == donor, "heldout", "training")
+    return split
+
+
+def _validate_existing_fold_split(path: Path, expected: pd.DataFrame) -> None:
+    observed = pd.read_csv(path, sep="\t")
+    if list(observed.columns) != list(expected.columns) or not observed.equals(expected):
+        raise ValueError(
+            f"Existing fold split does not match the current schema/content: {path}"
+        )
+
+
+def _release_fold_memory() -> None:
+    gc.collect()
+    if platform.system() == "Linux":
+        try:
+            malloc_trim = ctypes.CDLL(None).malloc_trim
+        except (AttributeError, OSError):
+            return
+        malloc_trim(0)
+
+
 def build_fold_objects() -> None:
     labels = _load_labels()
     for donor in DONORS:
@@ -608,29 +731,39 @@ def build_fold_objects() -> None:
         reference_path = reference_dir / "atac" / "reference.h5ad"
         heldout_path = fold_dir / "heldout_cells.h5ad"
         manifest_path = fold_dir / "manifest.yaml"
-        if reference_path.is_file() and heldout_path.is_file() and manifest_path.is_file():
+        reference_manifest_path = reference_dir / "reference.yaml"
+        if all(
+            path.is_file()
+            for path in (
+                reference_path,
+                reference_manifest_path,
+                heldout_path,
+                manifest_path,
+            )
+        ):
             print(f"fold donor={donor} status=reused", flush=True)
             continue
-        if fold_dir.exists() or reference_dir.exists():
+        if reference_dir.exists():
             raise FileExistsError(f"Partial donor-{donor} fold requires inspection.")
-        fold_dir.mkdir(parents=True)
-        split = labels[
-            [
-                "cell_id",
-                "sample_key",
-                "site",
-                "donor",
-                "author_cell_type",
-                "cell_type",
-            ]
-        ].copy()
-        split["partition"] = np.where(split["donor"] == donor, "heldout", "training")
+        split = _fold_split(labels, donor)
         split_path = fold_dir / "cells.tsv.gz"
-        split.to_csv(split_path, sep="\t", index=False, compression="gzip")
-        split_sha256 = _sha256(split_path)
-        reference, heldout = _fold_objects(donor, selected_features, split_sha256)
         temporary_reference = fold_dir / ".reference.h5ad.tmp"
         temporary_heldout = fold_dir / ".heldout.h5ad.tmp"
+        if fold_dir.exists():
+            allowed = {split_path.name, temporary_reference.name, temporary_heldout.name}
+            unexpected = [path.name for path in fold_dir.iterdir() if path.name not in allowed]
+            if not split_path.is_file() or unexpected:
+                raise FileExistsError(
+                    f"Partial donor-{donor} fold requires inspection; "
+                    f"unexpected={unexpected}."
+                )
+            _validate_existing_fold_split(split_path, split)
+            print(f"fold donor={donor} split=reused", flush=True)
+        else:
+            fold_dir.mkdir(parents=True)
+            split.to_csv(split_path, sep="\t", index=False, compression="gzip")
+        split_sha256 = _sha256(split_path)
+        reference, heldout = _fold_objects(donor, selected_features, split_sha256)
         reference.write_h5ad(temporary_reference, compression="gzip")
         heldout.write_h5ad(temporary_heldout, compression="gzip")
         reference_dir.joinpath("atac").mkdir(parents=True)
@@ -671,6 +804,8 @@ def build_fold_objects() -> None:
                 "heldout": _repository_path(heldout_path),
             },
         )
+        del reference, heldout
+        _release_fold_memory()
         print(f"fold donor={donor} status=completed", flush=True)
 
 
@@ -727,7 +862,11 @@ def materialize_datasets() -> None:
                         ),
                     )
                     print(f"dataset {dataset_id} status=completed", flush=True)
+                    del simulation
+                    _release_fold_memory()
                 registry[dataset_id] = {"config": _repository_path(dataset_path)}
+        del reference, heldout
+        _release_fold_memory()
     temporary = REGISTRY_PATH.with_name(".datasets.yaml.gse194122.tmp")
     temporary.parent.mkdir(parents=True, exist_ok=True)
     with temporary.open("w") as handle:

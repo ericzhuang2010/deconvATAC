@@ -1,6 +1,6 @@
 # ShapeMix-ATAC implementation plan
 
-Status: active implementation roadmap; Steps 0 through 6 completed 2026-08-23; all four planned external GEO source families acquired and source-preprocessed by 2026-08-24; full cross-dataset evaluation is planned in Section 13
+Status: active implementation roadmap; Steps 0 through 6 completed 2026-08-23; all four planned external GEO source families acquired and source-preprocessed by 2026-08-24; full cross-dataset evaluation is active under Section 13 and resumed with the exclusive-machine resource profile on 2026-09-02
 
 This document turns the ShapeMix concept into a repository-specific engineering and research plan and records the execution status of each step. The implementation preserves all current datasets and methods, creates new ShapeMix-specific data products, and makes the shape-aware versus peak-only comparison a controlled, reproducible ablation.
 
@@ -1091,14 +1091,23 @@ The minimum new core is therefore 192 jobs, of which NNLS jobs should be short. 
 
 Implement the GPU work in Sections 13.6–13.9 and pass CPU/CUDA parity, determinism, memory, and performance gates before external results are inspected. The development smoke dataset and one representative full-size protocol-v1 dataset are resource pilots only. They must be written outside the new external result roots and excluded from scientific summaries.
 
-**Status 2026-08-25:** CUDA qualification v1 predates the optimizer-coordinate
-amendment and is retained as historical evidence only. The post-amendment v2
-smoke campaign completed all four arms successfully. The first v2 full-size
-attempt was stopped before any arm finalized because the co-tenant workflow
-was about to launch a high-memory STAR alignment; its interruption record is
-under `results/development/shapemix_gpu_qualification_v2/full_size/`. Rerun
-that batch with explicit `--overwrite` only after the guarded launcher finds a
-safe multi-hour window, then regenerate the v2 qualification report.
+**Status 2026-09-05:** complete. CUDA qualification v1 remains historical
+because it predates the log-abundance optimizer coordinate. The completed v2
+full-size campaign succeeded in all four arms and established `4.082x` cached
+CUDA speedup, exact CUDA repeatability, and exact cached/streamed parity. Its
+direct three-restart CPU/CUDA comparison failed because CPU selected restart 2
+while CUDA selected restart 1, producing a `0.0364353` maximum difference; the
+failed report remains preserved.
+
+A development-only restart-zero diagnostic on the same 1,024 by 5,000 input
+then separated backend arithmetic from non-convex restart selection. CPU and
+CUDA both stopped at step 279, differed by at most `9.16081e-5` in proportions
+and `8.03279e-9` in metrics, and showed `4.173x` CUDA speedup. No threshold was
+relaxed. The schema-v3 report passes by combining this fixed-trajectory backend
+check with the independent multi-restart CUDA repeat/cache checks. Small inputs
+remain on CPU; represented full-size workloads use three-restart CUDA for both
+paired ShapeMix arms. The main driver now validates `status: passed` rather
+than accepting a merely nonempty qualification report.
 
 #### Evaluation stage E2 — Run GSE129785
 
@@ -1351,37 +1360,50 @@ represented full-size workloads use paired CUDA configs.
 
 ### 13.9 CPU-load containment and scheduling
 
-Co-tenant constraint, added 2026-08-24: another workload on this host may consume four to five physical cores. Treat that workload as higher priority and preserve at least one physical core of headroom. This constraint remains active until the user explicitly removes it.
+Resource amendment, 2026-09-02: the user confirmed that the competing
+workflow is no longer running and authorized the full machine for ShapeMix.
+The guarded launcher now has two explicit profiles. `co_tenant` preserves the
+original limits for reproducibility; the resumed evaluation uses
+`DECONVATAC_RESOURCE_PROFILE=exclusive`.
 
-Only one material deconvATAC task may run at a time, and only one fit process
-may own the RTX 3080. A paired-read alignment may pipe one-thread BWA directly
-into one-thread pinned pysam/embedded-samtools name sorting, with a Python
-header-normalization streamer and no plain-SAM intermediate. These are at most
-three runnable single-threaded processes, but the complete process tree is pinned
-to logical CPUs 6 and 7, which are separate physical cores on this host. Do not
-overlap a GPU fit, NNLS baseline, preprocessing job, checksum pass, download,
-test suite, or summary job from this repository. Do not launch if `nvidia-smi`
-shows an unrelated compute process using the GPU; GPU sharing requires explicit
-approval.
+Only one material deconvATAC task still runs at a time, and only one fit process
+may own the RTX 3080. Under the exclusive profile, adult-read acquisition uses
+up to eight network transfers and four concurrent integrity workers. Paired-read
+alignment streams eight-thread BWA directly into pinned pysam/embedded-samtools
+name sorting with four extra compression threads, plus the barcode-normalization
+stream, across the 16-logical-CPU host. No plain SAM is materialized. Fragment
+construction and common CPU libraries may use eight threads. Real-spatial
+BGZF fragment counting is partitioned only at tabix contig boundaries: the
+`co_tenant` profile permits at most two worker processes and the `exclusive`
+profile at most eight. Each shard uses the identical frozen barcode, feature,
+bin, and cut-offset axes; integer CSR layers and all QC counters are combined
+with an exact canonical binary-carry merge, while the source header count is
+recorded once rather than once per shard. The dataset manifest records the
+partition, merge rule, active profile, worker cap, and chunk size. Serial versus
+contig-parallel BGZF parity tests passed before spatial predictions; no
+prediction or outcome value was inspected.
+The exclusive profile retains at least 2 GiB available RAM as an OOM guard.
 
-Before every job, record the one-minute load average, available RAM, and GPU process/memory state. On this eight-physical-core/16-logical-CPU host, do not start a new deconvATAC task while the one-minute load average is `>= 6.0`; leave it queued and recheck later. This is a conservative launch gate, not permission to interrupt either workload. A running job may finish, but no additional repository process starts while the gate is closed.
+Before every job, record the resource profile, one-minute load average,
+available RAM, and GPU process/memory state. The exclusive launch ceiling is a
+one-minute load of 32 rather than the co-tenant ceiling of 6, but unrelated GPU
+compute processes, GPU temperature above 79 C, and the host-wide project lock
+remain fail-closed gates.
 
-All new fits and other material work must enter through the guarded launcher:
+All new fits and other material work continue to enter through the guarded
+launcher:
 
 ```bash
-scripts/run_shapemix_low_impact.sh \
+DECONVATAC_RESOURCE_PROFILE=exclusive \
+  scripts/run_shapemix_low_impact.sh \
   .venv/bin/python scripts/run_deconvolution.py --experiment-config <config>
 ```
 
-The launcher holds a host-wide deconvATAC lock, enforces the load/GPU/worker gates, lowers CPU and I/O priority, and caps the common host math libraries before Python imports them. Bypassing it is not permitted while the co-tenant constraint is active.
-
-The runner must also call `torch.set_num_threads(1)` and `torch.set_num_interop_threads(1)` before fitting. GPU and CPU-only fits, including NNLS, are restricted to one host thread. The earlier two-thread GPU-input exception is disabled while the co-tenant constraint is active.
-
-Fragment counting and preprocessing may use at most two CPU workers and must
-also run at lowered priority. The adult-read downloader may use four network
-transfer workers only because its enforced validation semaphore admits at most
-two gzip/checksum workers. If a stage cannot obey these limits, keep it gated
-rather than increasing CPU parallelism. Never automatically fall back from CUDA to an unconstrained CPU fit.
+ShapeMix Torch intra-op and inter-op math remains single-threaded because the
+dense likelihood is assigned to CUDA and its qualification depends on that
+deterministic policy. CPU-only support methods may use the exclusive profile's
+eight-thread BLAS environment. Never automatically fall back from CUDA to an
+unqualified CPU fit.
 
 Use one sequential GPU shard per campaign and resume by completed, hash-verified run. Record the launch-gate measurements, priority, worker/thread caps, wall time, CPU time, peak RSS, peak allocated/reserved VRAM, device-utilization samples, and any cache/chunk fallback. A load, temperature, memory-pressure, or GPU-occupancy monitor pauses launching the next run but does not terminate or rewrite a completed result.
 
@@ -1395,9 +1417,10 @@ The full campaign is complete only when:
 - all GSE129785 conclusions respect nominal versus absent truth, with no nominal or qualitative evidence stored under `truth/`;
 - GSE205055/GSE263333 use audited compatible references and make no exact-composition claim;
 - CPU/CUDA parity, repeated-CUDA determinism, memory fallback, and performance gates pass and are retained under `results/development/`;
-- resource manifests prove that only one deconvATAC task ran at a time, every
-  fit used one host thread, preprocessing and download validation used at most
-  two CPU workers, and every launch passed the co-tenant load/GPU gate;
+- resource manifests prove that only one deconvATAC task ran at a time, each
+  fit used its qualified device/thread policy, preprocessing and acquisition
+  stayed within the recorded `co_tenant` or `exclusive` profile, and every
+  launch passed the applicable load, memory, lock, and GPU gates;
 - failed runs and optional-baseline gates remain visible in summaries;
 - the canonical layout validator passes for configs, work paths, reusable products, references, runnable datasets, registry entries, result scopes, and per-run provenance;
 - all result groups, configs, code/input hashes, and environment metadata revalidate; and

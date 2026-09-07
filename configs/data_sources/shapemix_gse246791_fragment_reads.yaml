@@ -79,5 +79,5 @@ validation_gates:
   - mm10 coordinate, proper-pair, MAPQ, duplicate, and Tn5-shift audit
   - retained fragment barcodes map exactly to deposited H5AD observations
   - reconstructed per-cell unique-fragment counts agree with deposited n_fragment within the frozen tolerance
-download_workers_max: 4
-validation_workers_max: 2
+download_workers_max: 8
+validation_workers_max: 4

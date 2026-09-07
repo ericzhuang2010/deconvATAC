@@ -10,10 +10,12 @@ from scipy import sparse
 
 from deconvatac.data import (
     DeconvolutionInput,
+    FragmentShapeBin,
     FragmentShapeSpec,
     load_deconvolution_input,
     ordered_feature_sha256,
     validate_deconvolution_input,
+    validate_fragment_shape_spec,
 )
 
 
@@ -574,6 +576,33 @@ def test_bin_order_and_semantics_are_versioned() -> None:
 
     with pytest.raises(ValueError, match="ordered schema-version-1 bins"):
         validate_deconvolution_input(data)
+
+
+def test_schema_v2_accepts_only_complete_noncanonical_bin_partitions() -> None:
+    alternate = replace(
+        _declared_spec(),
+        schema_version=2,
+        bins=(
+            FragmentShapeBin("short", 0, 100, "fragment_length_lt_100"),
+            FragmentShapeBin("long", 100, None, "fragment_length_ge_100"),
+        ),
+    )
+    validate_fragment_shape_spec(alternate)
+
+    with pytest.raises(ValueError, match="must use schema version 1"):
+        validate_fragment_shape_spec(replace(_declared_spec(), schema_version=2))
+    with pytest.raises(ValueError, match="contiguous, non-overlapping, and ordered"):
+        validate_fragment_shape_spec(
+            replace(
+                alternate,
+                bins=(
+                    alternate.bins[0],
+                    FragmentShapeBin(
+                        "long", 101, None, "fragment_length_ge_101"
+                    ),
+                ),
+            )
+        )
 
 
 def test_declared_cell_types_must_match_reference_universe() -> None:

@@ -112,6 +112,7 @@ preprocessing_policy:
   peak_selection: reference-only ranking from author cCREs
   label_resolution: freeze an author-taxonomy broad ontology after the source audit and before feature selection
   fragment_bins_bp: [[0, 100], [100, 250], [250, null]]
+  maximum_invalid_parent_fragment_fraction: 1.0e-4
   right_cut_offset: audit BEDPE coordinate semantics against the author specification before freezing
   truth_policy: reference labels are not spatial composition truth
 validation_gates:

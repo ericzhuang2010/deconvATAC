@@ -1,3 +1,4 @@
+import gzip
 from pathlib import Path
 
 import pytest
@@ -6,6 +7,7 @@ from scripts.prepare_shapemix_gse244618 import (
     CELL_TYPES,
     _sample_records,
     broad_label,
+    iter_bedpe_fragments,
     parse_bedpe_record,
 )
 
@@ -73,6 +75,40 @@ def test_bedpe_parser_uses_strand_aware_five_prime_cut_sites():
 def test_bedpe_parser_fails_closed_on_invalid_parent_fragments(line, message):
     with pytest.raises(ValueError, match=message):
         parse_bedpe_record(line)
+
+
+def test_bedpe_iterator_audits_bounded_invalid_parent_fragments(tmp_path):
+    path = tmp_path / "source.bedpe.gz"
+    lines = [
+        "chr1\t10\t20\tchr1\t50\t60\tBC:valid\t60\t+\t-\n",
+        "chr1\t10\t20\tchr1\t50\t60\tBC:same\t60\t+\t+\n",
+        "chr1\t10\t20\tchr1\t0\t10\tBC:zero\t60\t+\t-\n",
+    ]
+    with gzip.open(path, "wt") as handle:
+        handle.writelines(lines)
+
+    audit = {}
+    records = list(
+        iter_bedpe_fragments(
+            path,
+            audit=audit,
+            maximum_invalid_fraction=0.75,
+        )
+    )
+
+    assert len(records) == 1
+    assert audit["source_rows"] == 3
+    assert audit["valid_parent_fragments"] == 1
+    assert audit["invalid_parent_fragments"] == 2
+    assert audit["invalid_parent_fragment_fraction"] == pytest.approx(2.0 / 3.0)
+    assert audit["invalid_by_reason"] == {
+        "non_opposite_strands": 1,
+        "nonpositive_five_prime_fragment": 1,
+    }
+    assert audit["passed"] is True
+
+    with pytest.raises(ValueError, match="exceeds the frozen maximum"):
+        list(iter_bedpe_fragments(path, maximum_invalid_fraction=0.5))
 
 
 def test_frozen_gse244618_subset_is_nine_unique_existing_bedpe_sources():

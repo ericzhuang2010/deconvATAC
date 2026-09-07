@@ -1,0 +1,30 @@
+description: >-
+  Development-only post-log-abundance CPU/CUDA parity diagnostic that fixes
+  the optimizer trajectory to deterministic restart zero on the representative
+  1024 by 5000 qualification input. This separates backend arithmetic parity
+  from multi-restart local-optimum selection and is not a scientific result.
+benchmark_scope: development_cuda_qualification_diagnostic
+protocol_version: 1
+run_group: restart0_parity
+datasets:
+  - pbmc_granulocyte_sorted_10k_shapemix_equal_celltype_split_1103_mix_101
+modalities:
+  - atac
+feature_sets:
+  atac:
+    - highly_variable
+method_runs:
+  - id: shapemix_length_restart0_cpu
+    method: shapemix
+    config: configs/methods/shapemix_qualification_restart0_cpu.yaml
+  - id: shapemix_length_restart0_cuda
+    method: shapemix
+    config: configs/methods/shapemix_qualification_restart0_cuda.yaml
+metrics:
+  - rmse_v1
+  - jsd_v2
+output_root: results/development/shapemix_gpu_qualification_v2
+run_id_template: "{dataset}__{modality}__{feature_set}__{method_run_id}"
+skip_missing: false
+continue_on_error: false
+overwrite: false

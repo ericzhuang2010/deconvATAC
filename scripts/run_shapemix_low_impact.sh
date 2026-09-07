@@ -1,14 +1,48 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly MAX_ONE_MINUTE_LOAD="6.0"
-readonly MAX_WORKERS=2
-readonly MAX_DOWNLOAD_WORKERS=4
-readonly MIN_AVAILABLE_MEMORY_KIB=4194304
+RESOURCE_PROFILE="${DECONVATAC_RESOURCE_PROFILE:-co_tenant}"
+case "$RESOURCE_PROFILE" in
+    co_tenant)
+        MAX_ONE_MINUTE_LOAD="6.0"
+        MAX_WORKERS=2
+        MAX_DOWNLOAD_WORKERS=4
+        MIN_AVAILABLE_MEMORY_KIB=4194304
+        STABILITY_SECONDS=60
+        CPU_THREADS=1
+        RAYON_THREADS=1
+        NICE_ADJUSTMENT=10
+        IONICE_PRIORITY=7
+        ;;
+    exclusive)
+        MAX_ONE_MINUTE_LOAD="32.0"
+        MAX_WORKERS=16
+        MAX_DOWNLOAD_WORKERS=8
+        MIN_AVAILABLE_MEMORY_KIB=2097152
+        STABILITY_SECONDS=5
+        CPU_THREADS=8
+        RAYON_THREADS=8
+        NICE_ADJUSTMENT=0
+        IONICE_PRIORITY=4
+        ;;
+    *)
+        echo "Unknown DECONVATAC_RESOURCE_PROFILE=$RESOURCE_PROFILE; expected co_tenant or exclusive." >&2
+        exit 64
+        ;;
+esac
+readonly RESOURCE_PROFILE
+readonly MAX_ONE_MINUTE_LOAD
+readonly MAX_WORKERS
+readonly MAX_DOWNLOAD_WORKERS
+readonly MIN_AVAILABLE_MEMORY_KIB
 readonly MAX_GPU_MEMORY_USED_MIB=2048
 readonly MAX_GPU_TEMPERATURE_C=79
 readonly MAX_ALLOWED_DISPLAY_PROCESS_MEMORY_MIB=512
-readonly STABILITY_SECONDS=60
+readonly STABILITY_SECONDS
+readonly CPU_THREADS
+readonly RAYON_THREADS
+readonly NICE_ADJUSTMENT
+readonly IONICE_PRIORITY
 readonly LOCK_PATH="/tmp/deconvatac-shapemix-resource.lock"
 
 usage() {
@@ -76,7 +110,8 @@ fi
 # A separate project on this host may leave long low-load gaps between its
 # download, trimming, and 12-thread alignment rules. Its persistent scheduler
 # is a stronger signal than instantaneous load, so never launch into that gap.
-if unrelated_schedulers="$(pgrep -u "$(id -u)" -x snakemake 2>/dev/null)" \
+if [[ "$RESOURCE_PROFILE" == "co_tenant" ]] \
+    && unrelated_schedulers="$(pgrep -u "$(id -u)" -x snakemake 2>/dev/null)" \
     && [[ -n "${unrelated_schedulers//[$'\t\r\n ']/}" ]]; then
     echo "Co-tenant scheduler gate closed: snakemake PID(s) $unrelated_schedulers are active." >&2
     exit 75
@@ -128,7 +163,10 @@ fi
 sleep "$STABILITY_SECONDS"
 stable_one_minute_load="$(awk '{print $1}' /proc/loadavg)"
 stable_available_kib="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
-stable_unrelated_schedulers="$(pgrep -u "$(id -u)" -x snakemake 2>/dev/null || true)"
+stable_unrelated_schedulers=""
+if [[ "$RESOURCE_PROFILE" == "co_tenant" ]]; then
+    stable_unrelated_schedulers="$(pgrep -u "$(id -u)" -x snakemake 2>/dev/null || true)"
+fi
 if ! stable_gpu_processes="$(nvidia-smi --query-compute-apps=pid,process_name,used_memory \
     --format=csv,noheader,nounits 2>/dev/null)"; then
     echo "Unable to repeat the GPU process query; refusing a fail-open launch." >&2
@@ -161,20 +199,21 @@ gpu_used_mib="$stable_gpu_used_mib"
 gpu_total_mib="$stable_gpu_total_mib"
 gpu_utilization="$stable_gpu_utilization"
 gpu_temperature="$stable_gpu_temperature"
-echo "resource_preflight one_minute_load=$one_minute_load available_memory_kib=$available_kib gpu_used_mib=$gpu_used_mib gpu_total_mib=$gpu_total_mib gpu_utilization=$gpu_utilization gpu_temperature_c=$gpu_temperature command_workers_max=$worker_limit cpu_workers_max=$MAX_WORKERS cpu_threads=1"
+echo "resource_preflight profile=$RESOURCE_PROFILE one_minute_load=$one_minute_load available_memory_kib=$available_kib gpu_used_mib=$gpu_used_mib gpu_total_mib=$gpu_total_mib gpu_utilization=$gpu_utilization gpu_temperature_c=$gpu_temperature command_workers_max=$worker_limit cpu_workers_max=$MAX_WORKERS math_threads=$CPU_THREADS rayon_threads=$RAYON_THREADS"
 
 project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 export CUDA_VISIBLE_DEVICES=0
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
-export OMP_NUM_THREADS=1
-export MKL_NUM_THREADS=1
-export OPENBLAS_NUM_THREADS=1
-export NUMEXPR_NUM_THREADS=1
-export VECLIB_MAXIMUM_THREADS=1
-export BLIS_NUM_THREADS=1
-export RAYON_NUM_THREADS=1
-export POLARS_MAX_THREADS=1
+export OMP_NUM_THREADS="$CPU_THREADS"
+export MKL_NUM_THREADS="$CPU_THREADS"
+export OPENBLAS_NUM_THREADS="$CPU_THREADS"
+export NUMEXPR_NUM_THREADS="$CPU_THREADS"
+export VECLIB_MAXIMUM_THREADS="$CPU_THREADS"
+export BLIS_NUM_THREADS="$CPU_THREADS"
+export RAYON_NUM_THREADS="$RAYON_THREADS"
+export POLARS_MAX_THREADS="$CPU_THREADS"
 export PYTHONPATH="$project_root:$project_root/src${PYTHONPATH:+:$PYTHONPATH}"
 
 export DECONVATAC_RESOURCE_GUARD=1
-exec nice -n 10 ionice -c 2 -n 7 "${arguments[@]}"
+export DECONVATAC_RESOURCE_PROFILE="$RESOURCE_PROFILE"
+exec nice -n "$NICE_ADJUSTMENT" ionice -c 2 -n "$IONICE_PRIORITY" "${arguments[@]}"

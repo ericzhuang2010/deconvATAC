@@ -5,7 +5,8 @@ ENA preserves the authors' original read name as the second whitespace-delimited
 FASTQ header field while prepending an ``SRR.accession`` identifier.  BWA retains
 only the first field as QNAME.  The original barcode-first name must therefore be
 restored before alignment so SnapATAC2's production barcode regex can recover the
-32-base cell barcode.
+cell barcode.  The selected libraries span two validated barcode generations:
+22 bases and 32 bases.
 
 Raw FASTQs are never modified.  The reusable functions here are also used by the
 streaming alignment stage, which writes normalized records directly to BWA.
@@ -24,7 +25,20 @@ from typing import BinaryIO, Iterator
 
 ROOT = Path(__file__).resolve().parents[1]
 ACCESSION_RE = re.compile(rb"^@(SRR[0-9]+)\.([1-9][0-9]*)$")
-BARCODE_RE = re.compile(rb"^[ACGT]{32}$")
+BARCODE_RE = re.compile(rb"^[ACGT]+$")
+SUPPORTED_BARCODE_LENGTHS = frozenset({22, 32})
+
+
+def is_supported_barcode(barcode: bytes | str) -> bool:
+    """Return whether ``barcode`` matches the frozen GSE246791 source contract."""
+    try:
+        encoded = barcode.encode("ascii") if isinstance(barcode, str) else barcode
+    except UnicodeEncodeError:
+        return False
+    return (
+        len(encoded) in SUPPORTED_BARCODE_LENGTHS
+        and BARCODE_RE.fullmatch(encoded) is not None
+    )
 
 
 @dataclass(frozen=True)
@@ -40,7 +54,7 @@ class PairAudit:
     read_pairs: int
     first_ordinal: int | None
     last_ordinal: int | None
-    barcode_length: int
+    barcode_length: int | None
     read1_length_min: int | None
     read1_length_max: int | None
     read2_length_min: int | None
@@ -75,8 +89,11 @@ def parse_rewritten_header(
             f"{native_qname!r}"
         )
     barcode = native_qname.split(b":", 1)[0]
-    if BARCODE_RE.fullmatch(barcode) is None:
-        raise ValueError(f"Native QNAME lacks an exact 32-base A/C/G/T barcode: {barcode!r}")
+    if not is_supported_barcode(barcode):
+        raise ValueError(
+            "Native QNAME lacks a supported 22- or 32-base A/C/G/T barcode: "
+            f"{barcode!r}"
+        )
     return NormalizedHeader(
         accession=observed_srr,
         ordinal=int(accession_match.group(2)),
@@ -119,6 +136,7 @@ def iter_normalized_pairs(
     iterator1 = iter_fastq_records(read1, label="read 1")
     iterator2 = iter_fastq_records(read2, label="read 2")
     previous_ordinal: int | None = None
+    barcode_length: int | None = None
     pair_number = 0
     while limit is None or pair_number < limit:
         record1 = next(iterator1, None)
@@ -143,6 +161,14 @@ def iter_normalized_pairs(
             raise ValueError(f"Native mate QNAME mismatch at pair {pair_number}")
         if header1.barcode != header2.barcode:
             raise ValueError(f"Mate barcode mismatch at pair {pair_number}")
+        observed_barcode_length = len(header1.barcode)
+        if barcode_length is None:
+            barcode_length = observed_barcode_length
+        elif observed_barcode_length != barcode_length:
+            raise ValueError(
+                f"Inconsistent barcode length at pair {pair_number}: "
+                f"{observed_barcode_length} after {barcode_length}"
+            )
         if previous_ordinal is not None and header1.ordinal != previous_ordinal + 1:
             raise ValueError(
                 f"Nonconsecutive ENA ordinal at pair {pair_number}: "
@@ -168,6 +194,7 @@ def audit_pair(
     read1_max: int | None = None
     read2_min: int | None = None
     read2_max: int | None = None
+    barcode_length: int | None = None
     with gzip.open(read1_path, "rb") as read1, gzip.open(read2_path, "rb") as read2:
         for record1, record2, header in iter_normalized_pairs(
             read1, read2, expected_srr=expected_srr, limit=limit
@@ -175,6 +202,7 @@ def audit_pair(
             count += 1
             first_ordinal = header.ordinal if first_ordinal is None else first_ordinal
             last_ordinal = header.ordinal
+            barcode_length = len(header.barcode)
             length1 = len(record1[1].rstrip(b"\r\n"))
             length2 = len(record2[1].rstrip(b"\r\n"))
             read1_min = length1 if read1_min is None else min(read1_min, length1)
@@ -185,7 +213,7 @@ def audit_pair(
         read_pairs=count,
         first_ordinal=first_ordinal,
         last_ordinal=last_ordinal,
-        barcode_length=32,
+        barcode_length=barcode_length,
         read1_length_min=read1_min,
         read1_length_max=read1_max,
         read2_length_min=read2_min,

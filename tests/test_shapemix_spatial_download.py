@@ -1,12 +1,20 @@
 import gzip
+import threading
+import urllib.error
 from pathlib import Path
 
 import pytest
 
+import scripts.download_shapemix_spatial as spatial_download
 from scripts.download_shapemix_spatial import (
+    Resource,
+    acquire,
+    download_once,
     load_config,
     md5_file,
     normalize_etag,
+    prioritize_incomplete_resources,
+    remote_metadata,
     resources_from_config,
     safe_tar_member_name,
     select_resources,
@@ -60,6 +68,67 @@ def test_etag_normalization_accepts_http_quoting_and_weak_prefix():
     assert normalize_etag(None) is None
 
 
+def test_remote_metadata_retries_transient_http_error(monkeypatch: pytest.MonkeyPatch):
+    calls = 0
+    delays = []
+
+    class Response:
+        headers = {"Content-Length": "123", "ETag": '"abc"'}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    def urlopen(_request, timeout):
+        nonlocal calls
+        assert timeout == 7
+        calls += 1
+        if calls == 1:
+            raise urllib.error.HTTPError(
+                "https://example.invalid/payload", 403, "Forbidden", {}, None
+            )
+        return Response()
+
+    monkeypatch.setattr(spatial_download.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(spatial_download.time, "sleep", delays.append)
+
+    assert remote_metadata(
+        "https://example.invalid/payload",
+        timeout=7,
+        attempts=2,
+        retry_delay_seconds=0.25,
+    ) == (123, "abc")
+    assert calls == 2
+    assert delays == [0.25]
+
+
+def test_remote_metadata_does_not_retry_permanent_http_error(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    calls = 0
+
+    def urlopen(_request, timeout):
+        nonlocal calls
+        assert timeout == 7
+        calls += 1
+        raise urllib.error.HTTPError(
+            "https://example.invalid/missing", 404, "Not Found", {}, None
+        )
+
+    monkeypatch.setattr(spatial_download.urllib.request, "urlopen", urlopen)
+
+    with pytest.raises(urllib.error.HTTPError):
+        remote_metadata(
+            "https://example.invalid/missing",
+            timeout=7,
+            attempts=5,
+            retry_delay_seconds=0,
+        )
+    assert calls == 1
+
+
 def test_reference_manifests_resolve_exact_frozen_scopes():
     expected = {
         "shapemix_gse216371_reference.yaml": (3, 76261606450),
@@ -100,9 +169,9 @@ def test_adult_fragment_download_separates_transfer_and_cpu_worker_limits():
     config = load_config(
         ROOT / "configs/data_sources/shapemix_gse246791_fragment_reads.yaml"
     )
-    assert worker_limits(config, 4) == (4, 2)
-    with pytest.raises(ValueError, match="must be <= 4"):
-        worker_limits(config, 5)
+    assert worker_limits(config, 8) == (8, 4)
+    with pytest.raises(ValueError, match="must be <= 8"):
+        worker_limits(config, 9)
 
 
 def test_ucsc_mm10_reference_manifest_is_pinned_and_organized():
@@ -150,3 +219,102 @@ def test_md5_file_matches_provider_style_digest(tmp_path: Path):
     path = tmp_path / "payload"
     path.write_bytes(b"abc")
     assert md5_file(path) == "900150983cd24fb0d6963f7d28e17f72"
+
+
+def test_download_once_reconnects_and_resumes_partial(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    destination = tmp_path / "raw" / "payload.gz"
+    staging = tmp_path / "work" / "payload.gz.part"
+    staging.parent.mkdir(parents=True)
+    staging.write_bytes(b"a")
+    resource = Resource(
+        name="payload.gz",
+        role="test",
+        accession="GSM_test",
+        url="https://example.invalid/payload.gz",
+        destination=destination,
+        staging_path=staging,
+    )
+    calls = []
+
+    def run(command, check):
+        assert check
+        calls.append(command)
+        with staging.open("ab") as handle:
+            handle.write(b"b" if len(calls) == 1 else b"c")
+        if len(calls) == 1:
+            raise spatial_download.subprocess.CalledProcessError(1, command)
+
+    delays = []
+    monkeypatch.setattr(spatial_download.subprocess, "run", run)
+    monkeypatch.setattr(spatial_download.time, "sleep", delays.append)
+
+    download_once(
+        resource,
+        expected_bytes=3,
+        timeout=7,
+        attempts=2,
+        retry_delay_seconds=0.25,
+    )
+
+    assert staging.read_bytes() == b"abc"
+    assert len(calls) == 2
+    assert "--continue" in calls[0]
+    assert delays == [0.25]
+
+
+def test_acquire_removes_checksum_invalid_staging_file_for_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    destination = tmp_path / "raw" / "payload.gz"
+    staging = tmp_path / "work" / "payload.gz.part"
+    staging.parent.mkdir(parents=True)
+    staging.write_bytes(b"bad")
+    resource = Resource(
+        name="payload.gz",
+        role="test",
+        accession="GSM_test",
+        url="https://example.invalid/payload.gz",
+        destination=destination,
+        staging_path=staging,
+        expected_bytes=3,
+        expected_md5="900150983cd24fb0d6963f7d28e17f72",
+    )
+    monkeypatch.setattr(
+        spatial_download, "remote_metadata", lambda _url, _timeout: (3, None)
+    )
+
+    with pytest.raises(ValueError, match="removed invalid staging file"):
+        acquire(resource, timeout=1, validation_slots=threading.BoundedSemaphore(1))
+
+    assert not staging.exists()
+    assert not destination.exists()
+
+
+def test_incomplete_resources_are_scheduled_first_in_stable_order(tmp_path: Path):
+    def make_resource(name: str) -> Resource:
+        return Resource(
+            name=name,
+            role="test",
+            accession="GSM_test",
+            url=f"https://example.invalid/{name}",
+            destination=tmp_path / "raw" / name,
+            staging_path=tmp_path / "work" / f"{name}.part",
+        )
+
+    complete = make_resource("complete.gz")
+    complete.destination.parent.mkdir(parents=True)
+    complete.destination.write_bytes(b"complete")
+    incomplete_a = make_resource("incomplete-a.gz")
+    incomplete_b = make_resource("incomplete-b.gz")
+
+    scheduled = prioritize_incomplete_resources(
+        (complete, incomplete_a, incomplete_b)
+    )
+
+    assert [resource.name for resource in scheduled] == [
+        "incomplete-a.gz",
+        "incomplete-b.gz",
+        "complete.gz",
+    ]

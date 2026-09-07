@@ -80,3 +80,13 @@ def test_nnls_baseline_remains_available():
     assert result.method == "nnls"
     assert list(result.proportions.columns) == ["A", "B"]
     assert np.allclose(result.proportions.sum(axis=1).values, 1.0)
+
+
+def test_nnls_preserves_declared_cell_type_order():
+    data = _toy_input()
+    data.cell_types = ["B", "A"]
+
+    result = get_method("nnls")().run(data)
+
+    assert list(result.proportions.columns) == ["B", "A"]
+    assert list(result.abundance.columns) == ["B", "A"]

@@ -64,6 +64,18 @@ def source_payload() -> bytes:
     return first + second
 
 
+def source_payload_with_boundary_rows() -> bytes:
+    return gzip.compress(
+        (
+            "#shapemix_member\tGSM1_E11A.bed.gz\n"
+            "chr1\t-8\t42\tcellA\t2\n"
+            "chr1\t0\t50\tcellA\t3\n"
+            "chr1\t950\t1008\tcellA\t4\n"
+            "chr1\t100\t300\tunknown\t1\n"
+        ).encode()
+    )
+
+
 def common_inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
     labels = tmp_path / "labels.tsv.gz"
     peaks = tmp_path / "peaks.tsv.gz"
@@ -136,9 +148,10 @@ def test_statistics_mode_filters_and_counts_exactly(
         "chr1\t100\t300\tcellB\t1\n"
     )
     assert cell_totals.read_text().splitlines() == [
-        "cell_id\tbed_rows\tread_support_sum",
-        "cellA\t1\t2",
-        "cellB\t1\t1",
+        "cell_id\tbed_rows\tread_support_sum\texcluded_invalid_coordinate_rows\t"
+        "excluded_invalid_coordinate_read_support",
+        "cellA\t1\t2\t0\t0",
+        "cellB\t1\t1\t0\t0",
     ]
     values = parse_summary(summary)
     assert values["total_rows"] == "3"
@@ -146,6 +159,58 @@ def test_statistics_mode_filters_and_counts_exactly(
     assert values["unknown_barcodes"] == "1"
     assert values["retained_fragments"] == "2"
     assert values["assigned_cut_sites"] == "3"
+
+
+def test_statistics_mode_excludes_whole_boundary_rows_without_clipping(
+    streamer: Path, tmp_path: Path
+) -> None:
+    labels, peaks, chrom_sizes = common_inputs(tmp_path)
+    normalized = tmp_path / "retained.tsv.gz"
+    cell_totals = tmp_path / "cell_totals.tsv"
+    summary = tmp_path / "summary.tsv"
+    subprocess.run(
+        [
+            str(streamer),
+            "--mode",
+            "statistics",
+            "--labels",
+            str(labels),
+            "--peaks",
+            str(peaks),
+            "--chrom-sizes",
+            str(chrom_sizes),
+            "--output-fragments",
+            str(normalized),
+            "--output-statistics",
+            str(tmp_path / "statistics.bin"),
+            "--output-cell-totals",
+            str(cell_totals),
+            "--output-summary",
+            str(summary),
+        ],
+        input=source_payload_with_boundary_rows(),
+        check=True,
+        cwd=ROOT,
+    )
+
+    assert gzip.open(normalized, "rt").read() == "chr1\t0\t50\tcellA\t3\n"
+    assert cell_totals.read_text().splitlines() == [
+        "cell_id\tbed_rows\tread_support_sum\texcluded_invalid_coordinate_rows\t"
+        "excluded_invalid_coordinate_read_support",
+        "cellA\t1\t3\t2\t6",
+        "cellB\t0\t0\t0\t0",
+    ]
+    values = parse_summary(summary)
+    assert values["total_rows"] == "4"
+    assert values["valid_rows"] == "2"
+    assert values["invalid_coordinate_rows"] == "2"
+    assert values["negative_start_rows"] == "1"
+    assert values["negative_end_rows"] == "0"
+    assert values["end_past_chromosome_rows"] == "1"
+    assert values["excluded_retained_fragment_rows"] == "2"
+    assert values["excluded_retained_read_support_total"] == "6"
+    assert values["retained_fragments"] == "1"
+    assert values["assigned_cut_sites"] == "2"
 
 
 def test_statistics_mode_rejects_retained_barcode_in_wrong_well(

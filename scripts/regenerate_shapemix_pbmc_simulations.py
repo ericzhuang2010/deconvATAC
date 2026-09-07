@@ -534,11 +534,15 @@ def simulate_shapemix_spots(
 
 
 def _repository_path(path: Path) -> str:
-    resolved = path.resolve()
+    lexical = path.absolute()
     try:
-        return str(resolved.relative_to(ROOT.resolve()))
+        return lexical.relative_to(ROOT.absolute()).as_posix()
     except ValueError:
-        return str(resolved)
+        resolved = path.resolve()
+        try:
+            return resolved.relative_to(ROOT.resolve()).as_posix()
+        except ValueError:
+            return str(resolved)
 
 
 def _sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:

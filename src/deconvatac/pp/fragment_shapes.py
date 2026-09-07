@@ -20,6 +20,7 @@ from scipy import sparse
 
 
 FRAGMENT_SHAPE_SCHEMA_VERSION = 1
+FRAGMENT_SHAPE_ALTERNATE_BINS_SCHEMA_VERSION = 2
 FRAGMENT_SHAPE_AXIS = "parent_fragment_length_bp"
 FRAGMENT_SHAPE_COUNT_UNIT = "deduplicated_cut_sites"
 FRAGMENT_SHAPE_READ_SUPPORT_POLICY = "ignore"
@@ -543,8 +544,13 @@ class FragmentShapeResult:
                 for layer_name, count in layer_totals.items()
             },
         }
+        schema_version = (
+            FRAGMENT_SHAPE_SCHEMA_VERSION
+            if self.bins == DEFAULT_FRAGMENT_LENGTH_BINS
+            else FRAGMENT_SHAPE_ALTERNATE_BINS_SCHEMA_VERSION
+        )
         metadata: dict[str, Any] = {
-            "schema_version": FRAGMENT_SHAPE_SCHEMA_VERSION,
+            "schema_version": schema_version,
             "axis": FRAGMENT_SHAPE_AXIS,
             "count_unit": FRAGMENT_SHAPE_COUNT_UNIT,
             "read_support_policy": FRAGMENT_SHAPE_READ_SUPPORT_POLICY,

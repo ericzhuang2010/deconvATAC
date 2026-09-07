@@ -1,0 +1,135 @@
+schema_version: 1
+method: shapemix
+model_version: 1
+source: training_reference_only
+outer_split_seed: 4
+signature:
+  schema_version: 1
+  content_sha256: 19ccfeede55769cbd687e4b2af09a3a76514efb004a3b34362734fff93ed6a0e
+  cell_types:
+  - B/plasma
+  - CD4 T
+  - CD8 T
+  - NK/ILC
+  - Myeloid/DC
+  - Erythroid/MK-E
+  - Hematopoietic progenitor
+  feature_sha256: f9b50f19c8e53da2537000f1e8e72bc84df3854a1bb00dadb405946ea19f4635
+  bin_names:
+  - short
+  - mono
+  - long
+  layer_names:
+  - fragment_length_lt_100
+  - fragment_length_100_249
+  - fragment_length_ge_250
+  signature_parameter_sha256: d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba
+  signature_diagnostics:
+    n_cells: 63138
+    n_cell_types: 7
+    n_peaks: 5000
+    n_bins: 3
+    cell_counts:
+      B/plasma: 9356
+      CD4 T: 9325
+      CD8 T: 12371
+      NK/ILC: 7628
+      Myeloid/DC: 13369
+      Erythroid/MK-E: 7405
+      Hematopoietic progenitor: 3684
+    bin_totals:
+      short: 70212458
+      mono: 41301856
+      long: 14750076
+    total_cut_sites: 126264390
+    accessibility_min: 0.0003276464531867691
+    accessibility_max: 10.240068042366564
+    omega_min: 0.00041594913584134375
+    omega_max: 0.9960188504165046
+    omega_max_sum_error: 2.220446049250313e-16
+    feature_sha256: f9b50f19c8e53da2537000f1e8e72bc84df3854a1bb00dadb405946ea19f4635
+    signature_parameter_sha256: d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba
+  dispersion_diagnostics:
+    fold_seed:
+    - 20260822
+    - 4
+    - 17
+    bit_generator: PCG64
+    numpy_version: 1.25.2
+    fold_membership_sha256: 51bef2f05480543e6a81b6c3bb15f5164a3bf5d479e4cd952b5cb78abf157a9d
+    fold_counts:
+      B/plasma:
+        fold_0: 4678
+        fold_1: 4678
+      CD4 T:
+        fold_0: 4663
+        fold_1: 4662
+      CD8 T:
+        fold_0: 6186
+        fold_1: 6185
+      NK/ILC:
+        fold_0: 3814
+        fold_1: 3814
+      Myeloid/DC:
+        fold_0: 6685
+        fold_1: 6684
+      Erythroid/MK-E:
+        fold_0: 3703
+        fold_1: 3702
+      Hematopoietic progenitor:
+        fold_0: 1842
+        fold_1: 1842
+    numerator: 215888465.38360184
+    denominator: 128891830.81386836
+    alpha_ref_raw: 1.6749584827867379
+    alpha_ref: 1.6749584827867379
+    phi_ref: 0.5970297235882734
+    alpha_floor: 1.0e-08
+    rate_pseudocount: 0.5
+    crossfit_mean_min: 7.000057657058532e-06
+    crossfit_mean_max: 10.363763467712939
+fragment_shape:
+  schema_version: 1
+  axis: parent_fragment_length_bp
+  count_unit: deduplicated_cut_sites
+  read_support_policy: ignore
+  peak_assignment: containing_nonoverlapping_peak
+  bins:
+  - name: short
+    min_inclusive: 0
+    max_exclusive: 100
+    layer: fragment_length_lt_100
+  - name: mono
+    min_inclusive: 100
+    max_exclusive: 250
+    layer: fragment_length_100_249
+  - name: long
+    min_inclusive: 250
+    layer: fragment_length_ge_250
+config_sha256: 10d81e7fc5a70288a913b2f8da95ecc7f6b5cc2a822cb63a1fdd78773deae988
+config:
+  use_shape: true
+  total_likelihood: negative_binomial
+  conditional_shape_likelihood: multinomial
+  signature_rate_pseudocount: 0.5
+  signature_shape_concentration: 1.0
+  exposure_mode: absorbed_in_abundance
+  dispersion_mode: reference_crossfit_global_scaled_by_abundance
+  dispersion_crossfit_folds: 2
+  dispersion_alpha_floor: 1.0e-08
+  background_mode: none
+  abundance_prior: gamma
+  abundance_prior_shape: 2.0
+  abundance_prior_rate: 1.0
+  optimizer: adam
+  learning_rate: 0.03
+  max_steps: 2000
+  patience: 100
+  tolerance: 1.0e-05
+  restarts: 3
+  spot_batch_size: 64
+  peak_chunk_size: 512
+  seed: 0
+  device: cuda:0
+  cuda_count_cache: auto
+  dtype: float32

@@ -92,9 +92,10 @@ def test_fragment_total_concordance_requires_exactly_one_global_convention(
     )
     totals = tmp_path / "totals.tsv"
     totals.write_text(
-        "cell_id\tbed_rows\tread_support_sum\n"
-        "cellA\t1\t3\n"
-        "cellB\t2\t4\n"
+        "cell_id\tbed_rows\tread_support_sum\texcluded_invalid_coordinate_rows\t"
+        "excluded_invalid_coordinate_read_support\n"
+        "cellA\t1\t3\t0\t0\n"
+        "cellB\t2\t4\t0\t0\n"
     )
     observed = materializer.validate_fragment_concordance(labels, totals)
     assert observed["passed"] is True
@@ -102,12 +103,32 @@ def test_fragment_total_concordance_requires_exactly_one_global_convention(
     assert observed["cells_compared"] == 2
 
     totals.write_text(
-        "cell_id\tbed_rows\tread_support_sum\n"
-        "cellA\t1\t1\n"
-        "cellB\t2\t2\n"
+        "cell_id\tbed_rows\tread_support_sum\texcluded_invalid_coordinate_rows\t"
+        "excluded_invalid_coordinate_read_support\n"
+        "cellA\t1\t1\t0\t0\n"
+        "cellB\t2\t2\t0\t0\n"
     )
     with pytest.raises(ValueError, match="Exactly one"):
         materializer.validate_fragment_concordance(labels, totals)
+
+
+def test_fragment_total_concordance_includes_excluded_boundary_rows(
+    tmp_path,
+) -> None:
+    labels = pd.DataFrame(
+        {"cell_id": ["cellA", "cellB"], "fragments": ["2", "2"]}
+    )
+    totals = tmp_path / "totals.tsv"
+    totals.write_text(
+        "cell_id\tbed_rows\tread_support_sum\texcluded_invalid_coordinate_rows\t"
+        "excluded_invalid_coordinate_read_support\n"
+        "cellA\t1\t5\t1\t2\n"
+        "cellB\t2\t8\t0\t0\n"
+    )
+    observed = materializer.validate_fragment_concordance(labels, totals)
+    assert observed["matching_convention"] == "bed_rows"
+    assert observed["excluded_invalid_coordinate_rows"] == 1
+    assert observed["total_source_bed_rows"] == 4
 
 
 def test_event_layers_aggregate_duplicates_in_bounded_chunks(

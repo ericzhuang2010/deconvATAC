@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import copy
+import ctypes
+import gc
 import hashlib
 import json
 import os
@@ -61,8 +63,14 @@ THREAD_ENVIRONMENT_VARIABLES = (
     "NUMEXPR_NUM_THREADS",
 )
 RESOURCE_GUARD_ENV = "DECONVATAC_RESOURCE_GUARD"
-RESOURCE_MAX_ONE_MINUTE_LOAD = 6.0
-RESOURCE_MIN_AVAILABLE_MEMORY_BYTES = 4 * 1024**3
+RESOURCE_PROFILE_ENV = "DECONVATAC_RESOURCE_PROFILE"
+RESOURCE_PROFILE = os.environ.get(RESOURCE_PROFILE_ENV, "co_tenant")
+if RESOURCE_PROFILE == "exclusive":
+    RESOURCE_MAX_ONE_MINUTE_LOAD = 32.0
+    RESOURCE_MIN_AVAILABLE_MEMORY_BYTES = 2 * 1024**3
+else:
+    RESOURCE_MAX_ONE_MINUTE_LOAD = 6.0
+    RESOURCE_MIN_AVAILABLE_MEMORY_BYTES = 4 * 1024**3
 RESOURCE_MAX_GPU_MEMORY_USED_MIB = 2048
 RESOURCE_MAX_GPU_TEMPERATURE_C = 79
 RESOURCE_MAX_DISPLAY_PROCESS_MEMORY_MIB = 512
@@ -199,11 +207,18 @@ def method_config_sha256(method_config: Mapping[str, Any]) -> str:
 def _recorded_path(path: Optional[Union[str, Path]]) -> Optional[str]:
     if path is None:
         return None
-    resolved = Path(path).resolve()
+    lexical = Path(path)
+    if not lexical.is_absolute():
+        lexical = ROOT / lexical
+    lexical = lexical.absolute()
     try:
-        return str(resolved.relative_to(ROOT.resolve()))
+        return lexical.relative_to(ROOT.absolute()).as_posix()
     except ValueError:
-        return str(resolved)
+        resolved = lexical.resolve()
+        try:
+            return resolved.relative_to(ROOT.resolve()).as_posix()
+        except ValueError:
+            return str(resolved)
 
 
 def _source_sha256(path: Optional[Path]) -> Optional[str]:
@@ -292,7 +307,7 @@ def _resolved_campaign_payload(
                 "dataset_config_sha256": job["dataset_config_sha256"],
             }
         )
-    registry_path = Path(registry).resolve()
+    registry_path = Path(registry)
     return {
         "experiment_config": copy.deepcopy(dict(experiment_config)),
         "resolved_jobs": resolved_jobs,
@@ -321,7 +336,7 @@ def build_execution_provenance(
     )
     methods = {str(job["method"]).lower() for job in jobs}
     compute_method = "shapemix" if "shapemix" in methods else None
-    registry_path = Path(registry).resolve()
+    registry_path = Path(registry)
     provenance = {
         "schema_version": PROVENANCE_SCHEMA_VERSION,
         "experiment_config": {
@@ -352,7 +367,7 @@ def build_single_run_provenance(
     method: str,
 ) -> dict[str, Any]:
     """Use the campaign schema for an auditable single-run invocation."""
-    registry_path = Path(registry).resolve()
+    registry_path = Path(registry)
     return {
         "schema_version": PROVENANCE_SCHEMA_VERSION,
         "experiment_config": {
@@ -558,6 +573,7 @@ def _resource_gate_state() -> dict[str, Any]:
         return {"enabled": False, "passed": True}
     state: dict[str, Any] = {
         "enabled": True,
+        "profile": RESOURCE_PROFILE,
         "captured_at": datetime.now().astimezone().isoformat(),
         "one_minute_load": float(os.getloadavg()[0]),
         "available_memory_bytes": int(psutil.virtual_memory().available),
@@ -616,7 +632,7 @@ def _execution_metadata(method_config: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _configure_shapemix_torch_threads(method: str) -> None:
-    """Enforce the co-tenant one-thread policy before ShapeMix imports work."""
+    """Keep ShapeMix Torch math single-threaded while CUDA owns the dense fit."""
     if str(method).lower() != "shapemix":
         return
 
@@ -632,6 +648,29 @@ def _configure_shapemix_torch_threads(method: str) -> None:
             raise RuntimeError(
                 "ShapeMix requires torch inter-op threads=1 under the co-tenant policy."
             ) from exc
+
+
+def _release_job_memory() -> None:
+    """Return per-job Python, CUDA, and glibc caches before the next run."""
+    gc.collect()
+    torch_module = sys.modules.get("torch")
+    cuda = getattr(torch_module, "cuda", None) if torch_module is not None else None
+    if cuda is not None:
+        try:
+            if cuda.is_available():
+                cuda.empty_cache()
+        except Exception:
+            # Cleanup must not invalidate an otherwise complete scientific run.
+            pass
+    gc.collect()
+    if platform.system() != "Linux":
+        return
+    try:
+        malloc_trim = ctypes.CDLL(None).malloc_trim
+    except (AttributeError, OSError):
+        return
+    malloc_trim(0)
+
 
 def run_one(
     dataset: str,
@@ -713,7 +752,7 @@ def run_one(
             "dataset_id": dataset,
             "modality": modality,
             "feature_set": feature_set,
-            "registry": str(registry),
+            "registry": _recorded_path(registry),
         },
         **_execution_metadata(method_config),
     }
@@ -725,7 +764,7 @@ def run_one(
         "dataset_id": dataset,
         "modality": modality,
         "feature_set": feature_set,
-        "registry": str(registry),
+        "registry": _recorded_path(registry),
         "dataset_config": data.metadata.get("dataset_config", {}),
     }
     if data.truth is not None:
@@ -1300,7 +1339,7 @@ def evaluate_run(
                 "n_spots": evaluation.n_spots,
                 "n_cell_types": evaluation.n_cell_types,
                 "value": evaluation.value,
-                "run_dir": str(run_dir),
+                "run_dir": _recorded_path(run_dir),
                 "error": None,
             }
         )
@@ -1352,7 +1391,7 @@ def _manifest_row(
         "method": job["method"],
         "method_run_id": job["method_run_id"],
         "run_id": job["run_id"],
-        "run_dir": str(batch_dir / job["run_id"]),
+        "run_dir": _recorded_path(batch_dir / job["run_id"]),
         "status": status,
         **_manifest_config_fields(job),
     }
@@ -1562,7 +1601,7 @@ def _failure_fallback_metadata(
             "dataset_id": job["dataset"],
             "modality": job["modality"],
             "feature_set": job["feature_set"],
-            "registry": str(registry),
+            "registry": _recorded_path(registry),
         },
         "execution_provenance": copy.deepcopy(dict(execution_provenance)),
         **_execution_metadata(job["method_config"]),
@@ -1737,6 +1776,7 @@ def run_experiment(
                 execution_provenance=execution_provenance,
                 manifest_rows=manifest_rows,
             )
+            _release_job_memory()
             continue
 
         resource_preflight = _wait_for_resource_gate()
@@ -1863,6 +1903,7 @@ def run_experiment(
             execution_provenance=execution_provenance,
             manifest_rows=manifest_rows,
         )
+        _release_job_memory()
 
     pd.DataFrame(manifest_rows).to_csv(batch_dir / "runs.csv", index=False)
     if failures:

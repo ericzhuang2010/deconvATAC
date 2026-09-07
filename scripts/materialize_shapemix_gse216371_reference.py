@@ -438,19 +438,34 @@ def validate_fragment_concordance(
     labels: pd.DataFrame, totals_path: Path
 ) -> dict[str, Any]:
     totals = pd.read_csv(totals_path, sep="\t", dtype={"cell_id": str})
+    expected_columns = (
+        "cell_id",
+        "bed_rows",
+        "read_support_sum",
+        "excluded_invalid_coordinate_rows",
+        "excluded_invalid_coordinate_read_support",
+    )
     if (
-        tuple(totals.columns) != ("cell_id", "bed_rows", "read_support_sum")
+        tuple(totals.columns) != expected_columns
         or totals["cell_id"].duplicated().any()
         or set(totals["cell_id"]) != set(labels["cell_id"])
     ):
         raise ValueError("Streamer cell-total axis does not match frozen E13.5 labels")
     expected = labels.set_index("cell_id")["fragments"].astype(np.int64)
     aligned = totals.set_index("cell_id").loc[expected.index]
-    if (aligned[["bed_rows", "read_support_sum"]] < 0).any().any():
+    total_columns = list(expected_columns[1:])
+    if (aligned[total_columns] < 0).any().any():
         raise ValueError("Streamer emitted negative fragment totals")
-    row_match = bool(np.array_equal(aligned["bed_rows"].to_numpy(), expected.to_numpy()))
+    source_bed_rows = (
+        aligned["bed_rows"] + aligned["excluded_invalid_coordinate_rows"]
+    )
+    source_read_support = (
+        aligned["read_support_sum"]
+        + aligned["excluded_invalid_coordinate_read_support"]
+    )
+    row_match = bool(np.array_equal(source_bed_rows.to_numpy(), expected.to_numpy()))
     support_match = bool(
-        np.array_equal(aligned["read_support_sum"].to_numpy(), expected.to_numpy())
+        np.array_equal(source_read_support.to_numpy(), expected.to_numpy())
     )
     if int(row_match) + int(support_match) != 1:
         raise ValueError(
@@ -467,6 +482,14 @@ def validate_fragment_concordance(
         "cells_compared": len(expected),
         "total_bed_rows": int(aligned["bed_rows"].sum()),
         "total_read_support": int(aligned["read_support_sum"].sum()),
+        "excluded_invalid_coordinate_rows": int(
+            aligned["excluded_invalid_coordinate_rows"].sum()
+        ),
+        "excluded_invalid_coordinate_read_support": int(
+            aligned["excluded_invalid_coordinate_read_support"].sum()
+        ),
+        "total_source_bed_rows": int(source_bed_rows.sum()),
+        "total_source_read_support": int(source_read_support.sum()),
         "total_workbook_fragments": int(expected.sum()),
     }
 
@@ -487,6 +510,20 @@ def write_coordinate_audit(
             "right_cut_offset": 0,
             "fragment_length": "end_minus_start",
             "read_support_policy": "ignore_for_model_counts",
+            "out_of_bounds_fragment_policy": (
+                "exclude_complete_source_row_without_coordinate_clipping"
+            ),
+            "boundary_counters": {
+                key: int(cache_manifest["counters"][key])
+                for key in (
+                    "invalid_coordinate_rows",
+                    "negative_start_rows",
+                    "negative_end_rows",
+                    "end_past_chromosome_rows",
+                    "excluded_retained_fragment_rows",
+                    "excluded_retained_read_support_total",
+                )
+            },
             "semantic_match": "exact",
             "fragment_total_match": "exact",
             "concordance": dict(concordance),
@@ -569,7 +606,17 @@ def build_fragment_statistics() -> Path:
             or summary.get("cells") != len(labels)
             or summary.get("features")
             != int(read_yaml(ccre_manifest)["candidate_intervals"])
-            or summary.get("valid_rows") != summary.get("total_rows")
+            or summary.get("valid_rows", 0)
+            + summary.get("invalid_coordinate_rows", 0)
+            != summary.get("total_rows")
+            or summary.get("negative_start_rows", 0)
+            > summary.get("invalid_coordinate_rows", 0)
+            or summary.get("negative_end_rows", 0)
+            > summary.get("invalid_coordinate_rows", 0)
+            or summary.get("end_past_chromosome_rows", 0)
+            > summary.get("invalid_coordinate_rows", 0)
+            or summary.get("excluded_retained_fragment_rows", 0)
+            > summary.get("invalid_coordinate_rows", 0)
         ):
             raise ValueError(f"Invalid embryo statistics summary: {summary}")
         concordance = validate_fragment_concordance(labels, totals_path)
@@ -609,6 +656,9 @@ def build_fragment_statistics() -> Path:
                 "right_cut_offset": 0,
                 "fragment_length": "end_minus_start",
                 "read_support_policy": "ignore",
+                "out_of_bounds_fragment_policy": (
+                    "exclude_complete_source_row_without_coordinate_clipping"
+                ),
             },
             "outputs": {
                 "fragments": "fragments.tsv.gz",
@@ -927,7 +977,7 @@ def reference_shape_result(
         total_rows=int(summary["total_rows"]),
         header_rows=int(summary["header_rows"]),
         invalid_schema_rows=0,
-        invalid_coordinate_rows=0,
+        invalid_coordinate_rows=int(summary["invalid_coordinate_rows"]),
         unknown_barcodes=int(summary["unknown_barcodes"]),
         filtered_contigs=0,
         valid_rows=int(summary["valid_rows"]),

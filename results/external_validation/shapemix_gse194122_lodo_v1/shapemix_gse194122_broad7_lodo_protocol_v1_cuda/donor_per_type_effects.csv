@@ -1,0 +1,141 @@
+donor,condition,cell_type,mae_length_minus_count_only
+1,equal_celltype,B/plasma,-0.00030735888420129615
+1,equal_celltype,CD4 T,-0.0010003253548970942
+1,equal_celltype,CD8 T,0.0014510421074648422
+1,equal_celltype,Erythroid/MK-E,-7.056275469576045e-05
+1,equal_celltype,Hematopoietic progenitor,-0.0009924036343088583
+1,equal_celltype,Myeloid/DC,-0.0005727450845214727
+1,equal_celltype,NK/ILC,0.002441980965289907
+1,observed_abundance,B/plasma,-0.0004638391290746127
+1,observed_abundance,CD4 T,-7.086946310443792e-05
+1,observed_abundance,CD8 T,0.0029436569254207325
+1,observed_abundance,Erythroid/MK-E,-8.36949401972209e-06
+1,observed_abundance,Hematopoietic progenitor,-0.002167911288943832
+1,observed_abundance,Myeloid/DC,-0.0010034877503671547
+1,observed_abundance,NK/ILC,0.0020966988497428674
+2,equal_celltype,B/plasma,-0.0005953790980635955
+2,equal_celltype,CD4 T,-0.002569834530012867
+2,equal_celltype,CD8 T,-0.0020693557925232225
+2,equal_celltype,Erythroid/MK-E,-0.00023298285957815829
+2,equal_celltype,Hematopoietic progenitor,-0.0007043802661723039
+2,equal_celltype,Myeloid/DC,-0.0006893254235744092
+2,equal_celltype,NK/ILC,-0.0008563834208716661
+2,observed_abundance,B/plasma,-0.00027278644598374355
+2,observed_abundance,CD4 T,-0.0016311424110539152
+2,observed_abundance,CD8 T,-0.0024732671399226927
+2,observed_abundance,Erythroid/MK-E,-0.00010203194467697796
+2,observed_abundance,Hematopoietic progenitor,0.0001257794754406412
+2,observed_abundance,Myeloid/DC,-0.00017411006002102797
+2,observed_abundance,NK/ILC,-0.00036015584410787477
+3,equal_celltype,B/plasma,0.0003384128029534708
+3,equal_celltype,CD4 T,0.0012877106875863811
+3,equal_celltype,CD8 T,0.0042771175202339015
+3,equal_celltype,Erythroid/MK-E,-0.00033148571407577015
+3,equal_celltype,Hematopoietic progenitor,-0.00035565438730143784
+3,equal_celltype,Myeloid/DC,-0.00013427701025298805
+3,equal_celltype,NK/ILC,0.0033131049806327598
+3,observed_abundance,B/plasma,0.0003795980329675576
+3,observed_abundance,CD4 T,0.001796090214778362
+3,observed_abundance,CD8 T,0.006659153238350007
+3,observed_abundance,Erythroid/MK-E,-0.00044754986387696843
+3,observed_abundance,Hematopoietic progenitor,-0.00012288078555307627
+3,observed_abundance,Myeloid/DC,-0.00030068122049353024
+3,observed_abundance,NK/ILC,0.004549463463388116
+4,equal_celltype,B/plasma,0.004987179213953946
+4,equal_celltype,CD4 T,-0.0009273237289430317
+4,equal_celltype,CD8 T,-0.006682275078558585
+4,equal_celltype,Erythroid/MK-E,-0.0010191192158781684
+4,equal_celltype,Hematopoietic progenitor,-0.005653684959526235
+4,equal_celltype,Myeloid/DC,-0.0019685756786335315
+4,equal_celltype,NK/ILC,-0.00286888716425443
+4,observed_abundance,B/plasma,0.0012526089814086233
+4,observed_abundance,CD4 T,-0.000834999140473934
+4,observed_abundance,CD8 T,-0.00041564743736899334
+4,observed_abundance,Erythroid/MK-E,-0.0018717411670605005
+4,observed_abundance,Hematopoietic progenitor,-0.0053873300448208615
+4,observed_abundance,Myeloid/DC,-0.002344351548182952
+4,observed_abundance,NK/ILC,-0.0006836807687421714
+5,equal_celltype,B/plasma,-0.0014931645749522715
+5,equal_celltype,CD4 T,-0.00040319411130171345
+5,equal_celltype,CD8 T,-0.0009767235556444182
+5,equal_celltype,Erythroid/MK-E,-0.00036636365232003976
+5,equal_celltype,Hematopoietic progenitor,0.0007825446480297787
+5,equal_celltype,Myeloid/DC,-0.0008371624610501935
+5,equal_celltype,NK/ILC,-0.002089751003215866
+5,observed_abundance,B/plasma,-0.0004821392238118817
+5,observed_abundance,CD4 T,-0.0002383532376917588
+5,observed_abundance,CD8 T,-0.0012902252432821365
+5,observed_abundance,Erythroid/MK-E,-0.0007591752697723633
+5,observed_abundance,Hematopoietic progenitor,-0.00032808445220013777
+5,observed_abundance,Myeloid/DC,-0.000775882699422005
+5,observed_abundance,NK/ILC,-0.0019283562821634653
+6,equal_celltype,B/plasma,-0.0007984702269553147
+6,equal_celltype,CD4 T,0.0004746187355926315
+6,equal_celltype,CD8 T,0.003764703174062363
+6,equal_celltype,Erythroid/MK-E,1.720678553015359e-05
+6,equal_celltype,Hematopoietic progenitor,-0.0004798666852262115
+6,equal_celltype,Myeloid/DC,-0.0004976393343352342
+6,equal_celltype,NK/ILC,-0.00010468716974105022
+6,observed_abundance,B/plasma,-0.0001458693315936864
+6,observed_abundance,CD4 T,0.0006951887806609658
+6,observed_abundance,CD8 T,0.001223100622440354
+6,observed_abundance,Erythroid/MK-E,-0.00010163651194171341
+6,observed_abundance,Hematopoietic progenitor,-0.0004452014720573508
+6,observed_abundance,Myeloid/DC,-0.0004720531383067966
+6,observed_abundance,NK/ILC,-0.0018956045524635631
+7,equal_celltype,B/plasma,0.005404465084313893
+7,equal_celltype,CD4 T,0.0027985279423494297
+7,equal_celltype,CD8 T,0.013724173225308334
+7,equal_celltype,Erythroid/MK-E,-0.00017975745621561304
+7,equal_celltype,Hematopoietic progenitor,0.0027472077811817493
+7,equal_celltype,Myeloid/DC,0.005667221452489102
+7,equal_celltype,NK/ILC,0.0008774115043961236
+7,observed_abundance,B/plasma,0.0062253557009848345
+7,observed_abundance,CD4 T,-0.0009555640468105892
+7,observed_abundance,CD8 T,-0.004421177479611391
+7,observed_abundance,Erythroid/MK-E,-0.0029431142364466523
+7,observed_abundance,Hematopoietic progenitor,0.002341140333687073
+7,observed_abundance,Myeloid/DC,0.009378193955959402
+7,observed_abundance,NK/ILC,-0.005194233382895187
+8,equal_celltype,B/plasma,0.003162396660664882
+8,equal_celltype,CD4 T,-0.005969845260130481
+8,equal_celltype,CD8 T,-0.010993111323731389
+8,equal_celltype,Erythroid/MK-E,-0.00011765194090102016
+8,equal_celltype,Hematopoietic progenitor,0.0007223516789468809
+8,equal_celltype,Myeloid/DC,-0.0009818231901578406
+8,equal_celltype,NK/ILC,-0.0022392319395326196
+8,observed_abundance,B/plasma,0.0006136359608421085
+8,observed_abundance,CD4 T,-0.0034802860190123117
+8,observed_abundance,CD8 T,-0.003356698438876163
+8,observed_abundance,Erythroid/MK-E,-0.0001194344428184814
+8,observed_abundance,Hematopoietic progenitor,-0.00020322397734941905
+8,observed_abundance,Myeloid/DC,-0.0004700915123128542
+8,observed_abundance,NK/ILC,0.005381233647836825
+9,equal_celltype,B/plasma,0.006457810397542181
+9,equal_celltype,CD4 T,0.0032064484121440626
+9,equal_celltype,CD8 T,0.013239993217970328
+9,equal_celltype,Erythroid/MK-E,0.00042570531011132395
+9,equal_celltype,Hematopoietic progenitor,-0.0013679045398145573
+9,equal_celltype,Myeloid/DC,-0.001502838413284649
+9,equal_celltype,NK/ILC,0.007168912771016545
+9,observed_abundance,B/plasma,0.0013178744536485668
+9,observed_abundance,CD4 T,-0.003382504396303228
+9,observed_abundance,CD8 T,-0.0006470112440875378
+9,observed_abundance,Erythroid/MK-E,0.00044885163054925875
+9,observed_abundance,Hematopoietic progenitor,-0.0002486661220669484
+9,observed_abundance,Myeloid/DC,-0.0003817445135884216
+9,observed_abundance,NK/ILC,0.003835517580290923
+10,equal_celltype,B/plasma,-0.001835051247163183
+10,equal_celltype,CD4 T,0.008658285994224281
+10,equal_celltype,CD8 T,0.008327240548096734
+10,equal_celltype,Erythroid/MK-E,-0.0005186471128791371
+10,equal_celltype,Hematopoietic progenitor,-0.008133237700855805
+10,equal_celltype,Myeloid/DC,0.00536414268042161
+10,equal_celltype,NK/ILC,-0.0007666955377117965
+10,observed_abundance,B/plasma,-0.0012038205305473157
+10,observed_abundance,CD4 T,0.00667129476123058
+10,observed_abundance,CD8 T,0.007585379636373464
+10,observed_abundance,Erythroid/MK-E,-0.0008276813180135047
+10,observed_abundance,Hematopoietic progenitor,-0.011476556526651548
+10,observed_abundance,Myeloid/DC,0.004792900786312532
+10,observed_abundance,NK/ILC,0.0011381235581799792

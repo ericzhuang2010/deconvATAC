@@ -103,12 +103,13 @@ preprocessing_policy:
   fragment_bins_bp: [[0, 100], [100, 250], [250, null]]
   right_cut_offset: 0
   coordinate_semantics: deposited BED zero-based half-open unique parent fragments; cuts at start and end; read support ignored for model counts
+  out_of_bounds_fragment_policy: exclude the complete source row without clipping either endpoint; preserve exact exclusion counters and retained-cell source totals for audit
   truth_policy: reference labels are not spatial composition truth
 validation_gates:
   - exact remote byte size and complete source stream
   - safe complete tar traversal with exactly the GEO-declared BED members
   - exact E13.5 annotation-to-fragment barcode mapping
-  - mm10 chromosome and coordinate validation
+  - mm10 chromosome and coordinate validation; out-of-bounds boundary rows are excluded whole, never clipped, and counted by reason
   - positive parent-fragment lengths, positive integer read support, and frozen half-open right-cut convention
   - exactly one of per-cell BED row count or read-support sum matches workbook Fragments for every retained E13.5 cell
   - minimum broad-label support before feature selection

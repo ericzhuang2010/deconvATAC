@@ -10,6 +10,7 @@ from scripts.construct_shapemix_gse246791_fragments import (
     filter_fragments,
     fragment_count_concordance,
     load_h5ad_fragment_counts,
+    run_fragment_builder,
 )
 
 
@@ -41,6 +42,43 @@ def test_load_h5ad_fragment_counts_reads_exact_contract(tmp_path: Path):
     assert barcodes == [BARCODE1, BARCODE2]
     np.testing.assert_array_equal(counts, [2, 1])
     assert chrom_sizes == {"chr1": 100}
+
+
+def test_run_fragment_builder_roots_scratch_and_restores_cwd(tmp_path: Path):
+    original_directory = Path.cwd()
+    observed: dict[str, object] = {}
+
+    def builder(**kwargs):
+        observed["cwd"] = Path.cwd()
+        observed["kwargs"] = kwargs
+        return "statistics"
+
+    result = run_fragment_builder(
+        builder,
+        work_root=tmp_path,
+        bam_file=tmp_path / "input.bam",
+        output_file=tmp_path / "fragments.tsv.gz",
+    )
+
+    assert result == "statistics"
+    assert observed["cwd"] == tmp_path
+    assert observed["kwargs"] == {
+        "bam_file": tmp_path / "input.bam",
+        "output_file": tmp_path / "fragments.tsv.gz",
+    }
+    assert Path.cwd() == original_directory
+
+
+def test_run_fragment_builder_restores_cwd_after_failure(tmp_path: Path):
+    original_directory = Path.cwd()
+
+    def builder(**_kwargs):
+        raise RuntimeError("builder failed")
+
+    with pytest.raises(RuntimeError, match="builder failed"):
+        run_fragment_builder(builder, work_root=tmp_path)
+
+    assert Path.cwd() == original_directory
 
 
 def test_filter_fragments_keeps_whitelist_and_h5ad_contigs(tmp_path: Path):

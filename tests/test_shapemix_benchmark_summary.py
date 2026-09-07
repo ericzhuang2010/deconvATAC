@@ -607,6 +607,7 @@ def test_cli_core_combines_run_groups_and_writes_one_donor_reports(tmp_path):
         "unavailable_pair_metrics": 0,
         "unavailable_outer_metrics": 0,
     }
+    assert manifest["status"] == "complete"
     assert not manifest["biological_replication"]
     assert manifest["donors"] == 1
     assert "cannot establish donor-level" in manifest["scientific_interpretation_limit"]
@@ -655,6 +656,7 @@ def test_all_failed_campaign_writes_explicit_incomplete_summary(tmp_path):
     assert manifest["counts"]["failed_runs"] == 40
     assert manifest["counts"]["unavailable_pair_metrics"] == 40
     assert manifest["counts"]["unavailable_outer_metrics"] == 20
+    assert manifest["status"] == "incomplete"
     assert len(pd.read_csv(output / "run_metrics.csv")) == 0
     assert len(pd.read_csv(output / "reconstruction.csv")) == 0
     assert len(pd.read_csv(output / "failures.csv")) == 40

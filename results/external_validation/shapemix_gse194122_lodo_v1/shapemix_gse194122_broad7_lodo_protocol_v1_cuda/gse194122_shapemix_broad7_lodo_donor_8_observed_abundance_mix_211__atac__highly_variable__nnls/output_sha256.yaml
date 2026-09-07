@@ -1,0 +1,14 @@
+schema_version: 1
+algorithm: sha256
+exclusions:
+- run.yaml
+- output_sha256.yaml
+run_metadata_sha256: 91eefbb8b23ccd5f97f189b9f15e0708cee7a5045a19beb537924eb54602f155
+run_metadata_hash_encoding: canonical_json_sorted_keys_compact_utf8
+files:
+  environment.txt: d95a66f9674c3b79b7b7384e56376e23d48f8f452d273f34bbabbe6ace3fc15d
+  inputs.yaml: 113d3cdebad1d25f558736f430a8ace42b7990dbe0c8d6dcaa6231f9bf042f0c
+  results/abundance.csv: 63f166082d467ed80fb1d52aebbf2201aa85d0fb6cacd1c09945353f5e19a59d
+  results/diagnostics.json: aa56b6ad7598d05b50cfa69b2f1ce605f6c51ad6273dcf9e5900093a5df38137
+  results/proportions.csv: 9932fb4817a308ec3d04ff0d6b0e6ca971093eada2a39b5ab40d71903ca1beb8
+  results/truth.csv: 974e20d4b6da52955a84000ecf22284067ab2906ba0cdcdbb13b2e4c96b506c4

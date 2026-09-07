@@ -305,8 +305,9 @@ Before any external prediction is inspected:
   `1e-4` tolerances;
 - smoke proportions are retained diagnostically and smoke-scale production
   inputs use CPU;
-- one 1,024 by 5,000 development dataset agrees within `2e-4`, with RMSE/JSD
-  agreement within `1e-5`;
+- one 1,024 by 5,000 development dataset, conditioned on deterministic restart
+  zero, agrees within `1e-4`, with RMSE/JSD agreement within `1e-5`; direct
+  multi-restart cross-device selection is retained as a separate diagnostic;
 - two repeated CUDA fits agree within `1e-7` and have the same convergence
   status;
 - cached and host-streamed CUDA modes meet the same tolerances;
@@ -346,6 +347,38 @@ the first v2 full-size attempt is recorded at
 `results/development/shapemix_gpu_qualification_v2/full_size/interruption.yaml`;
 it produced no scientific output.
 
+### Restart-conditioned backend qualification amendment (2026-09-05)
+
+The completed post-log-abundance v2 full-size campaign exposed a distinction
+that the original gate combined. All four runs succeeded, cached CUDA was
+`4.082x` faster than CPU, repeated CUDA results were identical, and cached and
+streamed CUDA results were identical. However, the three-restart CPU run
+selected restart 2 while all CUDA modes selected restart 1. Their direct
+maximum proportion difference was `0.0364353`, so the driver correctly stopped
+before any CUDA-routed external prediction.
+
+The failed report is retained as
+`qualification_report_direct_multirestart_failure.yaml`. A development-only
+diagnostic then fixed both devices to deterministic restart zero on the same
+1,024 by 5,000 input. Both devices selected restart zero, stopped at step 279,
+and agreed to a maximum proportion difference of `9.16081e-5` and a maximum
+RMSE/JSD difference of `8.03279e-9`. These pass the original, stricter `1e-4`
+proportion bound and the frozen `1e-5` metric bound; CUDA was `4.173x` faster.
+
+The v2 backend decision therefore separates two pre-production questions:
+
+- fixed-restart CPU/CUDA comparison qualifies backend arithmetic and the
+  convergence trajectory without changing any threshold;
+- independent three-restart CUDA repeats qualify same-device determinism and
+  cached/streamed equivalence; and
+- production retains all three restarts and uses the same CUDA backend for
+  both members of every full-size ShapeMix pair.
+
+This amendment uses development qualification evidence only. It was made
+before any CUDA-routed external prediction was inspected. The direct
+multi-restart cross-device failure remains visible in the schema-v3 report
+rather than being reclassified or discarded.
+
 ## PBMC diagnostic sensitivity campaign
 
 The one-donor PBMC follow-up changes one factor at a time and is explanatory,
@@ -373,6 +406,14 @@ objects by exact layer summation. The existing three-bin objects are not
 rewritten. Reference-support subsets select the smallest SHA-256 barcode
 digests within type, independently of held-out counts and predictions.
 
+Implementation clarification recorded 2026-09-06 before any PBMC stress
+prediction was produced: fragment-shape schema version 1 remains restricted to
+the canonical three-bin contract. The separately versioned two- and five-bin
+sensitivity objects use fragment-shape schema version 2, which requires a
+complete, contiguous, ordered partition beginning at zero and ending in one
+unbounded bin. All axis, count-unit, cut-offset, conservation, feature-hash,
+and provenance checks remain unchanged.
+
 There is no complete factorial grid and no depth-by-rare interaction in
 protocol v1. The anchor dataset is materialized once per evaluation seed and
 reused as the declared control for depth, cells, rarity, feature count, and bin
@@ -380,19 +421,29 @@ count. The campaign contains 40 unique datasets and 120 core jobs across the
 same three methods used elsewhere. Frozen experiment:
 `configs/experiments/shapemix_pbmc_stress_v1.yaml`.
 
-## Co-tenant resource policy
+## Resource execution profiles
 
 Every material task is launched through
-`scripts/run_shapemix_low_impact.sh`. Only one deconvATAC task runs at a time.
-The launcher requires one-minute load below 6.0, at least 4 GiB available host
-memory, and no unrelated GPU compute process. It applies low CPU/I/O priority,
-one host math thread, one GPU owner, and at most two preprocessing or validation
-workers. Adult-read acquisition alone may use four network transfers while its
-validation semaphore remains capped at two CPU workers.
-A closed gate pauses the next launch and never interrupts the other workflow.
-The persistent `gnome-remote-desktop-daemon` is treated as display overhead,
-not a competing scientific job, only while its reported allocation is at most
-512 MiB; the total 2 GiB prelaunch GPU-memory cap still applies.
+`scripts/run_shapemix_low_impact.sh`, which retains a host-wide lock and one
+GPU owner. The original `co_tenant` profile remains frozen: load below 6.0,
+at least 4 GiB available memory, one host math thread, at most two CPU workers,
+and four download transfers with two integrity workers.
+
+Resource amendment, 2026-09-02: after the user confirmed that no competing
+scientific workflow remains, pending work uses
+`DECONVATAC_RESOURCE_PROFILE=exclusive`. This profile admits eight download
+transfers, four integrity workers, eight-thread CPU libraries and fragment
+construction, and an eight-thread BWA plus four-extra-thread name-sort stream
+on the 16-logical-CPU host. Real-spatial tabix counting uses exact disjoint-
+contig shards with at most two worker processes under `co_tenant` or eight under
+`exclusive`; canonical integer CSR layers and complete QC counters are merged
+without changing the scientific inputs or count semantics. Dataset manifests
+record the partition, merge rule, profile, worker cap, and chunk size. It
+retains 2 GiB available-memory, unrelated-GPU, 79 C GPU-temperature, and
+project-lock gates. ShapeMix Torch math remains single-threaded while CUDA owns
+the qualified dense likelihood. The persistent
+`gnome-remote-desktop-daemon` remains classified as display overhead only
+while its reported GPU allocation is at most 512 MiB.
 
 ## Canonical outputs
 

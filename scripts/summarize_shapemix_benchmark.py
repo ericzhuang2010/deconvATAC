@@ -2010,6 +2010,16 @@ def _summary_manifest(
     primary_summary: pd.DataFrame,
 ) -> dict[str, Any]:
     first_provenance = provenance.iloc[0]
+    failed_runs = int((records["status"] != "success").sum())
+    unavailable_pair_metrics = int((paired["pair_status"] != "complete").sum())
+    unavailable_outer_metrics = int((outer["outer_status"] != "complete").sum())
+    status = (
+        "complete"
+        if failed_runs == 0
+        and unavailable_pair_metrics == 0
+        and unavailable_outer_metrics == 0
+        else "incomplete"
+    )
     support = {
         condition: bool(
             primary_summary.loc[
@@ -2020,6 +2030,7 @@ def _summary_manifest(
     }
     return {
         "schema_version": 1,
+        "status": status,
         "benchmark_protocol_version": PROTOCOL_VERSION,
         "analysis": "paired ShapeMix length-minus-count-only ablation",
         "reporting_scope": REPORTING_SCOPE,
@@ -2076,10 +2087,10 @@ def _summary_manifest(
         },
         "counts": {
             "runs": len(records),
-            "failed_runs": int((records["status"] != "success").sum()),
+            "failed_runs": failed_runs,
             "nested_pairs": int(paired[list(PAIR_KEY)].drop_duplicates().shape[0]),
-            "unavailable_pair_metrics": int((paired["pair_status"] != "complete").sum()),
-            "unavailable_outer_metrics": int((outer["outer_status"] != "complete").sum()),
+            "unavailable_pair_metrics": unavailable_pair_metrics,
+            "unavailable_outer_metrics": unavailable_outer_metrics,
         },
         "directional_support_rule": (
             "for each condition, both co-primary mean effects are below zero and at least "

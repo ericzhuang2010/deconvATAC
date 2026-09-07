@@ -6,13 +6,14 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import os
 import platform
 import shutil
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, Sequence
 
 import anndata as ad
 import numpy as np
@@ -26,7 +27,12 @@ from deconvatac.data.validators import (
     validate_fragment_shape_feature_axis,
     validate_fragment_shape_spec,
 )
-from deconvatac.pp.fragment_shapes import build_fragment_shape_anndata, count_fragment_shapes
+from deconvatac.pp.fragment_shapes import (
+    FragmentShapeQC,
+    FragmentShapeResult,
+    build_fragment_shape_anndata,
+    count_fragment_shapes,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +42,230 @@ DEFAULT_TEMPLATES = (
 )
 REGISTRY_PATH = ROOT / "data/registry/datasets.yaml"
 COUNT_CHUNK_SIZE = 1_000_000
+EXCLUSIVE_COUNT_WORKERS = 8
+CO_TENANT_COUNT_WORKERS = 2
+_SPATIAL_COUNT_CONTEXT: tuple[Any, ...] | None = None
+_QC_SUM_FIELDS = (
+    "total_rows",
+    "invalid_schema_rows",
+    "invalid_coordinate_rows",
+    "unknown_barcodes",
+    "filtered_contigs",
+    "valid_rows",
+    "retained_fragments",
+    "fragments_with_assigned_cut_sites",
+    "cut_sites_outside_peaks",
+    "assigned_cut_sites",
+    "read_support_total",
+)
+
+
+def spatial_count_workers(contig_count: int) -> int:
+    """Return a fail-closed worker count bounded by the active resource profile."""
+    if isinstance(contig_count, bool) or not isinstance(contig_count, int) or contig_count < 1:
+        raise ValueError("contig_count must be a positive integer")
+    profile = os.environ.get("DECONVATAC_RESOURCE_PROFILE", "co_tenant")
+    if profile == "exclusive":
+        maximum = EXCLUSIVE_COUNT_WORKERS
+    elif profile == "co_tenant":
+        maximum = CO_TENANT_COUNT_WORKERS
+    else:
+        raise ValueError(f"Unsupported DECONVATAC_RESOURCE_PROFILE={profile!r}")
+    return min(contig_count, maximum)
+
+
+def _canonical_sparse_add(
+    left: sparse.csr_matrix, right: sparse.csr_matrix
+) -> sparse.csr_matrix:
+    merged = (left + right).tocsr()
+    merged.sum_duplicates()
+    merged.eliminate_zeros()
+    merged.sort_indices()
+    return merged
+
+
+def _push_sparse_run(
+    levels: list[sparse.csr_matrix | None], run: sparse.csr_matrix
+) -> None:
+    level = 0
+    while True:
+        if level == len(levels):
+            levels.append(run)
+            return
+        current = levels[level]
+        if current is None:
+            levels[level] = run
+            return
+        levels[level] = None
+        run = _canonical_sparse_add(current, run)
+        level += 1
+
+
+def merge_fragment_shape_results(
+    results: Iterable[FragmentShapeResult],
+) -> FragmentShapeResult:
+    """Exactly merge disjoint-contig fragment-count shards."""
+    first: FragmentShapeResult | None = None
+    qc: FragmentShapeQC | None = None
+    levels: dict[str, list[sparse.csr_matrix | None]] = {}
+
+    for result in results:
+        if first is None:
+            first = result
+            qc = FragmentShapeQC(
+                header_rows=result.qc.header_rows,
+                cut_sites_per_bin={bin_.layer: 0 for bin_ in result.bins},
+            )
+            levels = {bin_.layer: [] for bin_ in result.bins}
+        elif (
+            result.barcodes != first.barcodes
+            or result.peaks != first.peaks
+            or result.bins != first.bins
+            or result.right_cut_offset != first.right_cut_offset
+        ):
+            raise ValueError("Fragment-count shards do not share identical axes")
+        elif result.qc.header_rows != first.qc.header_rows:
+            raise ValueError("Fragment-count shards disagree on source header rows")
+
+        assert first is not None and qc is not None
+        if set(result.qc.cut_sites_per_bin) != set(qc.cut_sites_per_bin):
+            raise ValueError("Fragment-count shards disagree on length-bin counters")
+        for field in _QC_SUM_FIELDS:
+            setattr(qc, field, getattr(qc, field) + getattr(result.qc, field))
+        for layer, count in result.qc.cut_sites_per_bin.items():
+            qc.cut_sites_per_bin[layer] += count
+        for bin_ in result.bins:
+            _push_sparse_run(levels[bin_.layer], result.layers[bin_.layer])
+
+    if first is None or qc is None:
+        raise ValueError("At least one fragment-count shard is required")
+
+    layers: dict[str, sparse.csr_matrix] = {}
+    shape = (len(first.barcodes), len(first.peaks))
+    for bin_ in first.bins:
+        merged: sparse.csr_matrix | None = None
+        for run in levels[bin_.layer]:
+            if run is None:
+                continue
+            merged = run if merged is None else _canonical_sparse_add(merged, run)
+        layers[bin_.layer] = (
+            sparse.csr_matrix(shape, dtype=np.int64) if merged is None else merged
+        )
+    return FragmentShapeResult(
+        barcodes=first.barcodes,
+        peaks=first.peaks,
+        bins=first.bins,
+        layers=layers,
+        qc=qc,
+        right_cut_offset=first.right_cut_offset,
+    )
+
+
+def _initialize_spatial_count_worker(
+    barcodes: Sequence[str],
+    peaks: Sequence[tuple[str, int, int, str]],
+    bins: Sequence[Mapping[str, Any]],
+    right_cut_offset: int,
+    chunk_size: int,
+) -> None:
+    global _SPATIAL_COUNT_CONTEXT
+    _SPATIAL_COUNT_CONTEXT = (
+        tuple(barcodes),
+        tuple(peaks),
+        tuple(dict(value) for value in bins),
+        int(right_cut_offset),
+        int(chunk_size),
+    )
+
+
+def _count_spatial_contig(fragments_path: str, contig: str) -> FragmentShapeResult:
+    if _SPATIAL_COUNT_CONTEXT is None:
+        raise RuntimeError("Spatial fragment-count worker was not initialized")
+    barcodes, peaks, bins, right_cut_offset, chunk_size = _SPATIAL_COUNT_CONTEXT
+    return count_fragment_shapes(
+        fragments_path,
+        barcodes,
+        peaks,
+        right_cut_offset=right_cut_offset,
+        bins=bins,
+        chunk_size=chunk_size,
+        contigs=(contig,),
+    )
+
+
+def count_spatial_fragment_shapes(
+    fragments_path: Path,
+    barcodes: Sequence[str],
+    peaks: Sequence[tuple[str, int, int, str]],
+    *,
+    right_cut_offset: int,
+    bins: Sequence[Mapping[str, Any]],
+    chunk_size: int,
+) -> FragmentShapeResult:
+    """Count a tabix-indexed file by contig under the active host resource profile."""
+    try:
+        import pysam  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise ImportError("Parallel spatial counting requires pysam") from exc
+
+    with pysam.TabixFile(str(fragments_path)) as tabix_file:
+        contigs = tuple(str(value) for value in tabix_file.contigs)
+    if not contigs or len(contigs) != len(set(contigs)):
+        raise ValueError(f"Invalid tabix contig axis: {repository_path(fragments_path)}")
+
+    workers = spatial_count_workers(len(contigs))
+    if workers == 1:
+        return count_fragment_shapes(
+            fragments_path,
+            barcodes,
+            peaks,
+            right_cut_offset=right_cut_offset,
+            bins=bins,
+            chunk_size=chunk_size,
+        )
+
+    print(
+        f"real_spatial_count file={repository_path(fragments_path)} "
+        f"workers={workers} contigs={len(contigs)} status=started",
+        flush=True,
+    )
+    completed = 0
+    completed_rows = 0
+    report_every = max(1, len(contigs) // 20)
+    with ProcessPoolExecutor(
+        max_workers=workers,
+        initializer=_initialize_spatial_count_worker,
+        initargs=(barcodes, peaks, bins, right_cut_offset, chunk_size),
+    ) as executor:
+        futures = {
+            executor.submit(_count_spatial_contig, str(fragments_path), contig): contig
+            for contig in contigs
+        }
+
+        def completed_results() -> Iterable[FragmentShapeResult]:
+            nonlocal completed, completed_rows
+            for future in as_completed(tuple(futures)):
+                result = future.result()
+                futures.pop(future)
+                completed += 1
+                completed_rows += result.qc.total_rows
+                if completed % report_every == 0 or completed == len(contigs):
+                    print(
+                        f"real_spatial_count file={fragments_path.name} "
+                        f"contigs_complete={completed}/{len(contigs)} "
+                        f"rows={completed_rows}",
+                        flush=True,
+                    )
+                yield result
+
+        merged = merge_fragment_shape_results(completed_results())
+    print(
+        f"real_spatial_count file={repository_path(fragments_path)} "
+        f"rows={merged.qc.total_rows} retained={merged.qc.retained_fragments} "
+        "status=complete",
+        flush=True,
+    )
+    return merged
 
 
 def repository_path(path: Path) -> str:
@@ -278,7 +508,7 @@ def build_atac_spatial(
     spec: FragmentShapeSpec,
     provenance: Mapping[str, Any],
 ) -> tuple[ad.AnnData, dict[str, Any]]:
-    result = count_fragment_shapes(
+    result = count_spatial_fragment_shapes(
         fragments_path,
         raw_barcodes,
         peak_records(var),
@@ -316,7 +546,7 @@ def build_epigenome_validation(
     var: pd.DataFrame,
     spec: FragmentShapeSpec,
 ) -> tuple[ad.AnnData, dict[str, Any]]:
-    result = count_fragment_shapes(
+    result = count_spatial_fragment_shapes(
         fragments_path,
         raw_barcodes,
         peak_records(var),
@@ -648,6 +878,15 @@ def materialize_section(template: Mapping[str, Any], section: Mapping[str, Any])
                 "atac_source_sha256": str(atac_record["normalized_sha256"]),
                 "spots": spatial.n_obs,
                 "features": spatial.n_vars,
+                "fragment_count_execution": {
+                    "partition": "tabix_contig",
+                    "merge": "exact_canonical_integer_csr_binary_carry",
+                    "resource_profile": os.environ.get(
+                        "DECONVATAC_RESOURCE_PROFILE", "co_tenant"
+                    ),
+                    "workers_max": spatial_count_workers(EXCLUSIVE_COUNT_WORKERS),
+                    "chunk_size": COUNT_CHUNK_SIZE,
+                },
                 "atac_preprocessing_counters": atac_qc,
                 "epigenome_preprocessing_counters": epigenome_qc,
                 "outputs": {

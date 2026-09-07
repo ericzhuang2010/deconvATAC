@@ -33,6 +33,7 @@ _CANONICAL_FRAGMENT_SHAPE_BINS = (
         layer="fragment_length_ge_250",
     ),
 )
+_SUPPORTED_FRAGMENT_SHAPE_SCHEMA_VERSIONS = (1, 2)
 _SHA256_PATTERN = re.compile(r"^[0-9a-fA-F]{64}$")
 _FRAGMENT_SHAPE_COUNTER_FIELDS = {
     "total_rows",
@@ -88,14 +89,74 @@ def _is_integer(value: Any) -> bool:
     return isinstance(value, Integral) and not isinstance(value, (bool, np.bool_))
 
 
+def _validate_complete_fragment_length_partition(
+    bins: tuple[FragmentShapeBin, ...],
+) -> None:
+    """Validate a complete ordered partition of non-negative fragment lengths."""
+    if not bins:
+        raise ValueError("fragment_shape.bins must contain at least one bin.")
+    if any(not isinstance(bin_spec, FragmentShapeBin) for bin_spec in bins):
+        raise TypeError("fragment_shape.bins must contain FragmentShapeBin values.")
+    if any(
+        not isinstance(bin_spec.name, str)
+        or not bin_spec.name
+        or not isinstance(bin_spec.layer, str)
+        or not bin_spec.layer
+        for bin_spec in bins
+    ):
+        raise ValueError("fragment_shape bin names and layer names must be non-empty strings.")
+    if len({bin_spec.name for bin_spec in bins}) != len(bins):
+        raise ValueError("fragment_shape bin names must be unique.")
+    if len({bin_spec.layer for bin_spec in bins}) != len(bins):
+        raise ValueError("fragment_shape layer names must be unique.")
+    if not _is_integer(bins[0].min_inclusive) or bins[0].min_inclusive != 0:
+        raise ValueError("fragment_shape bins must begin at zero.")
+
+    for index, bin_spec in enumerate(bins):
+        if not _is_integer(bin_spec.min_inclusive) or bin_spec.min_inclusive < 0:
+            raise ValueError(
+                "fragment_shape bin min_inclusive values must be non-negative integers."
+            )
+        if bin_spec.max_exclusive is not None and (
+            not _is_integer(bin_spec.max_exclusive)
+            or bin_spec.max_exclusive <= bin_spec.min_inclusive
+        ):
+            raise ValueError(
+                "fragment_shape bounded bins must have an integer max_exclusive "
+                "greater than min_inclusive."
+            )
+        if index < len(bins) - 1:
+            if bin_spec.max_exclusive is None:
+                raise ValueError(
+                    "Only the final fragment_shape bin may be unbounded."
+                )
+            if bins[index + 1].min_inclusive != bin_spec.max_exclusive:
+                raise ValueError(
+                    "fragment_shape bins must be contiguous, non-overlapping, and ordered."
+                )
+        elif bin_spec.max_exclusive is not None:
+            raise ValueError("The final fragment_shape bin must be unbounded.")
+
+
 def validate_fragment_shape_spec(spec: FragmentShapeSpec) -> None:
-    """Validate the versioned parent-fragment-length declaration."""
+    """Validate the versioned parent-fragment-length declaration.
+
+    Schema version 1 is the frozen canonical three-bin contract. Schema version
+    2 retains all other ShapeMix semantics while allowing a separately
+    versioned complete partition for predeclared bin-count sensitivities.
+    """
     if not isinstance(spec, FragmentShapeSpec):
         raise TypeError("fragment_shape must be a FragmentShapeSpec.")
-    if not _is_integer(spec.schema_version) or spec.schema_version != 1:
-        raise ValueError("fragment_shape.schema_version must be integer 1.")
+    if (
+        not _is_integer(spec.schema_version)
+        or spec.schema_version not in _SUPPORTED_FRAGMENT_SHAPE_SCHEMA_VERSIONS
+    ):
+        raise ValueError("fragment_shape.schema_version must be integer 1 or 2.")
     if spec.axis != "parent_fragment_length_bp":
-        raise ValueError("fragment_shape.axis must be 'parent_fragment_length_bp' for schema version 1.")
+        raise ValueError(
+            "fragment_shape.axis must be 'parent_fragment_length_bp' for "
+            "schema versions 1 and 2."
+        )
     if spec.count_unit != "deduplicated_cut_sites":
         raise ValueError("fragment_shape.count_unit must be 'deduplicated_cut_sites'.")
     if spec.read_support_policy != "ignore":
@@ -104,11 +165,17 @@ def validate_fragment_shape_spec(spec: FragmentShapeSpec) -> None:
         raise ValueError(
             "fragment_shape.peak_assignment must be 'containing_nonoverlapping_peak'."
         )
-    if spec.bins != _CANONICAL_FRAGMENT_SHAPE_BINS:
+    if spec.schema_version == 1 and spec.bins != _CANONICAL_FRAGMENT_SHAPE_BINS:
         raise ValueError(
             "fragment_shape.bins must be the ordered schema-version-1 bins "
             "[0, 100), [100, 250), and [250, infinity) with canonical layer names."
         )
+    if spec.schema_version == 2:
+        _validate_complete_fragment_length_partition(spec.bins)
+        if spec.bins == _CANONICAL_FRAGMENT_SHAPE_BINS:
+            raise ValueError(
+                "The canonical three-bin fragment_shape contract must use schema version 1."
+            )
     if spec.left_cut_offset is not None and (
         not _is_integer(spec.left_cut_offset) or spec.left_cut_offset != 0
     ):

@@ -18,6 +18,7 @@ from scripts.download_shapemix_spatial import load_config
 
 ROOT = Path(__file__).resolve().parents[1]
 BARCODE = "ACGTACGTACGTACGTACGTACGTACGTACGT"
+BARCODE_22 = "ACGTACGTACGTACGTACGTAC"
 
 
 def test_representative_sample_pair_resolves_immutable_raw_paths():
@@ -42,15 +43,19 @@ def write_sam(path: Path, query_name: str) -> None:
     )
 
 
-def test_sort_and_validate_bam_accepts_barcode_first_qnames(tmp_path: Path):
+@pytest.mark.parametrize("barcode", [BARCODE_22, BARCODE])
+def test_sort_and_validate_bam_accepts_barcode_first_qnames(
+    tmp_path: Path, barcode: str
+):
     sam = tmp_path / "input.sam"
     bam = tmp_path / "output.bam"
-    write_sam(sam, f"{BARCODE}:instrument:1")
+    write_sam(sam, f"{barcode}:instrument:1")
     result = sort_and_validate_bam(sam, bam)
     assert result["alignments"] == 2
     assert result["barcode_first_qname_audit"] == "passed"
     with pysam.AlignmentFile(bam, "rb") as handle:
-        assert next(handle.fetch(until_eof=True)).query_name.startswith(BARCODE)
+        assert next(handle.fetch(until_eof=True)).query_name.startswith(barcode)
+    assert result["barcode_length"] == len(barcode)
 
 
 def test_sort_and_validate_bam_rejects_barcode_lost_qnames(tmp_path: Path):
@@ -69,7 +74,7 @@ def test_cpu_affinity_is_fail_closed_at_two_cpus(monkeypatch: pytest.MonkeyPatch
         validate_cpu_affinity()
 
 
-def test_alignment_commands_stream_one_thread_bwa_into_one_thread_name_sort(
+def test_alignment_commands_are_resource_configurable_and_stream_without_sam(
     tmp_path: Path,
 ):
     bwa_command, sort_command = alignment_commands(
@@ -88,7 +93,22 @@ def test_alignment_commands_stream_one_thread_bwa_into_one_thread_name_sort(
         str(tmp_path / "sorter.py"),
         "--output",
         str(tmp_path / "name_sorted.bam.partial"),
+        "--threads",
+        "0",
     ]
+    bwa_command, sort_command = alignment_commands(
+        reference=tmp_path / "mm10.fa",
+        bwa=tmp_path / "bwa",
+        sorter_python=tmp_path / "python",
+        sorter_script=tmp_path / "sorter.py",
+        read_fd1=11,
+        read_fd2=12,
+        bam_output=tmp_path / "name_sorted.bam.partial",
+        bwa_threads=8,
+        sort_extra_threads=4,
+    )
+    assert bwa_command[1:4] == ["mem", "-t", "8"]
+    assert sort_command[-2:] == ["--threads", "4"]
     assert "alignment.sam" not in " ".join(sort_command)
 
 

@@ -303,8 +303,10 @@ z[s,c] ~ Gamma(shape=2.0, rate=1.0).
 Parameterize optimization variables as
 
 ```text
-z[s,c] = softplus(raw_z[s,c]) + epsilon.
+z[s,c] = exp(raw_z[s,c]) + epsilon.
 ```
+
+This log-abundance coordinate is the protocol amendment frozen on 2026-08-25.
 
 With all signatures and `phi_ref` fixed, the two objectives are:
 
@@ -357,7 +359,7 @@ device: cpu
 dtype: float32
 ```
 
-Initialize each restart from collapsed-count nonnegative least squares with a uniform positive fallback and deterministic restart perturbations. Select the finite converged restart with the largest complete objective for that arm. Record restart seeds, loss components, step count, stopping reason, convergence state, and non-finite events. Do not materialize the complete dense `S × P × B` expected tensor.
+Initialize restart zero at the exact collapsed-count nonnegative least-squares solution with a uniform positive fallback. Initialize later restarts with deterministic log-normal perturbations of that solution. Select the finite converged restart with the largest complete objective for that arm. Record restart seeds, loss components, step count, stopping reason, convergence state, and non-finite events. Do not materialize the complete dense `S × P × B` expected tensor.
 
 These values are the first frozen benchmark settings, not universal defaults. Any revision must be made jointly for both arms from synthetic unit cases or development seeds and must increment the protocol version before primary results are opened.
 

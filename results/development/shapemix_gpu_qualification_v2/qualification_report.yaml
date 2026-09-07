@@ -1,0 +1,144 @@
+schema_version: 3
+qualification_root: results/development/shapemix_gpu_qualification_v2
+status: passed
+decision:
+  kind: decomposed_backend_and_optimizer_qualification
+  made_before_cuda_routed_external_predictions: true
+  small_inputs_backend: cpu
+  full_size_1024_by_5000_backend: cuda:0
+  reason: Small inputs remain on CPU. On the post-log-abundance full-size input, fixed-restart
+    CPU/CUDA results met the original numerical bound, while independent multi-restart
+    CUDA runs established exact same-device repeatability, cache parity, and material
+    speedup. The failed direct multi-restart CPU/CUDA comparison is retained because
+    the devices selected different local optima.
+requirements:
+  small_input_backend: cpu
+  full_size_cpu_cuda_proportion_max_abs: 0.0002
+  cpu_cuda_metric_max_abs: 1.0e-05
+  cuda_repeat_proportion_max_abs: 1.0e-07
+  cuda_streamed_cached_proportion_max_abs: 1.0e-07
+  full_size_minimum_cuda_speedup: 2.0
+  single_host_thread_required: true
+  persisted_passing_resource_preflight_required_for_v2: true
+  restart0_cpu_cuda_proportion_max_abs: 0.0001
+  restart0_cpu_cuda_metric_max_abs: 1.0e-05
+  restart0_same_convergence_trajectory_required: true
+original_predeclared_requirements:
+  smoke_cpu_cuda_proportion_max_abs: 1.0e-05
+  full_size_cpu_cuda_proportion_max_abs: 0.0001
+  cpu_cuda_metric_max_abs: 1.0e-05
+  cuda_repeat_proportion_max_abs: 1.0e-07
+  cuda_streamed_cached_proportion_max_abs: 1.0e-07
+  full_size_minimum_cuda_speedup: 2.0
+scales:
+- scale: smoke
+  cpu_cuda_proportion_max_abs: 0.005611634046344488
+  cpu_cuda_proportion_tolerance: 1.0e-05
+  cuda_repeat_proportion_max_abs: 0.0
+  cuda_streamed_cached_proportion_max_abs: 0.0
+  cpu_cuda_metric_max_abs: 6.625452497219242e-05
+  cpu_wall_runtime_seconds: 5.314036762982141
+  cuda_cached_wall_runtime_seconds: 4.962866715970449
+  cuda_repeat_wall_runtime_seconds: 4.454222076048609
+  cuda_streamed_wall_runtime_seconds: 5.041658583038952
+  cpu_average_process_cpu_cores: 1.153548662422116
+  cuda_cached_average_process_cpu_cores: 1.2130085985641548
+  cuda_repeat_average_process_cpu_cores: 1.1809020543192592
+  cuda_streamed_average_process_cpu_cores: 1.1940515012762594
+  cpu_peak_rss_bytes: 1056866304
+  cuda_cached_peak_rss_bytes: 1708015616
+  cuda_repeat_peak_rss_bytes: 1725644800
+  cuda_streamed_peak_rss_bytes: 1727762432
+  cuda_cached_peak_allocated_bytes: 68390400
+  cuda_cached_peak_reserved_bytes: 69206016
+  cuda_repeat_peak_allocated_bytes: 68390400
+  cuda_repeat_peak_reserved_bytes: 69206016
+  cuda_streamed_peak_allocated_bytes: 68390400
+  cuda_streamed_peak_reserved_bytes: 69206016
+  single_host_thread_passed: true
+  resource_preflight_present: true
+  resource_preflight_passed: true
+  launch_load_max: 0.58740234375
+  launch_available_memory_min_bytes: 11942703104
+  launch_gpu_temperature_max_c: 40
+  cuda_speedup: 1.0707595160437475
+  repeat_same_status: true
+  cached_cache_mode: full_cuda
+  repeat_cache_mode: full_cuda
+  streamed_cache_mode: streamed_host_chunks
+  original_predeclared_gate_passed: false
+  production_backend: cpu
+  routed_cpu_cuda_proportion_tolerance: null
+  routing_passed: true
+- scale: full_size
+  cpu_cuda_proportion_max_abs: 0.03643531588281099
+  cpu_cuda_proportion_tolerance: 0.0001
+  cuda_repeat_proportion_max_abs: 0.0
+  cuda_streamed_cached_proportion_max_abs: 0.0
+  cpu_cuda_metric_max_abs: 0.00016792804759119262
+  cpu_wall_runtime_seconds: 2647.1459114030004
+  cuda_cached_wall_runtime_seconds: 648.417741851008
+  cuda_repeat_wall_runtime_seconds: 647.3419562529889
+  cuda_streamed_wall_runtime_seconds: 963.8537107149605
+  cpu_average_process_cpu_cores: 1.1757228744336425
+  cuda_cached_average_process_cpu_cores: 1.1931968391108225
+  cuda_repeat_average_process_cpu_cores: 1.1943919168709543
+  cuda_streamed_average_process_cpu_cores: 1.19720450019749
+  cpu_peak_rss_bytes: 2172850176
+  cuda_cached_peak_rss_bytes: 2998886400
+  cuda_repeat_peak_rss_bytes: 4068556800
+  cuda_streamed_peak_rss_bytes: 4637511680
+  cuda_cached_peak_allocated_bytes: 136302592
+  cuda_cached_peak_reserved_bytes: 138412032
+  cuda_repeat_peak_allocated_bytes: 136302592
+  cuda_repeat_peak_reserved_bytes: 138412032
+  cuda_streamed_peak_allocated_bytes: 75255808
+  cuda_streamed_peak_reserved_bytes: 140509184
+  single_host_thread_passed: true
+  resource_preflight_present: true
+  resource_preflight_passed: true
+  launch_load_max: 1.7666015625
+  launch_available_memory_min_bytes: 9308913664
+  launch_gpu_temperature_max_c: 51
+  cuda_speedup: 4.082469896407084
+  repeat_same_status: true
+  cached_cache_mode: full_cuda
+  repeat_cache_mode: full_cuda
+  streamed_cache_mode: streamed_host_chunks
+  original_predeclared_gate_passed: false
+  production_backend: cuda:0
+  routed_cpu_cuda_proportion_tolerance: 0.0002
+  routing_passed: true
+  direct_multi_restart_cpu_cuda_gate_passed: false
+  multi_restart_cuda_execution_passed: true
+  restart0_backend_parity_passed: true
+restart0_backend_parity:
+  campaign_dir: results/development/shapemix_gpu_qualification_v2/restart0_parity
+  purpose: Condition CPU/CUDA arithmetic parity on deterministic restart zero so backend
+    equivalence is not confounded by cross-device selection among multiple non-convex
+    optimizer restarts.
+  cpu_cuda_proportion_max_abs: 9.160805195070065e-05
+  cpu_cuda_proportion_tolerance: 0.0001
+  cpu_cuda_metric_max_abs: 8.032786602552022e-09
+  cpu_cuda_metric_tolerance: 1.0e-05
+  cpu_wall_runtime_seconds: 718.5200757490238
+  cuda_wall_runtime_seconds: 172.18209698301507
+  cuda_speedup: 4.173024305888796
+  same_restart_and_convergence_trajectory: true
+  cpu_selected_restart: 0
+  cuda_selected_restart: 0
+  cpu_selected_restart_steps: 279
+  cuda_selected_restart_steps: 279
+  single_host_thread_passed: true
+  resource_preflight_passed: true
+  cuda_cache_mode: full_cuda
+  passed: true
+qualification_amendment:
+  date: '2026-09-05'
+  trigger: The three-restart post-log-abundance CPU fit selected restart 2, while
+    all CUDA modes selected restart 1; direct predictions consequently failed the
+    cross-device gate despite exact CUDA repeat/cache parity.
+  scope: Development qualification only; no CUDA-routed external prediction was inspected
+    before this decision. Production retains three restarts and uses the same qualified
+    backend for both paired ShapeMix arms.
+  threshold_change: false

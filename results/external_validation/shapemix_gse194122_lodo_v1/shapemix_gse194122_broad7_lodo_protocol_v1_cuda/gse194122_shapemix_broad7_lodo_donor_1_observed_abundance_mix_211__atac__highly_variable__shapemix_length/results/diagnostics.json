@@ -1,0 +1,332 @@
+{
+  "config": {
+    "abundance_prior": "gamma",
+    "abundance_prior_rate": 1.0,
+    "abundance_prior_shape": 2.0,
+    "background_mode": "none",
+    "conditional_shape_likelihood": "multinomial",
+    "cuda_count_cache": "auto",
+    "device": "cuda:0",
+    "dispersion_alpha_floor": 1e-08,
+    "dispersion_crossfit_folds": 2,
+    "dispersion_mode": "reference_crossfit_global_scaled_by_abundance",
+    "dtype": "float32",
+    "exposure_mode": "absorbed_in_abundance",
+    "learning_rate": 0.03,
+    "max_steps": 2000,
+    "optimizer": "adam",
+    "patience": 100,
+    "peak_chunk_size": 512,
+    "restarts": 3,
+    "seed": 0,
+    "signature_rate_pseudocount": 0.5,
+    "signature_shape_concentration": 1.0,
+    "spot_batch_size": 64,
+    "tolerance": 1e-05,
+    "total_likelihood": "negative_binomial",
+    "use_shape": true
+  },
+  "config_sha256": "10d81e7fc5a70288a913b2f8da95ecc7f6b5cc2a822cb63a1fdd78773deae988",
+  "fit": {
+    "device": "cuda:0",
+    "dimensions": {
+      "bins": 3,
+      "cell_types": 7,
+      "peaks": 5000,
+      "spots": 1024
+    },
+    "dtype": "float32",
+    "execution": {
+      "count_cache_bytes": 61440000,
+      "count_cache_mode": "full_cuda",
+      "count_cache_requested_bytes": 61440000,
+      "cuda_runtime_version": "13.0",
+      "cuda_workspace_margin_bytes": 536870912,
+      "deterministic_algorithms": true,
+      "device_compute_capability": "8.6",
+      "device_free_memory_bytes_before_cache": 9661251584,
+      "device_index": 0,
+      "device_name": "NVIDIA GeForce RTX 3080",
+      "device_total_memory_bytes": 10353442816,
+      "float32_matmul_precision": "highest",
+      "peak_device_memory_allocated_bytes": 135337472,
+      "peak_device_memory_reserved_bytes": 138412032,
+      "torch_num_interop_threads": 1,
+      "torch_num_threads": 1,
+      "torch_version": "2.11.0+cu130"
+    },
+    "nnls_fallback_spots": [],
+    "nonfinite_events": [],
+    "objective": {
+      "abundance_log_prior": -14466.40380859375,
+      "count_log_likelihood": -9530467.578125,
+      "shape_log_likelihood": -8088729.1328125,
+      "total_log_objective": -17633663.114746094
+    },
+    "restarts": [
+      {
+        "abundance_log_prior": -14466.40380859375,
+        "best_step": 364,
+        "converged": true,
+        "count_log_likelihood": -9530467.578125,
+        "final_gradient_norm": 13.67614459991455,
+        "history_rows": 365,
+        "nonfinite_events": [],
+        "restart_index": 0,
+        "runtime_seconds": 216.0108502919902,
+        "seed_tuple": [
+          20260822,
+          1,
+          211,
+          0,
+          0
+        ],
+        "shape_log_likelihood": -8088729.1328125,
+        "steps": 364,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -17633663.114746094
+      },
+      {
+        "abundance_log_prior": -14437.424621582031,
+        "best_step": 331,
+        "converged": true,
+        "count_log_likelihood": -9530527.23046875,
+        "final_gradient_norm": 19.177461624145508,
+        "history_rows": 332,
+        "nonfinite_events": [],
+        "restart_index": 1,
+        "runtime_seconds": 194.5793243549997,
+        "seed_tuple": [
+          20260822,
+          1,
+          211,
+          0,
+          1
+        ],
+        "shape_log_likelihood": -8088721.76171875,
+        "steps": 331,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -17633686.416809082
+      },
+      {
+        "abundance_log_prior": -14462.32177734375,
+        "best_step": 405,
+        "converged": true,
+        "count_log_likelihood": -9530479.15625,
+        "final_gradient_norm": 17.859054565429688,
+        "history_rows": 406,
+        "nonfinite_events": [],
+        "restart_index": 2,
+        "runtime_seconds": 237.32733207498677,
+        "seed_tuple": [
+          20260822,
+          1,
+          211,
+          0,
+          2
+        ],
+        "shape_log_likelihood": -8088723.06640625,
+        "steps": 405,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -17633664.544433594
+      }
+    ],
+    "runtime_seconds": 648.057530112972,
+    "selected_restart": 0,
+    "stopping_reason": "selected_largest_finite_converged_objective",
+    "success": true,
+    "use_shape": true
+  },
+  "fragment_shape": {
+    "axis": "parent_fragment_length_bp",
+    "bins": [
+      {
+        "layer": "fragment_length_lt_100",
+        "max_exclusive": 100,
+        "min_inclusive": 0,
+        "name": "short"
+      },
+      {
+        "layer": "fragment_length_100_249",
+        "max_exclusive": 250,
+        "min_inclusive": 100,
+        "name": "mono"
+      },
+      {
+        "layer": "fragment_length_ge_250",
+        "min_inclusive": 250,
+        "name": "long"
+      }
+    ],
+    "count_unit": "deduplicated_cut_sites",
+    "peak_assignment": "containing_nonoverlapping_peak",
+    "read_support_policy": "ignore",
+    "schema_version": 1
+  },
+  "method": "shapemix",
+  "model_version": 1,
+  "native_outputs": {
+    "reconstruction_summary": "results/raw_method_output/reconstruction_summary.csv",
+    "residuals_by_peak_and_bin": "results/raw_method_output/residuals_by_peak_and_bin.csv.gz",
+    "restart_summary": "results/raw_method_output/restart_summary.csv",
+    "signature_summary": "results/raw_method_output/signature_summary.yaml",
+    "training_history": "results/raw_method_output/training_history.csv"
+  },
+  "reconstruction": {
+    "count": {
+      "absolute_error_sum": 9082858.316772195,
+      "entries": 5120000,
+      "expected_positive_entries": 5120000,
+      "expected_positive_fraction": 1.0,
+      "expected_total": 15996909.393143598,
+      "mean_absolute_error": 1.7739957649945692,
+      "observed_nonzero_entries": 3006232,
+      "observed_nonzero_fraction": 0.5871546875,
+      "observed_total": 16385664.0,
+      "residual_total": 388754.606856402,
+      "root_mean_squared_error": 2.6834018171130074,
+      "squared_error_sum": 36867303.9978772
+    },
+    "shape": {
+      "absolute_error_by_bin": [
+        6539776.330332293,
+        5046733.71746228,
+        2404734.784818454
+      ],
+      "expected_by_bin": [
+        8941967.448443038,
+        5157241.091064118,
+        1897700.8536364364
+      ],
+      "observed_by_bin": [
+        8966271.0,
+        5631453.0,
+        1787940.0
+      ],
+      "residual_by_bin": [
+        24303.55155696161,
+        474211.90893588215,
+        -109760.8536364364
+      ],
+      "squared_error_by_bin": [
+        19870326.380630687,
+        11798841.801292835,
+        3051491.9226541966
+      ]
+    }
+  },
+  "seeds": {
+    "inner_mixture_seed": 211,
+    "method_seed": 0,
+    "outer_split_seed": 1
+  },
+  "signature": {
+    "bin_names": [
+      "short",
+      "mono",
+      "long"
+    ],
+    "cell_types": [
+      "B/plasma",
+      "CD4 T",
+      "CD8 T",
+      "NK/ILC",
+      "Myeloid/DC",
+      "Erythroid/MK-E",
+      "Hematopoietic progenitor"
+    ],
+    "content_sha256": "2ac99ebe9f7297f4ff4061c13762d036d483aba9c834ff5a88a66b79d1f59f62",
+    "dispersion_diagnostics": {
+      "alpha_floor": 1e-08,
+      "alpha_ref": 1.765025560526604,
+      "alpha_ref_raw": 1.765025560526604,
+      "bit_generator": "PCG64",
+      "crossfit_mean_max": 9.936475204396917,
+      "crossfit_mean_min": 7.896952624819858e-06,
+      "denominator": 98613985.87279768,
+      "fold_counts": {
+        "B/plasma": {
+          "fold_0": 3524,
+          "fold_1": 3523
+        },
+        "CD4 T": {
+          "fold_0": 3413,
+          "fold_1": 3412
+        },
+        "CD8 T": {
+          "fold_0": 5474,
+          "fold_1": 5474
+        },
+        "Erythroid/MK-E": {
+          "fold_0": 3366,
+          "fold_1": 3365
+        },
+        "Hematopoietic progenitor": {
+          "fold_0": 1536,
+          "fold_1": 1536
+        },
+        "Myeloid/DC": {
+          "fold_0": 5250,
+          "fold_1": 5249
+        },
+        "NK/ILC": {
+          "fold_0": 2830,
+          "fold_1": 2830
+        }
+      },
+      "fold_membership_sha256": "a1be82c053e6a9636c61883735bf3946755c82c15a2e0eb86642d70a65bd0cc1",
+      "fold_seed": [
+        20260822,
+        1,
+        17
+      ],
+      "numerator": 174056205.69089735,
+      "numpy_version": "1.25.2",
+      "phi_ref": 0.5665640330453033,
+      "rate_pseudocount": 0.5
+    },
+    "feature_sha256": "e61ffb6854a830d5cb1eff00b286e89d26ac116e70eb32cdc497aa27a9989514",
+    "layer_names": [
+      "fragment_length_lt_100",
+      "fragment_length_100_249",
+      "fragment_length_ge_250"
+    ],
+    "schema_version": 1,
+    "signature_diagnostics": {
+      "accessibility_max": 9.628783627766667,
+      "accessibility_min": 0.00035941887952017064,
+      "bin_totals": {
+        "long": 11709622,
+        "mono": 32001782,
+        "short": 55280989
+      },
+      "cell_counts": {
+        "B/plasma": 7047,
+        "CD4 T": 6825,
+        "CD8 T": 10948,
+        "Erythroid/MK-E": 6731,
+        "Hematopoietic progenitor": 3072,
+        "Myeloid/DC": 10499,
+        "NK/ILC": 5660
+      },
+      "feature_sha256": "e61ffb6854a830d5cb1eff00b286e89d26ac116e70eb32cdc497aa27a9989514",
+      "n_bins": 3,
+      "n_cell_types": 7,
+      "n_cells": 50782,
+      "n_peaks": 5000,
+      "omega_max": 0.9955691556251596,
+      "omega_max_sum_error": 2.220446049250313e-16,
+      "omega_min": 0.00041027934466646686,
+      "signature_parameter_sha256": "d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba",
+      "total_cut_sites": 98992393
+    },
+    "signature_parameter_sha256": "d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba"
+  },
+  "software_versions": {
+    "numpy": "1.25.2",
+    "pandas": "2.3.3",
+    "pysam": "0.24.0",
+    "torch": "2.11.0"
+  },
+  "use_shape": true
+}

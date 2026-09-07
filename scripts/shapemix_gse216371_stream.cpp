@@ -88,6 +88,12 @@ struct PeakIndex {
 struct Counters {
   std::uint64_t total_rows = 0;
   std::uint64_t header_rows = 0;
+  std::uint64_t invalid_coordinate_rows = 0;
+  std::uint64_t negative_start_rows = 0;
+  std::uint64_t negative_end_rows = 0;
+  std::uint64_t end_past_chromosome_rows = 0;
+  std::uint64_t excluded_retained_fragment_rows = 0;
+  std::uint64_t excluded_retained_read_support_total = 0;
   std::uint64_t valid_rows = 0;
   std::uint64_t unknown_barcodes = 0;
   std::uint64_t retained_fragments = 0;
@@ -239,6 +245,20 @@ std::uint64_t parse_uint64(std::string_view value, const std::string& field) {
   const auto parsed = std::from_chars(first, last, result);
   if (parsed.ec != std::errc{} || parsed.ptr != last) {
     fail("Invalid nonnegative integer in " + field + ": " + std::string(value));
+  }
+  return result;
+}
+
+std::int64_t parse_int64(std::string_view value, const std::string& field) {
+  if (value.empty()) {
+    fail("Empty integer field: " + field);
+  }
+  std::int64_t result = 0;
+  const char* first = value.data();
+  const char* last = value.data() + value.size();
+  const auto parsed = std::from_chars(first, last, result);
+  if (parsed.ec != std::errc{} || parsed.ptr != last) {
+    fail("Invalid signed integer in " + field + ": " + std::string(value));
   }
   return result;
 }
@@ -430,6 +450,15 @@ void write_summary(const std::string& path, const std::string& mode,
          << "features\t" << features << "\n"
          << "total_rows\t" << counters.total_rows << "\n"
          << "header_rows\t" << counters.header_rows << "\n"
+         << "invalid_coordinate_rows\t" << counters.invalid_coordinate_rows << "\n"
+         << "negative_start_rows\t" << counters.negative_start_rows << "\n"
+         << "negative_end_rows\t" << counters.negative_end_rows << "\n"
+         << "end_past_chromosome_rows\t"
+         << counters.end_past_chromosome_rows << "\n"
+         << "excluded_retained_fragment_rows\t"
+         << counters.excluded_retained_fragment_rows << "\n"
+         << "excluded_retained_read_support_total\t"
+         << counters.excluded_retained_read_support_total << "\n"
          << "valid_rows\t" << counters.valid_rows << "\n"
          << "unknown_barcodes\t" << counters.unknown_barcodes << "\n"
          << "retained_fragments\t" << counters.retained_fragments << "\n"
@@ -472,15 +501,20 @@ void write_statistics(const std::string& path, std::uint64_t types,
 
 void write_cell_totals(const std::string& path, const LabelData& labels,
                        const std::vector<std::uint64_t>& rows,
-                       const std::vector<std::uint64_t>& supports) {
+                       const std::vector<std::uint64_t>& supports,
+                       const std::vector<std::uint64_t>& excluded_rows,
+                       const std::vector<std::uint64_t>& excluded_supports) {
   std::ofstream handle(path);
   if (!handle) {
     fail("Cannot create cell totals: " + path);
   }
-  handle << "cell_id\tbed_rows\tread_support_sum\n";
+  handle << "cell_id\tbed_rows\tread_support_sum"
+         << "\texcluded_invalid_coordinate_rows"
+         << "\texcluded_invalid_coordinate_read_support\n";
   for (std::size_t index = 0; index < labels.ordered_ids.size(); ++index) {
     handle << labels.ordered_ids[index] << '\t' << rows[index] << '\t'
-           << supports[index] << '\n';
+           << supports[index] << '\t' << excluded_rows[index] << '\t'
+           << excluded_supports[index] << '\n';
   }
   if (!handle) {
     fail("Failed while writing cell totals: " + path);
@@ -519,6 +553,8 @@ void process(const Arguments& arguments) {
   std::vector<std::uint32_t> coverage_cells;
   std::vector<std::uint64_t> cell_rows(labels.ordered_ids.size(), 0);
   std::vector<std::uint64_t> cell_supports(labels.ordered_ids.size(), 0);
+  std::vector<std::uint64_t> excluded_cell_rows(labels.ordered_ids.size(), 0);
+  std::vector<std::uint64_t> excluded_cell_supports(labels.ordered_ids.size(), 0);
   if (statistics_mode) {
     if (peaks.features > std::numeric_limits<std::size_t>::max() / labels.types) {
       fail("Feature-statistics matrix size overflows size_t");
@@ -590,14 +626,57 @@ void process(const Arguments& arguments) {
              std::to_string(counters.total_rows));
       }
       const auto found_chrom = chrom_sizes.find(fields[0]);
-      const auto start = parse_uint64(fields[1], "fragment start");
-      const auto end = parse_uint64(fields[2], "fragment end");
+      const auto start_signed = parse_int64(fields[1], "fragment start");
+      const auto end_signed = parse_int64(fields[2], "fragment end");
       const auto support = parse_uint64(fields[4], "read support");
-      if (found_chrom == chrom_sizes.end() || start >= end ||
-          end > found_chrom->second || support == 0) {
+      if (found_chrom == chrom_sizes.end() || support == 0) {
         fail("Fragment coordinate/support gate failed at row " +
              std::to_string(counters.total_rows));
       }
+      const bool negative_start = start_signed < 0;
+      const bool negative_end = end_signed < 0;
+      const bool end_past_chromosome =
+          !negative_end &&
+          static_cast<std::uint64_t>(end_signed) > found_chrom->second;
+      if (negative_start || negative_end || end_past_chromosome) {
+        ++counters.invalid_coordinate_rows;
+        if (negative_start) ++counters.negative_start_rows;
+        if (negative_end) ++counters.negative_end_rows;
+        if (end_past_chromosome) ++counters.end_past_chromosome_rows;
+
+        const auto found_cell = labels.cells.find(fields[3]);
+        if (found_cell != labels.cells.end()) {
+          const Cell cell = found_cell->second;
+          if (statistics_mode &&
+              (!member_marker_seen || current_well == kMissingCell ||
+               cell.well != current_well)) {
+            fail(
+                "Retained barcode does not match the active tar-member Round4 well at row " +
+                std::to_string(counters.total_rows));
+          }
+          ++counters.excluded_retained_fragment_rows;
+          ++excluded_cell_rows[cell.index];
+          if (std::numeric_limits<std::uint64_t>::max() -
+                  excluded_cell_supports[cell.index] <
+              support) {
+            fail("Per-cell excluded read-support total overflow");
+          }
+          excluded_cell_supports[cell.index] += support;
+          if (std::numeric_limits<std::uint64_t>::max() -
+                  counters.excluded_retained_read_support_total <
+              support) {
+            fail("Global excluded read-support total overflow");
+          }
+          counters.excluded_retained_read_support_total += support;
+        }
+        continue;
+      }
+      if (start_signed >= end_signed) {
+        fail("Fragment coordinate/support gate failed at row " +
+             std::to_string(counters.total_rows));
+      }
+      const auto start = static_cast<std::uint64_t>(start_signed);
+      const auto end = static_cast<std::uint64_t>(end_signed);
       ++counters.valid_rows;
 
       const auto found_cell = labels.cells.find(fields[3]);
@@ -702,7 +781,8 @@ void process(const Arguments& arguments) {
   if (statistics_mode) {
     write_statistics(arguments.output_statistics, labels.types, peaks.features,
                      type_counts, coverage);
-    write_cell_totals(arguments.output_cell_totals, labels, cell_rows, cell_supports);
+    write_cell_totals(arguments.output_cell_totals, labels, cell_rows, cell_supports,
+                      excluded_cell_rows, excluded_cell_supports);
   }
   write_summary(arguments.output_summary, arguments.mode, counters,
                 labels.ordered_ids.size(), labels.types, peaks.features,

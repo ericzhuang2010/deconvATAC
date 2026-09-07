@@ -12,6 +12,8 @@ import subprocess
 import tarfile
 import tempfile
 import threading
+import time
+import urllib.error
 import urllib.request
 import zipfile
 from dataclasses import asdict, dataclass
@@ -206,11 +208,32 @@ def normalize_etag(value: Optional[str]) -> Optional[str]:
     return normalized.strip('"')
 
 
-def remote_metadata(url: str, timeout: int) -> tuple[int, Optional[str]]:
-    request = urllib.request.Request(url, method="HEAD")
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        value = response.headers.get("Content-Length")
-        etag = normalize_etag(response.headers.get("ETag"))
+RETRYABLE_METADATA_HTTP_STATUS = {403, 408, 425, 429, 500, 502, 503, 504}
+
+
+def remote_metadata(
+    url: str,
+    timeout: int,
+    *,
+    attempts: int = 5,
+    retry_delay_seconds: float = 2.0,
+) -> tuple[int, Optional[str]]:
+    if attempts < 1:
+        raise ValueError("Metadata attempts must be positive")
+    for attempt in range(1, attempts + 1):
+        request = urllib.request.Request(url, method="HEAD")
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                value = response.headers.get("Content-Length")
+                etag = normalize_etag(response.headers.get("ETag"))
+            break
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RETRYABLE_METADATA_HTTP_STATUS or attempt == attempts:
+                raise
+        except (urllib.error.URLError, TimeoutError):
+            if attempt == attempts:
+                raise
+        time.sleep(retry_delay_seconds * attempt)
     if value is None or int(value) <= 0:
         raise ValueError(f"Source did not publish a positive Content-Length: {url}")
     return int(value), etag
@@ -289,33 +312,69 @@ def validate_xlsx(path: Path) -> None:
             raise ValueError(f"XLSX lacks [Content_Types].xml: {path}")
 
 
-def download_once(resource: Resource, expected_bytes: int, timeout: int) -> None:
+def download_once(
+    resource: Resource,
+    expected_bytes: int,
+    timeout: int,
+    *,
+    attempts: int = 3,
+    retry_delay_seconds: float = 5.0,
+) -> None:
+    if attempts < 1:
+        raise ValueError("Download attempts must be positive")
     resource.staging_path.parent.mkdir(parents=True, exist_ok=True)
-    observed = resource.staging_path.stat().st_size if resource.staging_path.exists() else 0
-    if observed > expected_bytes:
-        raise IOError(
-            f"Staging file is larger than the official source and will not be overwritten: "
-            f"{resource.staging_path}"
+    for attempt in range(1, attempts + 1):
+        observed = (
+            resource.staging_path.stat().st_size
+            if resource.staging_path.exists()
+            else 0
         )
-    if observed < expected_bytes:
-        subprocess.run(
-            [
-                "wget",
-                "-q",
-                "--continue",
-                f"--timeout={timeout}",
-                "--tries=20",
-                "--output-document",
-                str(resource.staging_path),
-                resource.url,
-            ],
-            check=True,
+        if observed > expected_bytes:
+            raise IOError(
+                "Staging file is larger than the official source and will not be "
+                f"overwritten: {resource.staging_path}"
+            )
+        if observed == expected_bytes:
+            return
+
+        transfer_error: subprocess.CalledProcessError | None = None
+        try:
+            subprocess.run(
+                [
+                    "wget",
+                    "-q",
+                    "--continue",
+                    f"--timeout={timeout}",
+                    "--tries=20",
+                    "--output-document",
+                    str(resource.staging_path),
+                    resource.url,
+                ],
+                check=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            transfer_error = exc
+
+        observed = (
+            resource.staging_path.stat().st_size
+            if resource.staging_path.exists()
+            else 0
         )
-    final_size = resource.staging_path.stat().st_size
-    if final_size != expected_bytes:
-        raise IOError(
-            f"Incomplete transfer for {resource.name}: {final_size} != {expected_bytes}"
-        )
+        if observed == expected_bytes:
+            return
+        if observed > expected_bytes:
+            raise IOError(
+                "Staging file is larger than the official source and will not be "
+                f"overwritten: {resource.staging_path}"
+            )
+        if attempt == attempts:
+            if transfer_error is not None:
+                raise transfer_error
+            raise IOError(
+                f"Incomplete transfer for {resource.name}: "
+                f"{observed} != {expected_bytes}"
+            )
+        time.sleep(retry_delay_seconds * attempt)
 
 
 def acquire(
@@ -344,6 +403,21 @@ def acquire(
         source = resource.staging_path
 
     with validation_slots:
+        observed_md5 = md5_file(source) if resource.expected_md5 is not None else None
+        if observed_md5 != resource.expected_md5:
+            removed_staging = source == resource.staging_path
+            if removed_staging:
+                source.unlink(missing_ok=True)
+            recovery = (
+                f"; removed invalid staging file {source} so the next attempt "
+                "will download it again"
+                if removed_staging
+                else ""
+            )
+            raise ValueError(
+                f"Provider MD5 mismatch for {resource.name}: "
+                f"{observed_md5!r} != frozen {resource.expected_md5!r}{recovery}"
+            )
         tar_members: Optional[int] = None
         if resource.payload == "tar":
             tar_members = validate_tar(source)
@@ -362,12 +436,6 @@ def acquire(
                 f"Unsupported payload type for {resource.name}: {resource.payload}"
             )
         digest = sha256_file(source)
-        observed_md5 = md5_file(source) if resource.expected_md5 is not None else None
-        if observed_md5 != resource.expected_md5:
-            raise ValueError(
-                f"Provider MD5 changed for {resource.name}: "
-                f"{observed_md5!r} != frozen {resource.expected_md5!r}"
-            )
         if source == resource.staging_path:
             os.replace(source, resource.destination)
     return DownloadResult(
@@ -418,15 +486,21 @@ def worker_limits(
 ) -> tuple[int, int]:
     if requested_transfer_workers < 1:
         raise ValueError("--workers must be positive")
-    transfer_limit = min(4, int(config.get("download_workers_max", 2)))
+    transfer_limit = min(16, int(config.get("download_workers_max", 2)))
     if requested_transfer_workers > transfer_limit:
         raise ValueError(
             f"--workers must be <= {transfer_limit} for this campaign"
         )
-    validation_limit = min(2, int(config.get("validation_workers_max", 2)))
+    validation_limit = min(8, int(config.get("validation_workers_max", 2)))
     if validation_limit < 1:
         raise ValueError("validation_workers_max must be positive")
     return requested_transfer_workers, validation_limit
+
+
+def prioritize_incomplete_resources(
+    resources: tuple[Resource, ...],
+) -> tuple[Resource, ...]:
+    return tuple(sorted(resources, key=lambda resource: resource.destination.exists()))
 
 
 def main() -> None:
@@ -435,19 +509,20 @@ def main() -> None:
     transfer_workers, validation_workers = worker_limits(config, args.workers)
     validation_slots = threading.BoundedSemaphore(validation_workers)
     resources = select_resources(resources_from_config(config), args.accession)
+    scheduled_resources = prioritize_incomplete_resources(resources)
+    order = {resource.name: index for index, resource in enumerate(resources)}
     results: list[DownloadResult] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=transfer_workers) as executor:
         pending = {
             executor.submit(
                 acquire, resource, args.timeout, validation_slots
             ): resource
-            for resource in resources
+            for resource in scheduled_resources
         }
         for future in concurrent.futures.as_completed(pending):
             result = future.result()
             results.append(result)
             print(f"validated {result.name} {result.bytes} {result.sha256}", flush=True)
-    order = {resource.name: index for index, resource in enumerate(resources)}
     results.sort(key=lambda result: order[result.name])
     config_path = args.config.resolve().relative_to(ROOT.resolve())
     record = {

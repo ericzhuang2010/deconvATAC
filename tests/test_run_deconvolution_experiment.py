@@ -658,6 +658,54 @@ def test_resource_gate_waits_and_rechecks_until_safe(monkeypatch):
     assert sleeps == [runner.RESOURCE_RECHECK_SECONDS]
 
 
+def test_recorded_path_preserves_project_path_through_symlink(tmp_path, monkeypatch):
+    import scripts.run_deconvolution as runner
+
+    repository = tmp_path / "repository"
+    storage = tmp_path / "storage"
+    repository.mkdir()
+    storage.mkdir()
+    (repository / "data").symlink_to(storage, target_is_directory=True)
+    registry = repository / "data" / "registry" / "datasets.yaml"
+
+    monkeypatch.setattr(runner, "ROOT", repository)
+
+    assert runner._recorded_path(registry) == "data/registry/datasets.yaml"
+
+
+def test_release_job_memory_collects_cuda_cache_and_trims(monkeypatch):
+    import scripts.run_deconvolution as runner
+
+    calls = []
+
+    class FakeCuda:
+        @staticmethod
+        def is_available():
+            return True
+
+        @staticmethod
+        def empty_cache():
+            calls.append("cuda")
+
+    class FakeTorch:
+        cuda = FakeCuda()
+
+    class FakeLibc:
+        @staticmethod
+        def malloc_trim(value):
+            assert value == 0
+            calls.append("trim")
+
+    monkeypatch.setattr(runner.gc, "collect", lambda: calls.append("gc"))
+    monkeypatch.setitem(runner.sys.modules, "torch", FakeTorch())
+    monkeypatch.setattr(runner.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(runner.ctypes, "CDLL", lambda _: FakeLibc())
+
+    runner._release_job_memory()
+
+    assert calls == ["gc", "cuda", "gc", "trim"]
+
+
 def test_failed_run_is_explicitly_finalized_and_never_reused(tmp_path):
     registry_path = _write_toy_dataset(tmp_path)
     experiment_path = tmp_path / "failed_resume.yaml"

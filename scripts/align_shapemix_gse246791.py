@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stream barcode-restored GSE246791 read pairs into one-thread BWA-MEM."""
+"""Stream barcode-restored GSE246791 read pairs into resource-configurable BWA-MEM."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ import gzip
 import hashlib
 import os
 import queue
-import re
 import subprocess
 import sys
 import tempfile
@@ -25,11 +24,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.preprocess_gse246791_fragment_reads import iter_normalized_pairs
+from scripts.preprocess_gse246791_fragment_reads import (
+    is_supported_barcode,
+    iter_normalized_pairs,
+)
 
 
 CHUNK_BYTES = 8 * 1024 * 1024
-BARCODE_QNAME_RE = re.compile(r"^[ACGT]{32}:")
 QUEUE_RECORDS = 512
 
 
@@ -178,12 +179,18 @@ def alignment_commands(
     read_fd1: int,
     read_fd2: int,
     bam_output: Path,
+    bwa_threads: int = 1,
+    sort_extra_threads: int = 0,
 ) -> tuple[list[str], list[str]]:
+    if bwa_threads < 1:
+        raise ValueError("bwa_threads must be positive")
+    if sort_extra_threads < 0:
+        raise ValueError("sort_extra_threads must be nonnegative")
     bwa_command = [
         str(bwa),
         "mem",
         "-t",
-        "1",
+        str(bwa_threads),
         str(reference),
         f"/dev/fd/{read_fd1}",
         f"/dev/fd/{read_fd2}",
@@ -193,6 +200,8 @@ def alignment_commands(
         str(sorter_script),
         "--output",
         str(bam_output),
+        "--threads",
+        str(sort_extra_threads),
     ]
     return bwa_command, sort_command
 
@@ -209,6 +218,8 @@ def stream_bwa_name_sorted_bam(
     bam_output: Path,
     bwa_stderr_output: Path,
     sort_stderr_output: Path,
+    bwa_threads: int = 1,
+    sort_extra_threads: int = 0,
 ) -> dict[str, Any]:
     """Validate pairs and stream BWA SAM stdout directly into name-sorted BAM."""
     read_fd1, write_fd1 = os.pipe()
@@ -224,11 +235,14 @@ def stream_bwa_name_sorted_bam(
         read_fd1=read_fd1,
         read_fd2=read_fd2,
         bam_output=bam_output,
+        bwa_threads=bwa_threads,
+        sort_extra_threads=sort_extra_threads,
     )
     pair_count = 0
     first_ordinal: int | None = None
     last_ordinal: int | None = None
     unique_h5_barcodes: set[str] = set()
+    barcode_length: int | None = None
     bam_output.parent.mkdir(parents=True, exist_ok=True)
     bwa_stderr_output.parent.mkdir(parents=True, exist_ok=True)
     sort_stderr_output.parent.mkdir(parents=True, exist_ok=True)
@@ -269,6 +283,7 @@ def stream_bwa_name_sorted_bam(
                     pair_count += 1
                     if first_ordinal is None:
                         first_ordinal = header.ordinal
+                        barcode_length = len(header.barcode)
                     last_ordinal = header.ordinal
                     if len(unique_h5_barcodes) < 1_000_000:
                         unique_h5_barcodes.add(header.barcode)
@@ -333,13 +348,14 @@ def stream_bwa_name_sorted_bam(
         raise ValueError("Streaming BWA/pysam-sort pipeline produced no BAM")
     return {
         "command": bwa_command,
-        "threads": 1,
+        "threads": bwa_threads,
         "sort_command": sort_command,
-        "sort_extra_threads": 0,
+        "sort_extra_threads": sort_extra_threads,
         "materialized_sam": False,
         "read_pairs": pair_count,
         "first_ordinal": first_ordinal,
         "last_ordinal": last_ordinal,
+        "barcode_length": barcode_length,
         "unique_barcodes_capped": len(unique_h5_barcodes),
         "unique_barcode_count_is_lower_bound": len(unique_h5_barcodes) == 1_000_000,
     }
@@ -352,21 +368,33 @@ def validate_and_promote_bam(temporary: Path, bam: Path) -> dict[str, Any]:
         raise FileNotFoundError(f"Name-sorted BAM partial is absent: {temporary}")
     alignments = 0
     checked = 0
+    barcode_lengths: set[int] = set()
     with pysam.AlignmentFile(temporary, "rb") as handle:
         header = handle.header.to_dict()
         for record in handle.fetch(until_eof=True):
             alignments += 1
             if checked < 10_000:
                 checked += 1
-                if BARCODE_QNAME_RE.match(record.query_name or "") is None:
-                    raise ValueError(f"BAM QNAME does not retain a 32-base barcode: {record.query_name!r}")
+                query_name = record.query_name or ""
+                barcode, separator, _remainder = query_name.partition(":")
+                if not separator or not is_supported_barcode(barcode):
+                    raise ValueError(
+                        "BAM QNAME does not retain a supported 22- or 32-base "
+                        f"barcode: {record.query_name!r}"
+                    )
+                barcode_lengths.add(len(barcode))
     if alignments == 0:
         raise ValueError("BWA produced an empty BAM")
+    if len(barcode_lengths) != 1:
+        raise ValueError(
+            f"BAM QNAMEs have inconsistent barcode lengths: {sorted(barcode_lengths)}"
+        )
     os.replace(temporary, bam)
     return {
         "alignments": alignments,
         "qnames_checked": checked,
         "barcode_first_qname_audit": "passed",
+        "barcode_length": next(iter(barcode_lengths)),
         "header_sort_order": header.get("HD", {}).get("SO"),
         "bytes": bam.stat().st_size,
         "sha256": file_digest(bam),
@@ -426,14 +454,24 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output", type=Path)
     parser.add_argument("--audit-output", type=Path)
-    return parser.parse_args()
+    parser.add_argument("--bwa-threads", type=int, default=1)
+    parser.add_argument("--sort-extra-threads", type=int, default=0)
+    parser.add_argument("--maximum-cpus", type=int, default=2)
+    args = parser.parse_args()
+    if args.bwa_threads < 1:
+        parser.error("--bwa-threads must be positive")
+    if args.sort_extra_threads < 0:
+        parser.error("--sort-extra-threads must be nonnegative")
+    if args.maximum_cpus < 1:
+        parser.error("--maximum-cpus must be positive")
+    return args
 
 
 def main() -> None:
     args = parse_args()
     if os.environ.get("DECONVATAC_RESOURCE_GUARD") != "1":
         raise RuntimeError("Run alignment through scripts/run_shapemix_low_impact.sh")
-    allowed_cpus = validate_cpu_affinity()
+    allowed_cpus = validate_cpu_affinity(args.maximum_cpus)
     config = load_yaml(args.config)
     sample = sample_pair(config, args.gsm)
     reference = args.reference.absolute()
@@ -474,6 +512,8 @@ def main() -> None:
         bam_output=temporary_bam,
         bwa_stderr_output=bwa_stderr,
         sort_stderr_output=sort_stderr,
+        bwa_threads=args.bwa_threads,
+        sort_extra_threads=args.sort_extra_threads,
     )
     bam_validation = validate_and_promote_bam(temporary_bam, output)
     record = {
@@ -507,10 +547,11 @@ def main() -> None:
         "pysam_sort_stderr_log": repository_path(sort_stderr),
         "elapsed_seconds": time.monotonic() - started,
         "resource_policy": {
-            "bwa_threads": 1,
-            "sort_extra_threads": 0,
+            "bwa_threads": args.bwa_threads,
+            "sort_extra_threads": args.sort_extra_threads,
             "maximum_runnable_cpu_processes": 3,
-            "maximum_cpu_cores": 2,
+            "maximum_declared_threads": args.bwa_threads + args.sort_extra_threads + 4,
+            "maximum_cpu_cores": len(allowed_cpus),
             "allowed_logical_cpus": allowed_cpus,
             "affinity_inherited_by_children": True,
             "materialized_sam": False,

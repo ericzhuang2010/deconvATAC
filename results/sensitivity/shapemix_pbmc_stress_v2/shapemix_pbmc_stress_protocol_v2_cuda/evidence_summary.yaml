@@ -1,0 +1,20 @@
+schema_version: 1
+status: complete
+campaign: results/sensitivity/shapemix_pbmc_stress_v2/shapemix_pbmc_stress_protocol_v2_cuda
+evidence_class: exact_heldout_pseudospot_truth
+scientific_scope: one-donor conditional diagnostic sensitivity
+datasets: 40
+jobs: 120
+mixture_seeds:
+- 307
+- 401
+methods:
+- shapemix_length
+- shapemix_count_only
+- nnls
+metrics:
+- rmse_v1
+- jsd_v2
+failed_metric_rows: 0
+interpretation: One factor changes at a time. Metric-minus-control and length-minus-count-only
+  values are negative when the first term is better.

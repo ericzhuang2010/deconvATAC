@@ -62,6 +62,9 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 
 
 CONFIG = _read_yaml(CONFIG_PATH)
+MAX_INVALID_BEDPE_FRACTION = float(
+    CONFIG["preprocessing_policy"]["maximum_invalid_parent_fragment_fraction"]
+)
 FAMILY_ROOT = ROOT / str(CONFIG["processed_directory"])
 LABEL_ROOT = FAMILY_ROOT / "labels" / LABEL_VERSION
 AXIS_ROOT = FAMILY_ROOT / "feature_axes" / LABEL_VERSION
@@ -71,6 +74,12 @@ RAW_ROOT = ROOT / str(CONFIG["raw_directory"])
 ANNOTATIONS_PATH = RAW_ROOT / "portal_metadata/Table_S3_nuclei.tsv.gz"
 TAXONOMY_PATH = RAW_ROOT / "portal_metadata/Table_S4.xlsx"
 CCRE_PATH = RAW_ROOT / "portal_metadata/Table_S6_ccres.bed.gz"
+
+
+class InvalidBedpeRecord(ValueError):
+    def __init__(self, category: str, message: str) -> None:
+        super().__init__(message)
+        self.category = category
 
 
 def _repository_path(path: Path) -> str:
@@ -281,29 +290,50 @@ def parse_bedpe_record(line: str | bytes) -> FragmentRecord:
         line = line.decode("utf-8")
     fields = line.rstrip("\r\n").split("\t")
     if len(fields) != 10 or any(field == "" for field in fields):
-        raise ValueError("Expected ten non-empty BEDPE fields.")
+        raise InvalidBedpeRecord(
+            "field_count",
+            "Expected ten non-empty BEDPE fields.",
+        )
     chrom1, start1_text, end1_text, chrom2, start2_text, end2_text = fields[:6]
     read_name, mapq_text, strand1, strand2 = fields[6:]
     if chrom1 != chrom2:
-        raise ValueError("BEDPE mates must be on the same chromosome.")
+        raise InvalidBedpeRecord(
+            "cross_chromosome",
+            "BEDPE mates must be on the same chromosome.",
+        )
     if {strand1, strand2} != {"+", "-"}:
-        raise ValueError("BEDPE mates must have opposite strands.")
+        raise InvalidBedpeRecord(
+            "non_opposite_strands",
+            "BEDPE mates must have opposite strands.",
+        )
     try:
         start1, end1 = int(start1_text), int(end1_text)
         start2, end2 = int(start2_text), int(end2_text)
         mapq = int(mapq_text)
     except ValueError as exc:
-        raise ValueError("BEDPE coordinate and MAPQ fields must be integers.") from exc
+        raise InvalidBedpeRecord(
+            "non_integer_coordinate_or_mapq",
+            "BEDPE coordinate and MAPQ fields must be integers.",
+        ) from exc
     if min(start1, start2, mapq) < 0 or end1 <= start1 or end2 <= start2:
-        raise ValueError("BEDPE coordinates or MAPQ are invalid.")
+        raise InvalidBedpeRecord(
+            "invalid_coordinate_or_mapq",
+            "BEDPE coordinates or MAPQ are invalid.",
+        )
     cut1 = start1 if strand1 == "+" else end1
     cut2 = start2 if strand2 == "+" else end2
     start, end = sorted((cut1, cut2))
     if end <= start:
-        raise ValueError("BEDPE 5-prime cut sites do not define a positive fragment.")
+        raise InvalidBedpeRecord(
+            "nonpositive_five_prime_fragment",
+            "BEDPE 5-prime cut sites do not define a positive fragment.",
+        )
     barcode = read_name.split(":", 1)[0]
     if not barcode:
-        raise ValueError("BEDPE read name has no barcode prefix.")
+        raise InvalidBedpeRecord(
+            "empty_barcode",
+            "BEDPE read name has no barcode prefix.",
+        )
     return FragmentRecord(
         chrom=chrom1,
         start=start,
@@ -313,15 +343,63 @@ def parse_bedpe_record(line: str | bytes) -> FragmentRecord:
     )
 
 
-def iter_bedpe_fragments(path: Path) -> Iterator[FragmentRecord]:
+def iter_bedpe_fragments(
+    path: Path,
+    *,
+    audit: dict[str, Any] | None = None,
+    maximum_invalid_fraction: float = MAX_INVALID_BEDPE_FRACTION,
+) -> Iterator[FragmentRecord]:
+    if not 0.0 <= maximum_invalid_fraction < 1.0:
+        raise ValueError("maximum_invalid_fraction must be in [0, 1).")
+    total_lines = 0
+    ignored_lines = 0
+    source_rows = 0
+    valid_records = 0
+    invalid_records = 0
+    invalid_by_reason: dict[str, int] = {}
+    first_invalid_line_by_reason: dict[str, int] = {}
     with gzip.open(path, "rt") as handle:
         for line_number, line in enumerate(handle, start=1):
+            total_lines += 1
             if not line.strip() or line.startswith("#"):
+                ignored_lines += 1
                 continue
+            source_rows += 1
             try:
-                yield parse_bedpe_record(line)
-            except ValueError as exc:
-                raise ValueError(f"{path}: invalid BEDPE row {line_number}: {exc}") from exc
+                record = parse_bedpe_record(line)
+            except InvalidBedpeRecord as exc:
+                invalid_records += 1
+                invalid_by_reason[exc.category] = invalid_by_reason.get(exc.category, 0) + 1
+                first_invalid_line_by_reason.setdefault(exc.category, line_number)
+                continue
+            valid_records += 1
+            yield record
+    if source_rows == 0:
+        raise ValueError(f"{path}: BEDPE contains no source records.")
+    invalid_fraction = invalid_records / source_rows
+    passed = invalid_fraction <= maximum_invalid_fraction
+    payload = {
+        "total_lines": total_lines,
+        "ignored_blank_or_comment_lines": ignored_lines,
+        "source_rows": source_rows,
+        "valid_parent_fragments": valid_records,
+        "invalid_parent_fragments": invalid_records,
+        "invalid_parent_fragment_fraction": invalid_fraction,
+        "maximum_invalid_parent_fragment_fraction": maximum_invalid_fraction,
+        "invalid_by_reason": dict(sorted(invalid_by_reason.items())),
+        "first_invalid_line_by_reason": dict(
+            sorted(first_invalid_line_by_reason.items())
+        ),
+        "passed": passed,
+    }
+    if audit is not None:
+        audit.clear()
+        audit.update(payload)
+    if not passed:
+        raise ValueError(
+            f"{path}: invalid BEDPE fraction {invalid_fraction:.8g} exceeds "
+            f"the frozen maximum {maximum_invalid_fraction:.8g}."
+        )
 
 
 def _candidate_ccres() -> pd.DataFrame:
@@ -369,13 +447,14 @@ def _aggregate_feature_statistics(
         closed_barcodes: set[str] = set()
         rows = 0
         assigned_cut_sites = 0
+        source_bedpe_audit: dict[str, Any] = {}
 
         def flush_cell() -> None:
             if current_group is not None and current_peaks:
                 indices = np.fromiter(current_peaks, dtype=np.int64)
                 coverage[current_group, indices] += 1
 
-        for record in iter_bedpe_fragments(source["path"]):
+        for record in iter_bedpe_fragments(source["path"], audit=source_bedpe_audit):
             rows += 1
             if record.barcode != current_barcode:
                 flush_cell()
@@ -401,6 +480,8 @@ def _aggregate_feature_statistics(
                     flush=True,
                 )
         flush_cell()
+        if rows != source_bedpe_audit["valid_parent_fragments"]:
+            raise RuntimeError("GSE244618 valid-fragment audit count mismatch.")
         audit_records.append(
             {
                 "sample": source["sample"],
@@ -409,6 +490,7 @@ def _aggregate_feature_statistics(
                 "selected_annotation_barcodes": len(barcode_types),
                 "observed_barcode_blocks": len(closed_barcodes) + int(current_barcode is not None),
                 "assigned_cut_sites": assigned_cut_sites,
+                "source_bedpe_qc": source_bedpe_audit,
             }
         )
         print(
@@ -560,8 +642,9 @@ def build_reference() -> Path:
         sample_labels = labels[labels["sample"] == source["sample"]].copy()
         sample_labels = sample_labels.sort_values("fragment_barcode")
         barcodes = sample_labels["fragment_barcode"].astype(str).tolist()
+        source_bedpe_audit: dict[str, Any] = {}
         result = count_fragment_shapes_from_records(
-            iter_bedpe_fragments(source["path"]),
+            iter_bedpe_fragments(source["path"], audit=source_bedpe_audit),
             barcodes,
             peaks,
             right_cut_offset=0,
@@ -582,6 +665,7 @@ def build_reference() -> Path:
             provenance={
                 "split_sha256": label_sha256,
                 "source_sha256": source_hashes,
+                "source_bedpe_qc": source_bedpe_audit,
                 "coordinate_validation": {
                     "selected_right_cut_offset": 0,
                     "matrix_match": "not_available",
@@ -606,6 +690,7 @@ def build_reference() -> Path:
                 "cells": shape.n_obs,
                 "peaks": shape.n_vars,
                 "source_sha256": source_hashes,
+                "source_bedpe_qc": source_bedpe_audit,
                 "preprocessing_counters": result.qc.to_dict(),
                 "output": _repository_path(output_path),
             },

@@ -29,4 +29,9 @@ materialization:
   selected_reference_features: 5000
   exact_truth: false
   copy_validation_modalities_into_dataset: true
+  fragment_count_partition: tabix_contig
+  fragment_count_merge: exact_canonical_integer_csr
+  fragment_count_workers_max:
+    co_tenant: 2
+    exclusive: 8
   no_overwrite: true

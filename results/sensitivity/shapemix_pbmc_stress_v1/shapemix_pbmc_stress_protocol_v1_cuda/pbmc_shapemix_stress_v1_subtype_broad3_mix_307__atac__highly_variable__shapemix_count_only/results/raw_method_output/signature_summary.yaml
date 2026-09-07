@@ -1,0 +1,115 @@
+schema_version: 1
+method: shapemix
+model_version: 1
+source: training_reference_only
+outer_split_seed: 1103
+signature:
+  schema_version: 1
+  content_sha256: f11b4dbe3bb4b781f1432aaff289c28e5b29c1af72329c8d0f4f1916a3d5ed9c
+  cell_types:
+  - CD14 Mono
+  - CD4 Naive
+  - CD8 Naive
+  feature_sha256: 1ae71b2eab52150939eae63a7964fe13b8c5928c61b4a6c7f448c4625b0d16f5
+  bin_names:
+  - short
+  - mono
+  - long
+  layer_names:
+  - fragment_length_lt_100
+  - fragment_length_100_249
+  - fragment_length_ge_250
+  signature_parameter_sha256: d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba
+  signature_diagnostics:
+    n_cells: 3699
+    n_cell_types: 3
+    n_peaks: 5000
+    n_bins: 3
+    cell_counts:
+      CD14 Mono: 1785
+      CD4 Naive: 967
+      CD8 Naive: 947
+    bin_totals:
+      short: 6173400
+      mono: 3860580
+      long: 1552354
+    total_cut_sites: 11586334
+    accessibility_min: 1.397123183652541e-07
+    accessibility_max: 7.632702807278209
+    omega_min: 1.5754647936648293e-07
+    omega_max: 0.9999980278133352
+    omega_max_sum_error: 2.220446049250313e-16
+    feature_sha256: 1ae71b2eab52150939eae63a7964fe13b8c5928c61b4a6c7f448c4625b0d16f5
+    signature_parameter_sha256: d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba
+  dispersion_diagnostics:
+    fold_seed:
+    - 20260822
+    - 1103
+    - 17
+    bit_generator: PCG64
+    numpy_version: 1.25.2
+    fold_membership_sha256: d5e514496c67749ee104823ba6689b4c41db6750ef8099eaf55f3a722121b71c
+    fold_counts:
+      CD14 Mono:
+        fold_0: 893
+        fold_1: 892
+      CD4 Naive:
+        fold_0: 484
+        fold_1: 483
+      CD8 Naive:
+        fold_0: 474
+        fold_1: 473
+    numerator: 16154526.325020118
+    denominator: 16772195.015084641
+    alpha_ref_raw: 0.963173055792101
+    alpha_ref: 0.963173055792101
+    phi_ref: 1.0382350232769053
+    alpha_floor: 1.0e-08
+    rate_pseudocount: 0.5
+    crossfit_mean_min: 0.0
+    crossfit_mean_max: 8.139155561642296
+fragment_shape:
+  schema_version: 1
+  axis: parent_fragment_length_bp
+  count_unit: deduplicated_cut_sites
+  read_support_policy: ignore
+  peak_assignment: containing_nonoverlapping_peak
+  bins:
+  - name: short
+    min_inclusive: 0
+    max_exclusive: 100
+    layer: fragment_length_lt_100
+  - name: mono
+    min_inclusive: 100
+    max_exclusive: 250
+    layer: fragment_length_100_249
+  - name: long
+    min_inclusive: 250
+    layer: fragment_length_ge_250
+config_sha256: e51ccfb558f6a547a49d8235aff199f7a5fcdd584ba2fc6e0c74275fff86c308
+config:
+  use_shape: false
+  total_likelihood: negative_binomial
+  conditional_shape_likelihood: multinomial
+  signature_rate_pseudocount: 0.5
+  signature_shape_concentration: 1.0
+  exposure_mode: absorbed_in_abundance
+  dispersion_mode: reference_crossfit_global_scaled_by_abundance
+  dispersion_crossfit_folds: 2
+  dispersion_alpha_floor: 1.0e-08
+  background_mode: none
+  abundance_prior: gamma
+  abundance_prior_shape: 2.0
+  abundance_prior_rate: 1.0
+  optimizer: adam
+  learning_rate: 0.03
+  max_steps: 2000
+  patience: 100
+  tolerance: 1.0e-05
+  restarts: 3
+  spot_batch_size: 64
+  peak_chunk_size: 512
+  seed: 0
+  device: cuda:0
+  cuda_count_cache: auto
+  dtype: float32

@@ -1,0 +1,64 @@
+dataset_id: gse194122_shapemix_broad7_lodo_donor_10_equal_celltype_mix_101
+modality: atac
+feature_set: highly_variable
+registry: data/registry/datasets.yaml
+dataset_config:
+  dataset_id: gse194122_shapemix_broad7_lodo_donor_10_equal_celltype_mix_101
+  source: gse194122_bmmc_multiome_donor_heldout_simulation
+  description: GSE194122 BMMC pseudo-spots aggregated only from the held-out donor
+    10; peaks and signatures use the other donors only.
+  labels_key: cell_type
+  spatial_key: spatial
+  benchmark_scope: external_donor_heldout_exact_truth
+  simulation:
+    condition: equal_celltype
+    outer_split_seed: 10
+    inner_mixture_seed: 101
+    source_cells_by_spot: data/processed/datasets/gse194122_shapemix_broad7_lodo_donor_10_equal_celltype_mix_101/simulation/source_cells_by_spot.jsonl
+    manifest: data/processed/datasets/gse194122_shapemix_broad7_lodo_donor_10_equal_celltype_mix_101/simulation/manifest.yaml
+    primary_dataset: false
+    depth_retain_probability: null
+  modalities:
+    atac:
+      reference:
+        path: data/processed/references/gse194122_bmmc_broad7_lodo_donor_10_v1/atac/reference.h5ad
+      spatial:
+        path: data/processed/datasets/gse194122_shapemix_broad7_lodo_donor_10_equal_celltype_mix_101/atac/spatial.h5ad
+      labels_key: cell_type
+      spatial_key: spatial
+      truth:
+        path: data/processed/datasets/gse194122_shapemix_broad7_lodo_donor_10_equal_celltype_mix_101/truth/proportions.csv
+        cell_types:
+        - B/plasma
+        - CD4 T
+        - CD8 T
+        - NK/ILC
+        - Myeloid/DC
+        - Erythroid/MK-E
+        - Hematopoietic progenitor
+      fragment_shape:
+        schema_version: 1
+        axis: parent_fragment_length_bp
+        count_unit: deduplicated_cut_sites
+        read_support_policy: ignore
+        peak_assignment: containing_nonoverlapping_peak
+        bins:
+        - name: short
+          min_inclusive: 0
+          max_exclusive: 100
+          layer: fragment_length_lt_100
+        - name: mono
+          min_inclusive: 100
+          max_exclusive: 250
+          layer: fragment_length_100_249
+        - name: long
+          min_inclusive: 250
+          max_exclusive: null
+          layer: fragment_length_ge_250
+      feature_sets:
+        all:
+          mode: all
+        highly_variable:
+          path: data/processed/datasets/gse194122_shapemix_broad7_lodo_donor_10_equal_celltype_mix_101/atac/features/highly_variable.txt
+  config_path: /home/ericzhuang2010/VscodeProjects/deconvATAC/data/processed/datasets/gse194122_shapemix_broad7_lodo_donor_10_equal_celltype_mix_101/dataset.yaml
+truth: results/truth.csv

@@ -54,7 +54,11 @@ class NNLSDeconvolver(BaseDeconvolver):
         reference_x = _matrix_from_layer(data.reference, layer_ref)
         spatial_x = _matrix_from_layer(data.spatial, layer_spatial)
         labels = data.reference.obs[data.labels_key].astype(str)
-        cell_types = list(pd.Index(labels).drop_duplicates())
+        cell_types = (
+            list(data.cell_types)
+            if data.cell_types is not None
+            else list(pd.Index(labels).drop_duplicates())
+        )
         signatures = _cell_type_signatures(reference_x, labels, cell_types)
 
         design = signatures.T

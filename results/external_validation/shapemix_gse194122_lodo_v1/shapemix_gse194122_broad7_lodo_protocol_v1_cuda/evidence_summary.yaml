@@ -1,0 +1,23 @@
+schema_version: 1
+status: complete
+campaign: results/external_validation/shapemix_gse194122_lodo_v1/shapemix_gse194122_broad7_lodo_protocol_v1_cuda
+evidence_class: external_donor_heldout_exact_truth
+analysis_unit: donor
+donors: 10
+conditions:
+- observed_abundance
+- equal_celltype
+inner_mixture_seeds:
+- 101
+- 211
+methods:
+- shapemix_length
+- shapemix_count_only
+- nnls
+metrics:
+- rmse_v1
+- jsd_v2
+metric_rows: 240
+failed_metric_rows: 0
+interpretation: length-minus-count-only metric effects are averaged over inner mixtures
+  within donor; negative values favor fragment length
