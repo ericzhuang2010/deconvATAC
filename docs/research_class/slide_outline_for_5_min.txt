@@ -1,53 +1,30 @@
-#Slide 1: Open close DNA region and impact on gene expression
-Introduce open region and closed region (open/closed chromatin) on DNA sequence, how is that related to gene expression, different cell type behave differently, including cancer cells, which express differently, this is also related to many diseases.
-
-
-#Slide 2: ATAC sequencing, and cut profile
-Then talk about ATAC sequencing, a widely used technology for identifying open/closed regions.
-Tn5 enzyme can only cut at open regions. We build a cut (or peak) profile that count the number of cuts made to each region to identify open/closed regions. X-axis is region, y-axis is the number of cuts by the enzyme in the corresponding region.
-
-Then talk about that for each cell type, the approximate cut profile is typically known and given ahead-of-time.
-
-#Slide 3: Spatial ATAC
-Ție ATAC cut profile with location information, allow scientists to see exactly where diseases like cancer are developing and how a cell's physical neighborhood changes its behavior.
-It is a recent technology started in 2022 and is getting very popular. 
-
-#Slide 4: The deconvolution problem for spatial ATAC
-Location are identified as spots in a grid, but each spot is much larger than one cell, so we get a the cut profile which is a mixture of the cut profiles of all cells in that spot.
-The deconvolution problem is to unmix it and get the number of cells for each cell type in the spot.
-Deconvolution works like identifying ingredients in a smoothie
-
-Novelty of problem: Most recent technology is from 2025, which uses existing deconvolution for spatial RNA-sequencing. 
-
-#Slide 5: my approach and hypothesis
-My approach is include addditional information, it is called cut length, the distance between two nearby cut points, which is not available for spatial RNA seq.
-
-I then use a Bayesian model to statically estimate the composition of number of cell of different cell types at a spot.
-
-Hypothesis: A Bayesian model using with the additional ATAC cut-length signals will be more accurate than using the cut counts alone.
-
-
-#Slide 6: Experiments and project status
-
-Public datasets such as PBMC human peripheral blood cells
-Human tissue with tumor, bone marrow, immune cells.
-And mouse tissues.
-
-The current status is that I have implemented the Bayesian model with the cut length information, and tried on the PBMC datasets and the results look promising.
-
-
 Hello everyone, I’m Andy Zhuang. My research project is ….
 
+SLIDE #1
+Most cells in our bodies contain essentially the same DNA. What makes an immune cell, a brain cell, or a cancer cell behave differently is which genes are active.
+DNA is packaged around a structure called chromatin. When chromatin is open, cellular machinery can reach the DNA, making nearby genes more likely to be expressed. When chromatin is closed, the DNA is less accessible and those genes are less likely to be active.
+Changes in chromatin accessibility can alter how cells behave. In diseases such as cancer, abnormal regions may open or close, activating harmful genes or shutting down protective ones.
 
-Most cells contain the same DNA, but different types of cells express different regions of it. This is why different types of cells, including cancer cells, can behave so differently. This is also important to the study of many diseases, where researchers try to determine the differences in DNA expression within the disease cells.
+SLIDE #2
+To measure chromatin accessibility, researchers commonly use a method called ATAC-seq. It uses an enzyme called Tn5 transposase, which only cuts the DNA at open regions. 
+we then create a cut profile. The x-axis represents regions along the genome, and the y-axis shows how many cuts are in each region. Regions with many high counts are more likely to contain open chromatin.
+For most cell types, we already know their approximate cut profile.
 
-ATAC-seq is a widely used technology used to identify open and closed regions. This method uses transposon enzymes to cut at special regions, building a profile of cuts (or peaks) that counts the number of cuts made to each region to identify open and closed regions. These profiles are often represented as bar graphs, where the x-axis is the region and the y-axis is the number of cuts made by the enzyme in that region.
-For most cell types, the approximate cut profile is usually already known and given ahead of time.
+SLIDE #3
+If we tie ATAC cut profiles to location information, this allows us to see exactly where different types of cells are developing and how a cell’s surorundings can affect its behavior. This is called spatial-ATAC, a relatively new technology developed in 2022. 
+It is a powerful technology that can be widely used to map disease regions, study how nearby cells many influence a cell's behavior. This helps study things like cancer development, Alzheimer’s disease, and many other important medical questions of today.
 
-If we tie ATAC cut profiles to location information, this allows us to see exactly where different types of cells are developing and how a cell’s surorundings can affect its behavior. Spatial ATAC-seq is a method for measuring these cut profiles across multiple cells. It is a recent technology developed in 2022, and in the past few years, it has already been put to use in studying brain development, cancer, Alzheimer’s disease, and other important medical questions of today.
+SLIDE #4
+However, for spatial ATAC, one of the challenges is that each spatial spot or location is much larger than a typical cell. so each spot may contain many cell and cell types.
+Because of this, the cut profile we get is a mixture of all cells in each spot. Deconvolution is the solution to estimate the proportion of each type of cell within a spot. This is like identifying ingredients in a smoothie.
+Unfortunately, current methods are borrowed from Spatial RNA deconvolution, which is quite different from spatial ATAC. 
 
-In spatial ATAC, locations are identified in a grid of spots. However, each spot is larger than a normal cell, so they may contain multiple types of cells. Because of this, we get a cut profile that mixes the cut profiles of all cells in that spot. This mixes together potentially important signals about DNA expression. To solve this problem, researchers use deconvolution to estimate the proportion of each type of cell within a spot. Current methods rely on RNA analysis. The most recent technology is from 2025 and uses existing deconvolution methods from spatial RNA sequencing. These methods use fragment counts but not fragment lengths in their estimates.
+SLIDE #5
+As you can see on this slide, Spatial-RNA counts how many times each gene is expression. On the gene expression profile, the x-axis are genes not cuts, adapting gene expression profile to cut profile does not work well.
 
-My approach is to include additional information, namely cut length, the distance between two nearby cut points, which is not available for spatial RNA methods and is reserved for ATAC signals. I will then use a Bayesian model to statistically estimate the composition of different types of cells in a spot. My hypothesis is that a Bayesian model using the additional ATAC cut-length signals will be more accurate than a model that uses the cut counts alone.
+SLDIE #6
+In this research, myy approach is to include additional information, namely cut length, which is the distance between two nearby cut points. This information is not available for spatial RNA because RNA sequencing counts gene expression not cuts.
+I will then use a Bayesian model to statistically estimate the composition of different types of cells in a spot. My hypothesis is that a Bayesian model using the additional ATAC cut-length signals will be more accurate than a model that uses the cut counts alone.
 
-In order to test the model, I will use public datasets such as PBMC human peripheral blood cells, human tissue with tumor, bone marrow, and immune cells, and mouse tissues. In each of these datasets the percentage of each type of cell is already known. I will compare my model with and without fragment length information. The current status is that I have implemented the Bayesian model with the cut length information, and tried on the PBMC datasets and the results look promising.
+SLIDE #7
+In order to test the model, I will use public datasets such as PBMC human peripheral blood cells, human tissue with tumor, bone marrow, and immune cells, and mouse tissues. In each of these datasets the percentage of each type of cell is already known. I will compare my model with and cut length information. The current status is that I have implemented the Bayesian model with the cut length information, and tried it on the PBMC datasets and the results look promising.
