@@ -76,6 +76,27 @@ def source_payload_with_boundary_rows() -> bytes:
     )
 
 
+def source_payload_with_noncanonical_rows() -> bytes:
+    return gzip.compress(
+        (
+            "#shapemix_member\tGSM1_E11A.bed.gz\n"
+            "chrUn_GL1\t10\t30\tcellA\t2\n"
+            "chrUn_GL1\t10\t30\tunknown\t3\n"
+            "chrY\t10\t30\tcellA\t4\n"
+            "chr1\t0\t50\tcellA\t5\n"
+        ).encode()
+    )
+
+
+def source_payload_with_invalid_noncanonical_row() -> bytes:
+    return gzip.compress(
+        (
+            "#shapemix_member\tGSM1_E11A.bed.gz\n"
+            "chrUn_GL1\t-8\t42\tcellA\t2\n"
+        ).encode()
+    )
+
+
 def common_inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
     labels = tmp_path / "labels.tsv.gz"
     peaks = tmp_path / "peaks.tsv.gz"
@@ -92,7 +113,7 @@ def common_inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
         "0\tchr1:0-100\tchr1\t0\t100\n"
         "1\tchr1:100-200\tchr1\t100\t200\n",
     )
-    chrom_sizes.write_text("chr1\t1000\n")
+    chrom_sizes.write_text("chr1\t1000\nchrY\t1000\nchrUn_GL1\t1000\n")
     return labels, peaks, chrom_sizes
 
 
@@ -148,10 +169,13 @@ def test_statistics_mode_filters_and_counts_exactly(
         "chr1\t100\t300\tcellB\t1\n"
     )
     assert cell_totals.read_text().splitlines() == [
-        "cell_id\tbed_rows\tread_support_sum\texcluded_invalid_coordinate_rows\t"
-        "excluded_invalid_coordinate_read_support",
-        "cellA\t1\t2\t0\t0",
-        "cellB\t1\t1\t0\t0",
+        "cell_id\tbed_rows\tread_support_sum\t"
+        "excluded_canonical_invalid_coordinate_rows\t"
+        "excluded_canonical_invalid_coordinate_read_support\t"
+        "excluded_noncanonical_contig_rows\t"
+        "excluded_noncanonical_contig_read_support",
+        "cellA\t1\t2\t0\t0\t0\t0",
+        "cellB\t1\t1\t0\t0\t0\t0",
     ]
     values = parse_summary(summary)
     assert values["total_rows"] == "3"
@@ -195,10 +219,13 @@ def test_statistics_mode_excludes_whole_boundary_rows_without_clipping(
 
     assert gzip.open(normalized, "rt").read() == "chr1\t0\t50\tcellA\t3\n"
     assert cell_totals.read_text().splitlines() == [
-        "cell_id\tbed_rows\tread_support_sum\texcluded_invalid_coordinate_rows\t"
-        "excluded_invalid_coordinate_read_support",
-        "cellA\t1\t3\t2\t6",
-        "cellB\t0\t0\t0\t0",
+        "cell_id\tbed_rows\tread_support_sum\t"
+        "excluded_canonical_invalid_coordinate_rows\t"
+        "excluded_canonical_invalid_coordinate_read_support\t"
+        "excluded_noncanonical_contig_rows\t"
+        "excluded_noncanonical_contig_read_support",
+        "cellA\t1\t3\t2\t6\t0\t0",
+        "cellB\t0\t0\t0\t0\t0\t0",
     ]
     values = parse_summary(summary)
     assert values["total_rows"] == "4"
@@ -211,6 +238,109 @@ def test_statistics_mode_excludes_whole_boundary_rows_without_clipping(
     assert values["excluded_retained_read_support_total"] == "6"
     assert values["retained_fragments"] == "1"
     assert values["assigned_cut_sites"] == "2"
+
+
+def test_statistics_mode_excludes_noncanonical_rows_but_keeps_chr_y(
+    streamer: Path, tmp_path: Path
+) -> None:
+    labels, peaks, chrom_sizes = common_inputs(tmp_path)
+    normalized = tmp_path / "retained.tsv.gz"
+    cell_totals = tmp_path / "cell_totals.tsv"
+    summary = tmp_path / "summary.tsv"
+    subprocess.run(
+        [
+            str(streamer),
+            "--mode",
+            "statistics",
+            "--labels",
+            str(labels),
+            "--peaks",
+            str(peaks),
+            "--chrom-sizes",
+            str(chrom_sizes),
+            "--output-fragments",
+            str(normalized),
+            "--output-statistics",
+            str(tmp_path / "statistics.bin"),
+            "--output-cell-totals",
+            str(cell_totals),
+            "--output-summary",
+            str(summary),
+        ],
+        input=source_payload_with_noncanonical_rows(),
+        check=True,
+        cwd=ROOT,
+    )
+
+    assert gzip.open(normalized, "rt").read() == (
+        "chrY\t10\t30\tcellA\t4\n"
+        "chr1\t0\t50\tcellA\t5\n"
+    )
+    assert cell_totals.read_text().splitlines()[1:] == [
+        "cellA\t2\t9\t0\t0\t1\t2",
+        "cellB\t0\t0\t0\t0\t0\t0",
+    ]
+    values = parse_summary(summary)
+    assert values["total_rows"] == "4"
+    assert values["valid_rows"] == "4"
+    assert values["noncanonical_contig_rows"] == "2"
+    assert values["noncanonical_invalid_coordinate_rows"] == "0"
+    assert values["excluded_retained_noncanonical_contig_rows"] == "1"
+    assert values["excluded_retained_noncanonical_read_support_total"] == "2"
+    assert values["unknown_barcodes"] == "0"
+    assert values["retained_fragments"] == "2"
+    assert values["assigned_cut_sites"] == "2"
+    assert values["cut_sites_outside_peaks"] == "2"
+
+
+def test_statistics_mode_audits_invalid_noncanonical_overlap_once_per_cell(
+    streamer: Path, tmp_path: Path
+) -> None:
+    labels, peaks, chrom_sizes = common_inputs(tmp_path)
+    normalized = tmp_path / "retained.tsv.gz"
+    cell_totals = tmp_path / "cell_totals.tsv"
+    summary = tmp_path / "summary.tsv"
+    subprocess.run(
+        [
+            str(streamer),
+            "--mode",
+            "statistics",
+            "--labels",
+            str(labels),
+            "--peaks",
+            str(peaks),
+            "--chrom-sizes",
+            str(chrom_sizes),
+            "--output-fragments",
+            str(normalized),
+            "--output-statistics",
+            str(tmp_path / "statistics.bin"),
+            "--output-cell-totals",
+            str(cell_totals),
+            "--output-summary",
+            str(summary),
+        ],
+        input=source_payload_with_invalid_noncanonical_row(),
+        check=True,
+        cwd=ROOT,
+    )
+
+    assert gzip.open(normalized, "rt").read() == ""
+    assert cell_totals.read_text().splitlines()[1:] == [
+        "cellA\t0\t0\t0\t0\t1\t2",
+        "cellB\t0\t0\t0\t0\t0\t0",
+    ]
+    values = parse_summary(summary)
+    assert values["total_rows"] == "1"
+    assert values["valid_rows"] == "0"
+    assert values["invalid_coordinate_rows"] == "1"
+    assert values["noncanonical_contig_rows"] == "1"
+    assert values["noncanonical_invalid_coordinate_rows"] == "1"
+    assert values["excluded_retained_fragment_rows"] == "1"
+    assert values["excluded_retained_read_support_total"] == "2"
+    assert values["excluded_retained_noncanonical_contig_rows"] == "1"
+    assert values["excluded_retained_noncanonical_read_support_total"] == "2"
+    assert values["retained_fragments"] == "0"
 
 
 def test_statistics_mode_rejects_retained_barcode_in_wrong_well(

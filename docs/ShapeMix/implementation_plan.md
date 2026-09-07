@@ -1262,9 +1262,21 @@ statistics live together under
 the author and broad-label audits and the author and selected cCRE axes use the
 corresponding versioned `labels/` and `feature_axes/` directories. The helper
 binary and packed sparse events are restartable intermediates under
-`data/work/preprocessing/gse216371_reference/`. They never become registered
-inputs, and the immutable reference manifest embeds hashes and counters rather
-than depending on those work paths.
+`data/work/preprocessing/gse216371_reference/`. A completed stream whose later
+concordance gate fails is preserved under that work tree's
+`failed_fragment_statistics/` directory rather than discarded. Intermediates
+never become registered inputs, and the immutable reference manifest embeds
+hashes and counters rather than depending on those work paths.
+
+The GSE216371 canonical genomic-contig universe is frozen as `chr1`-`chr19`,
+`chrX`, `chrY`, and `chrM`, independently of which contigs carry candidate
+cCREs. Complete rows on unplaced or random contigs are excluded and counted.
+A source-only two-well audit completed 2026-09-07 before spatial prediction
+covered 2,382 retained cells and showed that each cell's deposited-row excess
+over workbook `Fragments` equaled its noncanonical-contig rows exactly;
+`chrY` rows remained part of the workbook total. The all-cell production gate
+therefore requires exactly one of canonical BED-row count or canonical
+read-support sum to match workbook `Fragments` for every retained cell.
 
 Only exact source-cell pseudo-spot composition belongs in `truth/proportions.csv`. GSE129785 physical ratios live at `validation/nominal_broad_proportions.csv` and are referenced as nominal validation evidence, including the seven CD4-memory/CD8-naive samples. The legacy `truth` declarations and directories were removed on 2026-08-24, and `scripts/preprocess_gse129785.py` was updated so regeneration cannot recreate them. RNA, protein, histone, marker, image, and anatomical evidence for real spatial data also stays under `validation/`.
 

@@ -31,7 +31,7 @@ There is no strand column. Header/comment lines begin with `#` and are not recor
 
 Every valid row is one deduplicated fragment. The primary analysis sets `read_support_policy: ignore`: it counts the row once and does not weight it by `readSupport`, because weighting would reintroduce PCR support into the biological count.
 
-Reject and count records with a non-integer coordinate, `chromEnd <= chromStart`, or a missing field. Ignore and count valid records whose barcode is outside the requested cell set or whose contig is outside the canonical peak set.
+Reject and count records with a non-integer coordinate, `chromEnd <= chromStart`, or a missing field. Ignore and count valid records whose barcode is outside the requested cell set or whose contig is outside the dataset-declared canonical genomic-contig universe. That genomic universe is distinct from the selected feature-bearing contigs: a valid canonical fragment with no selected peak remains a retained fragment whose cut sites are counted as outside peaks.
 
 ### 2.2 Length and cut-site observations
 

@@ -101,17 +101,42 @@ preprocessing_policy:
   extract_scope: stream the tar and retain E13.5 labeled-cell fragments only in derived caches
   peak_selection: reference-only ranking from author cCREs
   fragment_bins_bp: [[0, 100], [100, 250], [250, null]]
+  canonical_contigs:
+    - chr1
+    - chr2
+    - chr3
+    - chr4
+    - chr5
+    - chr6
+    - chr7
+    - chr8
+    - chr9
+    - chr10
+    - chr11
+    - chr12
+    - chr13
+    - chr14
+    - chr15
+    - chr16
+    - chr17
+    - chr18
+    - chr19
+    - chrX
+    - chrY
+    - chrM
   right_cut_offset: 0
-  coordinate_semantics: deposited BED zero-based half-open unique parent fragments; cuts at start and end; read support ignored for model counts
+  coordinate_semantics: deposited BED zero-based half-open unique parent fragments on canonical mm10 genomic contigs; cuts at start and end; read support ignored for model counts
+  noncanonical_contig_policy: exclude complete rows on unplaced or random contigs without clipping; preserve exact global and retained-cell counters for audit
   out_of_bounds_fragment_policy: exclude the complete source row without clipping either endpoint; preserve exact exclusion counters and retained-cell source totals for audit
   truth_policy: reference labels are not spatial composition truth
 validation_gates:
   - exact remote byte size and complete source stream
   - safe complete tar traversal with exactly the GEO-declared BED members
   - exact E13.5 annotation-to-fragment barcode mapping
+  - exact canonical mm10 genomic-contig universe chr1-chr19, chrX, chrY, chrM; unplaced and random contig rows are excluded whole and counted
   - mm10 chromosome and coordinate validation; out-of-bounds boundary rows are excluded whole, never clipped, and counted by reason
   - positive parent-fragment lengths, positive integer read support, and frozen half-open right-cut convention
-  - exactly one of per-cell BED row count or read-support sum matches workbook Fragments for every retained E13.5 cell
+  - exactly one of per-cell canonical-contig BED row count or canonical-contig read-support sum matches workbook Fragments for every retained E13.5 cell
   - minimum broad-label support before feature selection
   - nonnegative integer CSR layers whose sum equals X
 download_workers_max: 2

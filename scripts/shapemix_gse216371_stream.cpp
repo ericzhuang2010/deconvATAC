@@ -45,6 +45,25 @@ struct TransparentHash {
   }
 };
 
+bool is_canonical_mm10_contig(std::string_view chrom) {
+  if (chrom == "chrX" || chrom == "chrY" || chrom == "chrM") {
+    return true;
+  }
+  if (chrom.size() < 4 || chrom.rfind("chr", 0) != 0) {
+    return false;
+  }
+  const std::string_view number = chrom.substr(3);
+  if (number.size() > 1 && number.front() == '0') {
+    return false;
+  }
+  unsigned value = 0;
+  const auto parsed =
+      std::from_chars(number.data(), number.data() + number.size(), value);
+  return parsed.ec == std::errc{} &&
+         parsed.ptr == number.data() + number.size() && value >= 1 &&
+         value <= 19;
+}
+
 struct Cell {
   std::uint32_t index;
   std::uint32_t type;
@@ -94,6 +113,10 @@ struct Counters {
   std::uint64_t end_past_chromosome_rows = 0;
   std::uint64_t excluded_retained_fragment_rows = 0;
   std::uint64_t excluded_retained_read_support_total = 0;
+  std::uint64_t noncanonical_contig_rows = 0;
+  std::uint64_t noncanonical_invalid_coordinate_rows = 0;
+  std::uint64_t excluded_retained_noncanonical_contig_rows = 0;
+  std::uint64_t excluded_retained_noncanonical_read_support_total = 0;
   std::uint64_t valid_rows = 0;
   std::uint64_t unknown_barcodes = 0;
   std::uint64_t retained_fragments = 0;
@@ -459,6 +482,14 @@ void write_summary(const std::string& path, const std::string& mode,
          << counters.excluded_retained_fragment_rows << "\n"
          << "excluded_retained_read_support_total\t"
          << counters.excluded_retained_read_support_total << "\n"
+         << "noncanonical_contig_rows\t" << counters.noncanonical_contig_rows
+         << "\n"
+         << "noncanonical_invalid_coordinate_rows\t"
+         << counters.noncanonical_invalid_coordinate_rows << "\n"
+         << "excluded_retained_noncanonical_contig_rows\t"
+         << counters.excluded_retained_noncanonical_contig_rows << "\n"
+         << "excluded_retained_noncanonical_read_support_total\t"
+         << counters.excluded_retained_noncanonical_read_support_total << "\n"
          << "valid_rows\t" << counters.valid_rows << "\n"
          << "unknown_barcodes\t" << counters.unknown_barcodes << "\n"
          << "retained_fragments\t" << counters.retained_fragments << "\n"
@@ -499,22 +530,29 @@ void write_statistics(const std::string& path, std::uint64_t types,
   }
 }
 
-void write_cell_totals(const std::string& path, const LabelData& labels,
-                       const std::vector<std::uint64_t>& rows,
-                       const std::vector<std::uint64_t>& supports,
-                       const std::vector<std::uint64_t>& excluded_rows,
-                       const std::vector<std::uint64_t>& excluded_supports) {
+void write_cell_totals(
+    const std::string& path, const LabelData& labels,
+    const std::vector<std::uint64_t>& rows,
+    const std::vector<std::uint64_t>& supports,
+    const std::vector<std::uint64_t>& excluded_canonical_invalid_rows,
+    const std::vector<std::uint64_t>& excluded_canonical_invalid_supports,
+    const std::vector<std::uint64_t>& excluded_noncanonical_rows,
+    const std::vector<std::uint64_t>& excluded_noncanonical_supports) {
   std::ofstream handle(path);
   if (!handle) {
     fail("Cannot create cell totals: " + path);
   }
   handle << "cell_id\tbed_rows\tread_support_sum"
-         << "\texcluded_invalid_coordinate_rows"
-         << "\texcluded_invalid_coordinate_read_support\n";
+         << "\texcluded_canonical_invalid_coordinate_rows"
+         << "\texcluded_canonical_invalid_coordinate_read_support"
+         << "\texcluded_noncanonical_contig_rows"
+         << "\texcluded_noncanonical_contig_read_support\n";
   for (std::size_t index = 0; index < labels.ordered_ids.size(); ++index) {
     handle << labels.ordered_ids[index] << '\t' << rows[index] << '\t'
-           << supports[index] << '\t' << excluded_rows[index] << '\t'
-           << excluded_supports[index] << '\n';
+           << supports[index] << '\t' << excluded_canonical_invalid_rows[index]
+           << '\t' << excluded_canonical_invalid_supports[index] << '\t'
+           << excluded_noncanonical_rows[index] << '\t'
+           << excluded_noncanonical_supports[index] << '\n';
   }
   if (!handle) {
     fail("Failed while writing cell totals: " + path);
@@ -553,8 +591,14 @@ void process(const Arguments& arguments) {
   std::vector<std::uint32_t> coverage_cells;
   std::vector<std::uint64_t> cell_rows(labels.ordered_ids.size(), 0);
   std::vector<std::uint64_t> cell_supports(labels.ordered_ids.size(), 0);
-  std::vector<std::uint64_t> excluded_cell_rows(labels.ordered_ids.size(), 0);
-  std::vector<std::uint64_t> excluded_cell_supports(labels.ordered_ids.size(), 0);
+  std::vector<std::uint64_t> excluded_canonical_invalid_cell_rows(
+      labels.ordered_ids.size(), 0);
+  std::vector<std::uint64_t> excluded_canonical_invalid_cell_supports(
+      labels.ordered_ids.size(), 0);
+  std::vector<std::uint64_t> excluded_noncanonical_cell_rows(
+      labels.ordered_ids.size(), 0);
+  std::vector<std::uint64_t> excluded_noncanonical_cell_supports(
+      labels.ordered_ids.size(), 0);
   if (statistics_mode) {
     if (peaks.features > std::numeric_limits<std::size_t>::max() / labels.types) {
       fail("Feature-statistics matrix size overflows size_t");
@@ -638,48 +682,80 @@ void process(const Arguments& arguments) {
       const bool end_past_chromosome =
           !negative_end &&
           static_cast<std::uint64_t>(end_signed) > found_chrom->second;
-      if (negative_start || negative_end || end_past_chromosome) {
+      const bool invalid_coordinate =
+          negative_start || negative_end || end_past_chromosome;
+      if (invalid_coordinate) {
         ++counters.invalid_coordinate_rows;
         if (negative_start) ++counters.negative_start_rows;
         if (negative_end) ++counters.negative_end_rows;
         if (end_past_chromosome) ++counters.end_past_chromosome_rows;
+      } else {
+        if (start_signed >= end_signed) {
+          fail("Fragment coordinate/support gate failed at row " +
+               std::to_string(counters.total_rows));
+        }
+        ++counters.valid_rows;
+      }
 
-        const auto found_cell = labels.cells.find(fields[3]);
+      const bool canonical_contig = is_canonical_mm10_contig(fields[0]);
+      const auto found_cell = labels.cells.find(fields[3]);
+      if (found_cell != labels.cells.end() && statistics_mode) {
+        if (!member_marker_seen || current_well == kMissingCell ||
+            found_cell->second.well != current_well) {
+          fail(
+              "Retained barcode does not match the active tar-member Round4 well at row " +
+              std::to_string(counters.total_rows));
+        }
+      }
+      if (invalid_coordinate && found_cell != labels.cells.end()) {
+        ++counters.excluded_retained_fragment_rows;
+        if (std::numeric_limits<std::uint64_t>::max() -
+                counters.excluded_retained_read_support_total <
+            support) {
+          fail("Global excluded read-support total overflow");
+        }
+        counters.excluded_retained_read_support_total += support;
+      }
+      if (!canonical_contig) {
+        ++counters.noncanonical_contig_rows;
+        if (invalid_coordinate) {
+          ++counters.noncanonical_invalid_coordinate_rows;
+        }
         if (found_cell != labels.cells.end()) {
           const Cell cell = found_cell->second;
-          if (statistics_mode &&
-              (!member_marker_seen || current_well == kMissingCell ||
-               cell.well != current_well)) {
-            fail(
-                "Retained barcode does not match the active tar-member Round4 well at row " +
-                std::to_string(counters.total_rows));
-          }
-          ++counters.excluded_retained_fragment_rows;
-          ++excluded_cell_rows[cell.index];
+          ++counters.excluded_retained_noncanonical_contig_rows;
+          ++excluded_noncanonical_cell_rows[cell.index];
           if (std::numeric_limits<std::uint64_t>::max() -
-                  excluded_cell_supports[cell.index] <
+                  excluded_noncanonical_cell_supports[cell.index] <
               support) {
-            fail("Per-cell excluded read-support total overflow");
+            fail("Per-cell noncanonical read-support total overflow");
           }
-          excluded_cell_supports[cell.index] += support;
+          excluded_noncanonical_cell_supports[cell.index] += support;
           if (std::numeric_limits<std::uint64_t>::max() -
-                  counters.excluded_retained_read_support_total <
+                  counters.excluded_retained_noncanonical_read_support_total <
               support) {
-            fail("Global excluded read-support total overflow");
+            fail("Global noncanonical read-support total overflow");
           }
-          counters.excluded_retained_read_support_total += support;
+          counters.excluded_retained_noncanonical_read_support_total += support;
         }
         continue;
       }
-      if (start_signed >= end_signed) {
-        fail("Fragment coordinate/support gate failed at row " +
-             std::to_string(counters.total_rows));
+      if (invalid_coordinate) {
+        if (found_cell != labels.cells.end()) {
+          const Cell cell = found_cell->second;
+          ++excluded_canonical_invalid_cell_rows[cell.index];
+          if (std::numeric_limits<std::uint64_t>::max() -
+                  excluded_canonical_invalid_cell_supports[cell.index] <
+              support) {
+            fail("Per-cell canonical-invalid read-support total overflow");
+          }
+          excluded_canonical_invalid_cell_supports[cell.index] += support;
+        }
+        continue;
       }
+
       const auto start = static_cast<std::uint64_t>(start_signed);
       const auto end = static_cast<std::uint64_t>(end_signed);
-      ++counters.valid_rows;
-
-      const auto found_cell = labels.cells.find(fields[3]);
       if (found_cell == labels.cells.end()) {
         ++counters.unknown_barcodes;
       } else {
@@ -781,8 +857,11 @@ void process(const Arguments& arguments) {
   if (statistics_mode) {
     write_statistics(arguments.output_statistics, labels.types, peaks.features,
                      type_counts, coverage);
-    write_cell_totals(arguments.output_cell_totals, labels, cell_rows, cell_supports,
-                      excluded_cell_rows, excluded_cell_supports);
+    write_cell_totals(
+        arguments.output_cell_totals, labels, cell_rows, cell_supports,
+        excluded_canonical_invalid_cell_rows,
+        excluded_canonical_invalid_cell_supports,
+        excluded_noncanonical_cell_rows, excluded_noncanonical_cell_supports);
   }
   write_summary(arguments.output_summary, arguments.mode, counters,
                 labels.ordered_ids.size(), labels.types, peaks.features,

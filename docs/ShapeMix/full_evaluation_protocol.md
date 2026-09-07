@@ -164,16 +164,27 @@ The source scopes are frozen before acquisition:
 Frozen 2026-08-26 before spatial prediction, each deposited five-column BED
 record is one mm10, zero-based, half-open parent fragment with columns
 `chrom`, `start`, `end`, `cell barcode`, and positive integer read support.
-ShapeMix treats each deposited row as one unique parent fragment, ignores read
+ShapeMix treats each retained row as one unique parent fragment, ignores read
 support for model counts, uses one left cut at `start`, one right cut at `end`,
-`right_cut_offset=0`, and length `end-start`. The exact archive-member set must
-match all 68 GEO-declared BED files. The retained E13.5 annotation barcode must
-join exactly once to its declared Round-4 well. The audit computes both BED
-row count and read-support sum per cell and must identify exactly one convention
-that equals the author's workbook `Fragments` value for every retained cell.
-The source does not deposit an aligned per-cell accessibility
-matrix, so a coordinate gate may pass only through these exact BED semantics
-and all-cell fragment-total concordance; it must not claim a matrix match.
+`right_cut_offset=0`, and length `end-start`. The canonical genomic-contig
+universe is exactly `chr1`-`chr19`, `chrX`, `chrY`, and `chrM`; it is distinct
+from the smaller set of contigs carrying selected cCRE features. Rows on
+unplaced or random contigs are excluded whole, never clipped, and counted in
+global and retained-cell audits. The exact archive-member set must match all 68
+GEO-declared BED files, and each retained E13.5 annotation barcode must join
+exactly once to its declared Round-4 well.
+
+A source-only audit completed 2026-09-07, before spatial prediction, verified
+the convention independently in two wells (2,382 retained cells): every
+per-cell difference between deposited BED rows and workbook `Fragments` was
+exactly the number of unplaced/random-contig rows. `chrY` rows were included in
+the workbook convention. The production gate therefore computes canonical BED
+row count and canonical read-support sum per cell and requires exactly one to
+equal the author's workbook value for every retained cell. Coordinate-invalid
+rows remain in source-accounting audits but are excluded whole from the model
+cache. The source does not deposit an aligned per-cell accessibility matrix, so
+the gate may pass only through these exact BED semantics and all-cell
+fragment-total concordance; it must not claim a matrix match.
 
 ### GSE216371 embryo ontology freeze
 

@@ -84,6 +84,18 @@ def test_embryo_ranker_prefers_higher_unsigned_total_before_identifier(
     assert selected == [0, 2]
 
 
+def test_canonical_mm10_contigs_rejects_config_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        materializer,
+        "CONFIG",
+        {"preprocessing_policy": {"canonical_contigs": ["chr1", "chrX"]}},
+    )
+    with pytest.raises(ValueError, match="canonical_contigs"):
+        materializer.canonical_mm10_contigs()
+
+
 def test_fragment_total_concordance_requires_exactly_one_global_convention(
     tmp_path,
 ) -> None:
@@ -92,21 +104,27 @@ def test_fragment_total_concordance_requires_exactly_one_global_convention(
     )
     totals = tmp_path / "totals.tsv"
     totals.write_text(
-        "cell_id\tbed_rows\tread_support_sum\texcluded_invalid_coordinate_rows\t"
-        "excluded_invalid_coordinate_read_support\n"
-        "cellA\t1\t3\t0\t0\n"
-        "cellB\t2\t4\t0\t0\n"
+        "cell_id\tbed_rows\tread_support_sum\t"
+        "excluded_canonical_invalid_coordinate_rows\t"
+        "excluded_canonical_invalid_coordinate_read_support\t"
+        "excluded_noncanonical_contig_rows\t"
+        "excluded_noncanonical_contig_read_support\n"
+        "cellA\t1\t3\t0\t0\t0\t0\n"
+        "cellB\t2\t4\t0\t0\t0\t0\n"
     )
     observed = materializer.validate_fragment_concordance(labels, totals)
     assert observed["passed"] is True
-    assert observed["matching_convention"] == "bed_rows"
+    assert observed["matching_convention"] == "canonical_bed_rows"
     assert observed["cells_compared"] == 2
 
     totals.write_text(
-        "cell_id\tbed_rows\tread_support_sum\texcluded_invalid_coordinate_rows\t"
-        "excluded_invalid_coordinate_read_support\n"
-        "cellA\t1\t1\t0\t0\n"
-        "cellB\t2\t2\t0\t0\n"
+        "cell_id\tbed_rows\tread_support_sum\t"
+        "excluded_canonical_invalid_coordinate_rows\t"
+        "excluded_canonical_invalid_coordinate_read_support\t"
+        "excluded_noncanonical_contig_rows\t"
+        "excluded_noncanonical_contig_read_support\n"
+        "cellA\t1\t1\t0\t0\t0\t0\n"
+        "cellB\t2\t2\t0\t0\t0\t0\n"
     )
     with pytest.raises(ValueError, match="Exactly one"):
         materializer.validate_fragment_concordance(labels, totals)
@@ -120,15 +138,72 @@ def test_fragment_total_concordance_includes_excluded_boundary_rows(
     )
     totals = tmp_path / "totals.tsv"
     totals.write_text(
-        "cell_id\tbed_rows\tread_support_sum\texcluded_invalid_coordinate_rows\t"
-        "excluded_invalid_coordinate_read_support\n"
-        "cellA\t1\t5\t1\t2\n"
-        "cellB\t2\t8\t0\t0\n"
+        "cell_id\tbed_rows\tread_support_sum\t"
+        "excluded_canonical_invalid_coordinate_rows\t"
+        "excluded_canonical_invalid_coordinate_read_support\t"
+        "excluded_noncanonical_contig_rows\t"
+        "excluded_noncanonical_contig_read_support\n"
+        "cellA\t1\t5\t1\t2\t0\t0\n"
+        "cellB\t2\t8\t0\t0\t0\t0\n"
     )
     observed = materializer.validate_fragment_concordance(labels, totals)
-    assert observed["matching_convention"] == "bed_rows"
-    assert observed["excluded_invalid_coordinate_rows"] == 1
+    assert observed["matching_convention"] == "canonical_bed_rows"
+    assert observed["excluded_canonical_invalid_coordinate_rows"] == 1
+    assert observed["total_canonical_source_bed_rows"] == 4
     assert observed["total_source_bed_rows"] == 4
+
+
+def test_fragment_total_concordance_excludes_noncanonical_rows(
+    tmp_path,
+) -> None:
+    labels = pd.DataFrame(
+        {"cell_id": ["cellA", "cellB"], "fragments": ["1", "2"]}
+    )
+    totals = tmp_path / "totals.tsv"
+    totals.write_text(
+        "cell_id\tbed_rows\tread_support_sum\t"
+        "excluded_canonical_invalid_coordinate_rows\t"
+        "excluded_canonical_invalid_coordinate_read_support\t"
+        "excluded_noncanonical_contig_rows\t"
+        "excluded_noncanonical_contig_read_support\n"
+        "cellA\t1\t4\t0\t0\t3\t9\n"
+        "cellB\t2\t5\t0\t0\t0\t0\n"
+    )
+    observed = materializer.validate_fragment_concordance(labels, totals)
+    assert observed["matching_convention"] == "canonical_bed_rows"
+    assert observed["excluded_noncanonical_contig_rows"] == 3
+    assert observed["total_canonical_source_bed_rows"] == 3
+    assert observed["total_source_bed_rows"] == 6
+
+
+def test_completed_failed_scan_is_preserved_and_incomplete_scan_is_removed(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    work_root = tmp_path / "work"
+    monkeypatch.setattr(materializer, "WORK_ROOT", work_root)
+
+    completed = tmp_path / ".major_types_v1.completed"
+    completed.mkdir()
+    (completed / "stream_summary.tsv").write_text("key\tvalue\nmode\tstatistics\n")
+    preserved = materializer.preserve_failed_fragment_statistics(
+        completed, ValueError("concordance gate failed")
+    )
+    assert preserved is not None
+    assert preserved.parent == work_root / "failed_fragment_statistics"
+    assert not completed.exists()
+    assert (preserved / "failure.txt").read_text() == (
+        "ValueError: concordance gate failed\n"
+    )
+
+    incomplete = tmp_path / ".major_types_v1.incomplete"
+    incomplete.mkdir()
+    assert (
+        materializer.preserve_failed_fragment_statistics(
+            incomplete, RuntimeError("stream interrupted")
+        )
+        is None
+    )
+    assert not incomplete.exists()
 
 
 def test_event_layers_aggregate_duplicates_in_bounded_chunks(

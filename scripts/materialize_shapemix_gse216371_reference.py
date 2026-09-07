@@ -59,6 +59,9 @@ REFERENCE_ROOT = (
 WORK_ROOT = ROOT / "data/work/preprocessing/gse216371_reference"
 STREAM_SOURCE = ROOT / "scripts/shapemix_gse216371_stream.cpp"
 CHROM_SIZES = ROOT / "data/raw/sources/ucsc/mm10_initial/mm10.chrom.sizes"
+CANONICAL_MM10_CONTIGS = tuple(
+    [f"chr{value}" for value in range(1, 20)] + ["chrX", "chrY", "chrM"]
+)
 N_TOP_PEAKS = 5_000
 MIN_REFERENCE_CELLS_PER_PEAK = 10
 FEATURE_CHUNK = 100_000
@@ -74,6 +77,20 @@ def read_yaml(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TypeError(f"Expected a YAML mapping: {path}")
     return value
+
+
+def canonical_mm10_contigs() -> tuple[str, ...]:
+    declared = tuple(
+        str(value)
+        for value in CONFIG.get("preprocessing_policy", {}).get(
+            "canonical_contigs", ()
+        )
+    )
+    if declared != CANONICAL_MM10_CONTIGS:
+        raise ValueError(
+            "GSE216371 canonical_contigs must equal chr1-chr19, chrX, chrY, chrM"
+        )
+    return declared
 
 
 def repository_path(path: Path) -> str:
@@ -442,8 +459,10 @@ def validate_fragment_concordance(
         "cell_id",
         "bed_rows",
         "read_support_sum",
-        "excluded_invalid_coordinate_rows",
-        "excluded_invalid_coordinate_read_support",
+        "excluded_canonical_invalid_coordinate_rows",
+        "excluded_canonical_invalid_coordinate_read_support",
+        "excluded_noncanonical_contig_rows",
+        "excluded_noncanonical_contig_read_support",
     )
     if (
         tuple(totals.columns) != expected_columns
@@ -456,37 +475,60 @@ def validate_fragment_concordance(
     total_columns = list(expected_columns[1:])
     if (aligned[total_columns] < 0).any().any():
         raise ValueError("Streamer emitted negative fragment totals")
+    canonical_source_bed_rows = (
+        aligned["bed_rows"]
+        + aligned["excluded_canonical_invalid_coordinate_rows"]
+    )
+    canonical_source_read_support = (
+        aligned["read_support_sum"]
+        + aligned["excluded_canonical_invalid_coordinate_read_support"]
+    )
     source_bed_rows = (
-        aligned["bed_rows"] + aligned["excluded_invalid_coordinate_rows"]
+        canonical_source_bed_rows + aligned["excluded_noncanonical_contig_rows"]
     )
     source_read_support = (
-        aligned["read_support_sum"]
-        + aligned["excluded_invalid_coordinate_read_support"]
+        canonical_source_read_support
+        + aligned["excluded_noncanonical_contig_read_support"]
     )
-    row_match = bool(np.array_equal(source_bed_rows.to_numpy(), expected.to_numpy()))
+    row_match = bool(
+        np.array_equal(canonical_source_bed_rows.to_numpy(), expected.to_numpy())
+    )
     support_match = bool(
-        np.array_equal(source_read_support.to_numpy(), expected.to_numpy())
+        np.array_equal(canonical_source_read_support.to_numpy(), expected.to_numpy())
     )
     if int(row_match) + int(support_match) != 1:
         raise ValueError(
-            "Exactly one deposited fragment-total convention must match every "
+            "Exactly one canonical-contig fragment-total convention must match every "
             f"retained E13.5 cell; bed_rows={row_match} read_support_sum={support_match}"
         )
-    if (aligned["bed_rows"] <= 0).any():
-        raise ValueError("A retained E13.5 cell has no deposited fragment row")
+    if (canonical_source_bed_rows <= 0).any():
+        raise ValueError("A retained E13.5 cell has no canonical deposited fragment row")
     return {
         "passed": True,
-        "matching_convention": "bed_rows" if row_match else "read_support_sum",
+        "matching_convention": (
+            "canonical_bed_rows" if row_match else "canonical_read_support_sum"
+        ),
         "bed_rows_match_every_cell": row_match,
         "read_support_sum_matches_every_cell": support_match,
         "cells_compared": len(expected),
+        "canonical_contigs": list(CANONICAL_MM10_CONTIGS),
         "total_bed_rows": int(aligned["bed_rows"].sum()),
         "total_read_support": int(aligned["read_support_sum"].sum()),
-        "excluded_invalid_coordinate_rows": int(
-            aligned["excluded_invalid_coordinate_rows"].sum()
+        "excluded_canonical_invalid_coordinate_rows": int(
+            aligned["excluded_canonical_invalid_coordinate_rows"].sum()
         ),
-        "excluded_invalid_coordinate_read_support": int(
-            aligned["excluded_invalid_coordinate_read_support"].sum()
+        "excluded_canonical_invalid_coordinate_read_support": int(
+            aligned["excluded_canonical_invalid_coordinate_read_support"].sum()
+        ),
+        "excluded_noncanonical_contig_rows": int(
+            aligned["excluded_noncanonical_contig_rows"].sum()
+        ),
+        "excluded_noncanonical_contig_read_support": int(
+            aligned["excluded_noncanonical_contig_read_support"].sum()
+        ),
+        "total_canonical_source_bed_rows": int(canonical_source_bed_rows.sum()),
+        "total_canonical_source_read_support": int(
+            canonical_source_read_support.sum()
         ),
         "total_source_bed_rows": int(source_bed_rows.sum()),
         "total_source_read_support": int(source_read_support.sum()),
@@ -513,6 +555,10 @@ def write_coordinate_audit(
             "out_of_bounds_fragment_policy": (
                 "exclude_complete_source_row_without_coordinate_clipping"
             ),
+            "canonical_contigs": list(canonical_mm10_contigs()),
+            "noncanonical_contig_policy": (
+                "exclude_complete_source_row_without_coordinate_clipping"
+            ),
             "boundary_counters": {
                 key: int(cache_manifest["counters"][key])
                 for key in (
@@ -522,6 +568,15 @@ def write_coordinate_audit(
                     "end_past_chromosome_rows",
                     "excluded_retained_fragment_rows",
                     "excluded_retained_read_support_total",
+                )
+            },
+            "contig_counters": {
+                key: int(cache_manifest["counters"][key])
+                for key in (
+                    "noncanonical_contig_rows",
+                    "noncanonical_invalid_coordinate_rows",
+                    "excluded_retained_noncanonical_contig_rows",
+                    "excluded_retained_noncanonical_read_support_total",
                 )
             },
             "semantic_match": "exact",
@@ -536,6 +591,29 @@ def write_coordinate_audit(
             "outcome_data_used": False,
         },
     )
+
+
+def preserve_failed_fragment_statistics(
+    temporary: Path, error: BaseException
+) -> Path | None:
+    if not (temporary / "stream_summary.tsv").is_file():
+        shutil.rmtree(temporary, ignore_errors=True)
+        return None
+    destination_root = WORK_ROOT / "failed_fragment_statistics"
+    destination_root.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+    destination = destination_root / f"{stamp}_{temporary.name.lstrip('.')}"
+    try:
+        temporary.rename(destination)
+    except OSError:
+        return temporary
+    try:
+        (destination / "failure.txt").write_text(
+            f"{type(error).__name__}: {error}\n"
+        )
+    except OSError:
+        pass
+    return destination
 
 
 def build_fragment_statistics() -> Path:
@@ -564,6 +642,7 @@ def build_fragment_statistics() -> Path:
     binary, binary_manifest = compile_streamer()
     source, source_record = archive_path()
     expected_members = expected_fragment_members()
+    canonical_mm10_contigs()
 
     FRAGMENT_CACHE_ROOT.parent.mkdir(parents=True, exist_ok=True)
     temporary = Path(
@@ -617,6 +696,17 @@ def build_fragment_statistics() -> Path:
             > summary.get("invalid_coordinate_rows", 0)
             or summary.get("excluded_retained_fragment_rows", 0)
             > summary.get("invalid_coordinate_rows", 0)
+            or summary.get("noncanonical_invalid_coordinate_rows", 0)
+            > summary.get("invalid_coordinate_rows", 0)
+            or summary.get("noncanonical_invalid_coordinate_rows", 0)
+            > summary.get("noncanonical_contig_rows", 0)
+            or summary.get("excluded_retained_noncanonical_contig_rows", 0)
+            > summary.get("noncanonical_contig_rows", 0)
+            or summary.get("unknown_barcodes", 0)
+            + summary.get("retained_fragments", 0)
+            + summary.get("noncanonical_contig_rows", 0)
+            - summary.get("noncanonical_invalid_coordinate_rows", 0)
+            != summary.get("valid_rows", 0)
         ):
             raise ValueError(f"Invalid embryo statistics summary: {summary}")
         concordance = validate_fragment_concordance(labels, totals_path)
@@ -652,6 +742,10 @@ def build_fragment_statistics() -> Path:
             "coordinate_semantics": {
                 "genome_build": "mm10",
                 "source": "zero_based_half_open_parent_fragments",
+                "canonical_contigs": list(canonical_mm10_contigs()),
+                "noncanonical_contig_policy": (
+                    "exclude_complete_source_row_without_coordinate_clipping"
+                ),
                 "left_cut_offset": 0,
                 "right_cut_offset": 0,
                 "fragment_length": "end_minus_start",
@@ -671,8 +765,14 @@ def build_fragment_statistics() -> Path:
         }
         atomic_yaml(temporary / "manifest.yaml", manifest)
         temporary.rename(FRAGMENT_CACHE_ROOT)
-    except BaseException:
-        shutil.rmtree(temporary, ignore_errors=True)
+    except BaseException as error:
+        preserved = preserve_failed_fragment_statistics(temporary, error)
+        if preserved is not None:
+            print(
+                "gse216371 fragment_statistics status=failed_preserved "
+                f"path={repository_path(preserved)}",
+                flush=True,
+            )
         raise
     write_coordinate_audit(manifest, concordance)
     print(
