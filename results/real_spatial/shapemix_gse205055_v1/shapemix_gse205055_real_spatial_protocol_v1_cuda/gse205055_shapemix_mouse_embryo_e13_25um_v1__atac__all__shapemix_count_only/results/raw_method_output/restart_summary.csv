@@ -1,0 +1,4 @@
+restart_index,seed_tuple,converged,stopping_reason,steps,count_log_likelihood,shape_log_likelihood,abundance_log_prior,total_log_objective,nonfinite_events,runtime_seconds,best_step,final_gradient_norm,history_rows,selected
+0,"[20260822,0,0,0,0]",True,objective_patience,1319,-14285073.529174805,0.0,-410710.62939453125,-14695784.158569336,[],4178.764926581003,1319,43.01491165161133,1320,True
+1,"[20260822,0,0,0,1]",True,objective_patience,1308,-14285120.786010742,0.0,-410701.45556640625,-14695822.241577148,[],4147.599441954997,1308,46.175048828125,1309,False
+2,"[20260822,0,0,0,2]",True,objective_patience,1308,-14285122.305908203,0.0,-410701.8859863281,-14695824.191894531,[],4143.129476021,1308,46.437400817871094,1309,False

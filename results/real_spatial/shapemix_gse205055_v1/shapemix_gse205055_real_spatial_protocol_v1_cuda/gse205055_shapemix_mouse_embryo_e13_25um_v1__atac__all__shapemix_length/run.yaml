@@ -1,7 +1,119 @@
-schema_version: 1
-run_group: shapemix_gse205055_real_spatial_protocol_v1_cuda
-status: running
-metrics: []
+method: shapemix
+dataset_id: gse205055_shapemix_mouse_embryo_e13_25um_v1
+modality: atac
+feature_set: all
+results:
+  proportions: results/proportions.csv
+  abundance: results/abundance.csv
+  diagnostics: results/diagnostics.json
+status: success
+run_id: gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__shapemix_length
+method_run_id: shapemix_length
+method_config:
+  method: shapemix
+  params:
+    use_shape: true
+    total_likelihood: negative_binomial
+    conditional_shape_likelihood: multinomial
+    signature_rate_pseudocount: 0.5
+    signature_shape_concentration: 1.0
+    exposure_mode: absorbed_in_abundance
+    dispersion_mode: reference_crossfit_global_scaled_by_abundance
+    dispersion_crossfit_folds: 2
+    dispersion_alpha_floor: 1.0e-08
+    background_mode: none
+    abundance_prior: gamma
+    abundance_prior_shape: 2.0
+    abundance_prior_rate: 1.0
+    optimizer: adam
+    learning_rate: 0.03
+    max_steps: 2000
+    patience: 100
+    tolerance: 1.0e-05
+    restarts: 3
+    spot_batch_size: 64
+    peak_chunk_size: 512
+    seed: 0
+    device: cuda:0
+    cuda_count_cache: auto
+    dtype: float32
+method_config_source: method_runs_config
+method_config_source_path: configs/methods/shapemix_cuda.yaml
+method_config_sha256: 806f2900f7c48d19a05f21e7cfcd52e1587f42d244903b94b635ccdd68c2d1a3
+method_config_source_sha256: 971ca55efa9179add6a89187441123be95cea6f35f87f48521eaf62679440261
+dataset_config_sha256: c62c7a8aa9f340ebc78a2c4dad8c1bf02bfe6a13b4710c1d9d73ac05e692d24b
+environment:
+  python: 3.11.15 | packaged by conda-forge | (main, Aug 11 2026, 10:26:29) [GCC 14.4.0]
+  platform: Linux-7.0.0-31-generic-x86_64-with-glibc2.39
+  packages: &id001
+    deconvatac: 0+unknown
+    anndata: 0.9.2
+    muon: 0.1.5
+    numpy: 1.25.2
+    pandas: 2.3.3
+    scipy: 1.11.3
+    yaml: 6.0.3
+    torch: 2.11.0+cu130
+    pysam: 0.24.0
+  compute:
+    thread_environment:
+      OMP_NUM_THREADS: '8'
+      MKL_NUM_THREADS: '8'
+      OPENBLAS_NUM_THREADS: '8'
+      VECLIB_MAXIMUM_THREADS: '8'
+      NUMEXPR_NUM_THREADS: '8'
+    logical_cpu_count: 16
+    physical_cpu_count: 8
+    cpu_affinity:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    torch_num_threads: 1
+    torch_num_interop_threads: 1
+software_versions: *id001
+proportion_evaluation:
+  contract_version: v2
+  row_sum_atol: 1.0e-06
+  cell_types:
+  - Mesenchymal
+  - Chondro-osteogenic
+  - Muscle
+  - Endothelial
+  - Epithelial
+  - Hepatocyte
+  - Erythroid
+  - Immune
+  - Neural progenitor/regional CNS
+  - Excitatory neuron
+  - Inhibitory neuron
+  - Peripheral/sensory/motor neural
+  evidence: prediction_only
+inputs:
+  dataset_id: gse205055_shapemix_mouse_embryo_e13_25um_v1
+  modality: atac
+  feature_set: all
+  registry: data/registry/datasets.yaml
+seed: 0
+device: cuda:0
+dtype: float32
+determinism:
+  seed: 0
+  device: cuda:0
+  dtype: float32
+  source: resolved_method_config
 execution_provenance:
   schema_version: 1
   experiment_config:
@@ -152,85 +264,81 @@ execution_provenance:
     - 15
     torch_num_threads: 8
     torch_num_interop_threads: 8
-runs:
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__shapemix_length
-  method: shapemix
-  method_run_id: shapemix_length
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__shapemix_length
-  output_manifest_sha256: a3acbe9a847d11b742c5d83c298fda5bf3a169bdaec51a580c0dce4dfbd9b5c5
-  wall_runtime_seconds: 4046.552147497001
-  peak_rss_bytes: 4341682176
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__shapemix_count_only
-  method: shapemix
-  method_run_id: shapemix_count_only
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__shapemix_count_only
-  output_manifest_sha256: 2cc47e0a2e924975e9cfe65fc1e6013ac74c66554c59d66612b5ea1ed20ca4a5
-  wall_runtime_seconds: 2162.5212121419972
-  peak_rss_bytes: 5136773120
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__nnls
-  method: nnls
-  method_run_id: nnls
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__nnls
-  output_manifest_sha256: a8547ba722e86c2de9d962a6b7ed56dbe2f1e35182a934a87e7e5fa1d2b862bf
-  wall_runtime_seconds: 4.48840606900194
-  peak_rss_bytes: 3995373568
-- run_id: gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__shapemix_length
-  method: shapemix
-  method_run_id: shapemix_length
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__shapemix_length
-  output_manifest_sha256: 7d9b963cf57b44489a0da74302a6ed4965903cae4ac99f14b143f05d502b9732
+execution_action: executed
+performance:
   wall_runtime_seconds: 22681.960293453994
+  process_cpu_seconds: 26719.36
+  average_process_cpu_cores: 1.1780004750167559
+  average_process_cpu_percent_of_one_core: 117.80004750167558
+  cpu_measurement:
+    source: psutil_process_tree_cpu_times
+    semantics: driver-plus-live-child user and system CPU time
+    average_core_semantics: CPU seconds divided by wall seconds
   peak_rss_bytes: 5594677248
-- run_id: gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__shapemix_count_only
-  method: shapemix
-  method_run_id: shapemix_count_only
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__shapemix_count_only
-  output_manifest_sha256: 505f8be23bc64de1bb36fdd0c83394c8210efd1d437c939ae3c089803b9ad524
-  wall_runtime_seconds: 12493.701861921996
-  peak_rss_bytes: 5596069888
-- run_id: gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__nnls
-  method: nnls
-  method_run_id: nnls
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__nnls
-  output_manifest_sha256: 8a9c6dfcc64d518a28c3f87a345657cd78aa2c347cdd67e9249967086e2bc4ca
-  wall_runtime_seconds: 10.593234964995645
-  peak_rss_bytes: 4282130432
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__shapemix_length
-  method: shapemix
-  method_run_id: shapemix_length
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__shapemix_length
-  output_manifest_sha256: ea62b557f6bc5664f2e09c48d1be97d05c216468b38b4bb4ac36b23b740e20f6
-  wall_runtime_seconds: 3885.8222279070033
-  peak_rss_bytes: 5195726848
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__shapemix_count_only
-  method: shapemix
-  method_run_id: shapemix_count_only
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__shapemix_count_only
-  output_manifest_sha256: 0295eaad6b44620dadd3c9a55cc095d48116d5a7ae0fab2e037ba0ee5e10c521
-  wall_runtime_seconds: 2237.3809908760013
-  peak_rss_bytes: 5147840512
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__nnls
-  method: nnls
-  method_run_id: nnls
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__nnls
-  output_manifest_sha256: 92f5ddd076dbbd5a3ac8ed5166e0868540a0dae63e8ffacd0713e605a53e9d4c
-  wall_runtime_seconds: 4.449008989002323
-  peak_rss_bytes: 4006416384
+  peak_rss_mb: 5335.5
+  scope: load_signature_fit_diagnostics_standard_write_and_evaluation
+  clock: time.perf_counter
+  rss_measurement:
+    source: psutil_sampled_process_tree
+    sample_interval_seconds: 0.02
+    semantics: maximum sampled sum of driver and recursive child RSS
+    platform: linux
+    ru_maxrss:
+      raw_value: 5462256
+      units: kibibytes
+      bytes: 5593350144
+      platform: linux
+      semantics: process_lifetime_high_water_mark
+  compute_environment:
+    thread_environment:
+      OMP_NUM_THREADS: '8'
+      MKL_NUM_THREADS: '8'
+      OPENBLAS_NUM_THREADS: '8'
+      VECLIB_MAXIMUM_THREADS: '8'
+      NUMEXPR_NUM_THREADS: '8'
+    logical_cpu_count: 16
+    physical_cpu_count: 8
+    cpu_affinity:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    torch_num_threads: 8
+    torch_num_interop_threads: 8
+  resource_preflight:
+    enabled: true
+    profile: exclusive
+    captured_at: '2026-09-07T21:10:22.410601-04:00'
+    one_minute_load: 1.6240234375
+    available_memory_bytes: 10157694976
+    process_nice: 0
+    process_ionice: 'pionice(ioclass=<IOPriority.IOPRIO_CLASS_BE: 2>, value=4)'
+    thresholds:
+      one_minute_load_max_exclusive: 32.0
+      available_memory_bytes_min: 2147483648
+      gpu_external_memory_used_mib_max: 2048
+      gpu_temperature_c_max: 79
+    gpu_memory_used_mib: 659
+    gpu_external_memory_used_mib: 277
+    own_gpu_memory_used_mib: 382
+    gpu_memory_total_mib: 10240
+    gpu_utilization_percent: 0
+    gpu_temperature_c: 48
+    unrelated_gpu_processes: []
+    passed: true
+output_manifest:
+  path: output_sha256.yaml
+  schema_version: 1
+  sha256: 7d9b963cf57b44489a0da74302a6ed4965903cae4ac99f14b143f05d502b9732
