@@ -1,0 +1,354 @@
+{
+  "config": {
+    "abundance_prior": "gamma",
+    "abundance_prior_rate": 1.0,
+    "abundance_prior_shape": 2.0,
+    "background_mode": "none",
+    "conditional_shape_likelihood": "multinomial",
+    "cuda_count_cache": "auto",
+    "device": "cuda:0",
+    "dispersion_alpha_floor": 1e-08,
+    "dispersion_crossfit_folds": 2,
+    "dispersion_mode": "reference_crossfit_global_scaled_by_abundance",
+    "dtype": "float32",
+    "exposure_mode": "absorbed_in_abundance",
+    "learning_rate": 0.03,
+    "max_steps": 2000,
+    "optimizer": "adam",
+    "patience": 100,
+    "peak_chunk_size": 512,
+    "restarts": 3,
+    "seed": 0,
+    "signature_rate_pseudocount": 0.5,
+    "signature_shape_concentration": 1.0,
+    "spot_batch_size": 64,
+    "tolerance": 1e-05,
+    "total_likelihood": "negative_binomial",
+    "use_shape": true
+  },
+  "config_sha256": "10d81e7fc5a70288a913b2f8da95ecc7f6b5cc2a822cb63a1fdd78773deae988",
+  "fit": {
+    "device": "cuda:0",
+    "dimensions": {
+      "bins": 3,
+      "cell_types": 9,
+      "peaks": 4996,
+      "spots": 10000
+    },
+    "dtype": "float32",
+    "execution": {
+      "count_cache_bytes": 599520000,
+      "count_cache_mode": "full_cuda",
+      "count_cache_requested_bytes": 599520000,
+      "cuda_runtime_version": "13.0",
+      "cuda_workspace_margin_bytes": 536870912,
+      "deterministic_algorithms": true,
+      "device_compute_capability": "8.6",
+      "device_free_memory_bytes_before_cache": 9661251584,
+      "device_index": 0,
+      "device_name": "NVIDIA GeForce RTX 3080",
+      "device_total_memory_bytes": 10353442816,
+      "float32_matmul_precision": "highest",
+      "peak_device_memory_allocated_bytes": 675514880,
+      "peak_device_memory_reserved_bytes": 677380096,
+      "torch_num_interop_threads": 1,
+      "torch_num_threads": 1,
+      "torch_version": "2.11.0+cu130"
+    },
+    "nnls_fallback_spots": [],
+    "nonfinite_events": [],
+    "objective": {
+      "abundance_log_prior": -261223.70080566406,
+      "count_log_likelihood": -15289884.383300781,
+      "shape_log_likelihood": -6106141.690307617,
+      "total_log_objective": -21657249.774414062
+    },
+    "restarts": [
+      {
+        "abundance_log_prior": -261223.70080566406,
+        "best_step": 772,
+        "converged": true,
+        "count_log_likelihood": -15289884.383300781,
+        "final_gradient_norm": 20.825151443481445,
+        "history_rows": 773,
+        "nonfinite_events": [],
+        "restart_index": 0,
+        "runtime_seconds": 4529.355553286005,
+        "seed_tuple": [
+          20260822,
+          0,
+          0,
+          0,
+          0
+        ],
+        "shape_log_likelihood": -6106141.690307617,
+        "steps": 772,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -21657249.774414062
+      },
+      {
+        "abundance_log_prior": -261179.96072387695,
+        "best_step": 790,
+        "converged": true,
+        "count_log_likelihood": -15289923.714355469,
+        "final_gradient_norm": 25.507543563842773,
+        "history_rows": 791,
+        "nonfinite_events": [],
+        "restart_index": 1,
+        "runtime_seconds": 4653.578489466992,
+        "seed_tuple": [
+          20260822,
+          0,
+          0,
+          0,
+          1
+        ],
+        "shape_log_likelihood": -6106178.9794921875,
+        "steps": 790,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -21657282.654571533
+      },
+      {
+        "abundance_log_prior": -261180.88604736328,
+        "best_step": 790,
+        "converged": true,
+        "count_log_likelihood": -15289925.115722656,
+        "final_gradient_norm": 25.700786590576172,
+        "history_rows": 791,
+        "nonfinite_events": [],
+        "restart_index": 2,
+        "runtime_seconds": 4626.508208196989,
+        "seed_tuple": [
+          20260822,
+          0,
+          0,
+          0,
+          2
+        ],
+        "shape_log_likelihood": -6106175.874755859,
+        "steps": 790,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -21657281.87652588
+      }
+    ],
+    "runtime_seconds": 13810.157478333,
+    "selected_restart": 0,
+    "stopping_reason": "selected_largest_finite_converged_objective",
+    "success": true,
+    "use_shape": true
+  },
+  "fragment_shape": {
+    "axis": "parent_fragment_length_bp",
+    "bins": [
+      {
+        "layer": "fragment_length_lt_100",
+        "max_exclusive": 100,
+        "min_inclusive": 0,
+        "name": "short"
+      },
+      {
+        "layer": "fragment_length_100_249",
+        "max_exclusive": 250,
+        "min_inclusive": 100,
+        "name": "mono"
+      },
+      {
+        "layer": "fragment_length_ge_250",
+        "min_inclusive": 250,
+        "name": "long"
+      }
+    ],
+    "coordinate_validation": {
+      "audit": "data/processed/shapemix/gse246791_mouse_brain_reference/manifests/representative_coordinate_audit.yaml",
+      "matrix_match": "representative_recovered_read_concordance",
+      "passed": true,
+      "selected_right_cut_offset": -1,
+      "validation_method": "deposited_matrix_concordance_thresholds"
+    },
+    "count_unit": "deduplicated_cut_sites",
+    "feature_sha256": "a07a3a77b78c788c09d9fa1d78b0940e8cd59f10f8a2372d52c82c4e4caae165",
+    "left_cut_offset": 0,
+    "peak_assignment": "containing_nonoverlapping_peak",
+    "read_support_policy": "ignore",
+    "right_cut_offset": -1,
+    "schema_version": 1
+  },
+  "method": "shapemix",
+  "model_version": 1,
+  "native_outputs": {
+    "reconstruction_summary": "results/raw_method_output/reconstruction_summary.csv",
+    "residuals_by_peak_and_bin": "results/raw_method_output/residuals_by_peak_and_bin.csv.gz",
+    "restart_summary": "results/raw_method_output/restart_summary.csv",
+    "signature_summary": "results/raw_method_output/signature_summary.yaml",
+    "training_history": "results/raw_method_output/training_history.csv"
+  },
+  "reconstruction": {
+    "count": {
+      "absolute_error_sum": 9783721.459180456,
+      "entries": 49960000,
+      "expected_positive_entries": 49960000,
+      "expected_positive_fraction": 1.0,
+      "expected_total": 5893311.707061392,
+      "mean_absolute_error": 0.1958310940588562,
+      "observed_nonzero_entries": 3343807,
+      "observed_nonzero_fraction": 0.06692968374699759,
+      "observed_total": 6963407.0,
+      "residual_total": 1070095.2929386077,
+      "root_mean_squared_error": 0.6108006217034428,
+      "squared_error_sum": 18638946.87768668
+    },
+    "shape": {
+      "absolute_error_by_bin": [
+        5691096.522032322,
+        3512316.596861594,
+        1863676.3824171973
+      ],
+      "expected_by_bin": [
+        3330803.2528161244,
+        1784058.99956831,
+        778449.4546769501
+      ],
+      "observed_by_bin": [
+        3278425.0,
+        2331798.0,
+        1353184.0
+      ],
+      "residual_by_bin": [
+        -52378.25281612435,
+        547739.0004316899,
+        574734.5453230499
+      ],
+      "squared_error_by_bin": [
+        7148049.010006522,
+        5869548.383672265,
+        2061545.9460021663
+      ]
+    }
+  },
+  "seeds": {
+    "inner_mixture_seed": 0,
+    "method_seed": 0,
+    "outer_split_seed": 0
+  },
+  "signature": {
+    "bin_names": [
+      "short",
+      "mono",
+      "long"
+    ],
+    "cell_types": [
+      "Excitatory neurons",
+      "Inhibitory neurons",
+      "Other neurons",
+      "Astroglia/ependymal",
+      "Oligodendrocytes",
+      "OPCs",
+      "Microglia/macrophages",
+      "Other immune",
+      "Vascular/stromal"
+    ],
+    "content_sha256": "c685d4dd7bae86469aee4f16bc4fc4311bf82d9966e55a112e8c3146afd5030e",
+    "dispersion_diagnostics": {
+      "alpha_floor": 1e-08,
+      "alpha_ref": 1.8866970416457873,
+      "alpha_ref_raw": 1.8866970416457873,
+      "bit_generator": "PCG64",
+      "crossfit_mean_max": 11.660520032337928,
+      "crossfit_mean_min": 6.62113261679851e-10,
+      "denominator": 74345644.10405684,
+      "fold_counts": {
+        "Astroglia/ependymal": {
+          "fold_0": 6721,
+          "fold_1": 6720
+        },
+        "Excitatory neurons": {
+          "fold_0": 18714,
+          "fold_1": 18714
+        },
+        "Inhibitory neurons": {
+          "fold_0": 12899,
+          "fold_1": 12899
+        },
+        "Microglia/macrophages": {
+          "fold_0": 1693,
+          "fold_1": 1692
+        },
+        "OPCs": {
+          "fold_0": 2235,
+          "fold_1": 2235
+        },
+        "Oligodendrocytes": {
+          "fold_0": 13295,
+          "fold_1": 13294
+        },
+        "Other immune": {
+          "fold_0": 11,
+          "fold_1": 11
+        },
+        "Other neurons": {
+          "fold_0": 321,
+          "fold_1": 320
+        },
+        "Vascular/stromal": {
+          "fold_0": 909,
+          "fold_1": 908
+        }
+      },
+      "fold_membership_sha256": "1b197f6e0118dfebac5efe68a3b75bee130bdeeb414bfc93c67a1fb984dd56fd",
+      "fold_seed": [
+        20260822,
+        0,
+        17
+      ],
+      "numerator": 140267706.7903746,
+      "numpy_version": "1.25.2",
+      "phi_ref": 0.530026802357038,
+      "rate_pseudocount": 0.5
+    },
+    "feature_sha256": "a07a3a77b78c788c09d9fa1d78b0940e8cd59f10f8a2372d52c82c4e4caae165",
+    "layer_names": [
+      "fragment_length_lt_100",
+      "fragment_length_100_249",
+      "fragment_length_ge_250"
+    ],
+    "schema_version": 1,
+    "signature_diagnostics": {
+      "accessibility_max": 11.582506039138806,
+      "accessibility_min": 6.621797599002376e-10,
+      "bin_totals": {
+        "long": 9610183,
+        "mono": 21967903,
+        "short": 41467883
+      },
+      "cell_counts": {
+        "Astroglia/ependymal": 13441,
+        "Excitatory neurons": 37428,
+        "Inhibitory neurons": 25798,
+        "Microglia/macrophages": 3385,
+        "OPCs": 4470,
+        "Oligodendrocytes": 26589,
+        "Other immune": 22,
+        "Other neurons": 641,
+        "Vascular/stromal": 1817
+      },
+      "feature_sha256": "a07a3a77b78c788c09d9fa1d78b0940e8cd59f10f8a2372d52c82c4e4caae165",
+      "n_bins": 3,
+      "n_cell_types": 9,
+      "n_cells": 113591,
+      "n_peaks": 4996,
+      "omega_max": 0.9999986216543806,
+      "omega_max_sum_error": 2.220446049250313e-16,
+      "omega_min": 4.5407462269007386e-08,
+      "signature_parameter_sha256": "d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba",
+      "total_cut_sites": 73045969
+    },
+    "signature_parameter_sha256": "d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba"
+  },
+  "software_versions": {
+    "numpy": "1.25.2",
+    "pandas": "2.3.3",
+    "pysam": "0.24.0",
+    "torch": "2.11.0"
+  },
+  "use_shape": true
+}

@@ -1,0 +1,373 @@
+{
+  "config": {
+    "abundance_prior": "gamma",
+    "abundance_prior_rate": 1.0,
+    "abundance_prior_shape": 2.0,
+    "background_mode": "none",
+    "conditional_shape_likelihood": "multinomial",
+    "cuda_count_cache": "auto",
+    "device": "cuda:0",
+    "dispersion_alpha_floor": 1e-08,
+    "dispersion_crossfit_folds": 2,
+    "dispersion_mode": "reference_crossfit_global_scaled_by_abundance",
+    "dtype": "float32",
+    "exposure_mode": "absorbed_in_abundance",
+    "learning_rate": 0.03,
+    "max_steps": 2000,
+    "optimizer": "adam",
+    "patience": 100,
+    "peak_chunk_size": 512,
+    "restarts": 3,
+    "seed": 0,
+    "signature_rate_pseudocount": 0.5,
+    "signature_shape_concentration": 1.0,
+    "spot_batch_size": 64,
+    "tolerance": 1e-05,
+    "total_likelihood": "negative_binomial",
+    "use_shape": false
+  },
+  "config_sha256": "e51ccfb558f6a547a49d8235aff199f7a5fcdd584ba2fc6e0c74275fff86c308",
+  "fit": {
+    "device": "cuda:0",
+    "dimensions": {
+      "bins": 3,
+      "cell_types": 12,
+      "peaks": 5000,
+      "spots": 2500
+    },
+    "dtype": "float32",
+    "execution": {
+      "count_cache_bytes": 150000000,
+      "count_cache_mode": "full_cuda",
+      "count_cache_requested_bytes": 150000000,
+      "cuda_runtime_version": "13.0",
+      "cuda_workspace_margin_bytes": 536870912,
+      "deterministic_algorithms": true,
+      "device_compute_capability": "8.6",
+      "device_free_memory_bytes_before_cache": 9661251584,
+      "device_index": 0,
+      "device_name": "NVIDIA GeForce RTX 3080",
+      "device_total_memory_bytes": 10353442816,
+      "float32_matmul_precision": "highest",
+      "peak_device_memory_allocated_bytes": 222859264,
+      "peak_device_memory_reserved_bytes": 224395264,
+      "torch_num_interop_threads": 1,
+      "torch_num_threads": 1,
+      "torch_version": "2.11.0+cu130"
+    },
+    "nnls_fallback_spots": [],
+    "nonfinite_events": [],
+    "objective": {
+      "abundance_log_prior": -72758.9249420166,
+      "count_log_likelihood": -9586780.868774414,
+      "shape_log_likelihood": 0.0,
+      "total_log_objective": -9659539.79371643
+    },
+    "restarts": [
+      {
+        "abundance_log_prior": -72758.9249420166,
+        "best_step": 394,
+        "converged": true,
+        "count_log_likelihood": -9586780.868774414,
+        "final_gradient_norm": 13.615790367126465,
+        "history_rows": 395,
+        "nonfinite_events": [],
+        "restart_index": 0,
+        "runtime_seconds": 327.23887243299396,
+        "seed_tuple": [
+          20260822,
+          0,
+          0,
+          0,
+          0
+        ],
+        "shape_log_likelihood": 0.0,
+        "steps": 394,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -9659539.79371643
+      },
+      {
+        "abundance_log_prior": -72779.04722595215,
+        "best_step": 465,
+        "converged": true,
+        "count_log_likelihood": -9586771.787719727,
+        "final_gradient_norm": 18.992816925048828,
+        "history_rows": 466,
+        "nonfinite_events": [],
+        "restart_index": 1,
+        "runtime_seconds": 379.6049538829975,
+        "seed_tuple": [
+          20260822,
+          0,
+          0,
+          0,
+          1
+        ],
+        "shape_log_likelihood": 0.0,
+        "steps": 465,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -9659550.834945679
+      },
+      {
+        "abundance_log_prior": -72776.95516967773,
+        "best_step": 477,
+        "converged": true,
+        "count_log_likelihood": -9586767.717895508,
+        "final_gradient_norm": 16.820098876953125,
+        "history_rows": 478,
+        "nonfinite_events": [],
+        "restart_index": 2,
+        "runtime_seconds": 392.8511735170032,
+        "seed_tuple": [
+          20260822,
+          0,
+          0,
+          0,
+          2
+        ],
+        "shape_log_likelihood": 0.0,
+        "steps": 477,
+        "stopping_reason": "objective_patience",
+        "total_log_objective": -9659544.673065186
+      }
+    ],
+    "runtime_seconds": 1099.8795698400063,
+    "selected_restart": 0,
+    "stopping_reason": "selected_largest_finite_converged_objective",
+    "success": true,
+    "use_shape": false
+  },
+  "fragment_shape": {
+    "axis": "parent_fragment_length_bp",
+    "bins": [
+      {
+        "layer": "fragment_length_lt_100",
+        "max_exclusive": 100,
+        "min_inclusive": 0,
+        "name": "short"
+      },
+      {
+        "layer": "fragment_length_100_249",
+        "max_exclusive": 250,
+        "min_inclusive": 100,
+        "name": "mono"
+      },
+      {
+        "layer": "fragment_length_ge_250",
+        "min_inclusive": 250,
+        "name": "long"
+      }
+    ],
+    "coordinate_validation": {
+      "audit": "data/processed/shapemix/gse216371_embryo_reference/manifests/embryo_fragment_coordinate_audit.yaml",
+      "fragment_total_match": "exact",
+      "matrix_match": "not_available",
+      "selected_right_cut_offset": 0,
+      "semantic_match": "exact",
+      "validation_method": "deposited_bed_half_open_parent_fragments"
+    },
+    "count_unit": "deduplicated_cut_sites",
+    "feature_sha256": "20d6e8587939ea52a65df1d93b036c055335a54217414b5fe1a29d8bbaa32580",
+    "left_cut_offset": 0,
+    "peak_assignment": "containing_nonoverlapping_peak",
+    "read_support_policy": "ignore",
+    "right_cut_offset": 0,
+    "schema_version": 1
+  },
+  "method": "shapemix",
+  "model_version": 1,
+  "native_outputs": {
+    "reconstruction_summary": "results/raw_method_output/reconstruction_summary.csv",
+    "residuals_by_peak_and_bin": "results/raw_method_output/residuals_by_peak_and_bin.csv.gz",
+    "restart_summary": "results/raw_method_output/restart_summary.csv",
+    "signature_summary": "results/raw_method_output/signature_summary.yaml",
+    "training_history": "results/raw_method_output/training_history.csv"
+  },
+  "reconstruction": {
+    "count": {
+      "absolute_error_sum": 7381729.863937082,
+      "entries": 12500000,
+      "expected_positive_entries": 12500000,
+      "expected_positive_fraction": 1.0,
+      "expected_total": 6203972.957865294,
+      "mean_absolute_error": 0.5905383891149666,
+      "observed_nonzero_entries": 2563710,
+      "observed_nonzero_fraction": 0.2050968,
+      "observed_total": 6679201.0,
+      "residual_total": 475228.04213470593,
+      "root_mean_squared_error": 1.0375435124606325,
+      "squared_error_sum": 13456206.75311433
+    },
+    "shape": {
+      "absolute_error_by_bin": [
+        5033916.038736327,
+        3494079.526054145,
+        1441095.86416428
+      ],
+      "expected_by_bin": [
+        2523789.4600857897,
+        2239313.684281829,
+        1440869.8134976733
+      ],
+      "observed_by_bin": [
+        4296113.0,
+        2382616.0,
+        472.0
+      ],
+      "residual_by_bin": [
+        1772323.5399142103,
+        143302.3157181712,
+        -1440397.8134976733
+      ],
+      "squared_error_by_bin": [
+        9170514.564320475,
+        4531779.346063569,
+        484659.68305917946
+      ]
+    }
+  },
+  "seeds": {
+    "inner_mixture_seed": 0,
+    "method_seed": 0,
+    "outer_split_seed": 0
+  },
+  "signature": {
+    "bin_names": [
+      "short",
+      "mono",
+      "long"
+    ],
+    "cell_types": [
+      "Mesenchymal",
+      "Chondro-osteogenic",
+      "Muscle",
+      "Endothelial",
+      "Epithelial",
+      "Hepatocyte",
+      "Erythroid",
+      "Immune",
+      "Neural progenitor/regional CNS",
+      "Excitatory neuron",
+      "Inhibitory neuron",
+      "Peripheral/sensory/motor neural"
+    ],
+    "content_sha256": "8e76a7a59e87689ab4fcf5d1d3ea13ba772b1de60e4f3b25d34bf9f494cf6206",
+    "dispersion_diagnostics": {
+      "alpha_floor": 1e-08,
+      "alpha_ref": 3.627904573052819,
+      "alpha_ref_raw": 3.627904573052819,
+      "bit_generator": "PCG64",
+      "crossfit_mean_max": 1.9313322647531235,
+      "crossfit_mean_min": 4.793739505268337e-07,
+      "denominator": 19656384.19453008,
+      "fold_counts": {
+        "Chondro-osteogenic": {
+          "fold_0": 10064,
+          "fold_1": 10064
+        },
+        "Endothelial": {
+          "fold_0": 1306,
+          "fold_1": 1305
+        },
+        "Epithelial": {
+          "fold_0": 2145,
+          "fold_1": 2144
+        },
+        "Erythroid": {
+          "fold_0": 4164,
+          "fold_1": 4164
+        },
+        "Excitatory neuron": {
+          "fold_0": 3468,
+          "fold_1": 3468
+        },
+        "Hepatocyte": {
+          "fold_0": 490,
+          "fold_1": 490
+        },
+        "Immune": {
+          "fold_0": 420,
+          "fold_1": 420
+        },
+        "Inhibitory neuron": {
+          "fold_0": 5547,
+          "fold_1": 5547
+        },
+        "Mesenchymal": {
+          "fold_0": 11957,
+          "fold_1": 11956
+        },
+        "Muscle": {
+          "fold_0": 2566,
+          "fold_1": 2566
+        },
+        "Neural progenitor/regional CNS": {
+          "fold_0": 8484,
+          "fold_1": 8484
+        },
+        "Peripheral/sensory/motor neural": {
+          "fold_0": 1488,
+          "fold_1": 1487
+        }
+      },
+      "fold_membership_sha256": "bf94bebd2f96defbdb413165fbf44777566798165ff2cddd9a97eab551165f42",
+      "fold_seed": [
+        20260822,
+        0,
+        17
+      ],
+      "numerator": 71311486.10901883,
+      "numpy_version": "1.25.2",
+      "phi_ref": 0.27564120826874927,
+      "rate_pseudocount": 0.5
+    },
+    "feature_sha256": "20d6e8587939ea52a65df1d93b036c055335a54217414b5fe1a29d8bbaa32580",
+    "layer_names": [
+      "fragment_length_lt_100",
+      "fragment_length_100_249",
+      "fragment_length_ge_250"
+    ],
+    "schema_version": 1,
+    "signature_diagnostics": {
+      "accessibility_max": 1.9166942902188584,
+      "accessibility_min": 9.977852805105732e-07,
+      "bin_totals": {
+        "long": 16527326,
+        "mono": 25968298,
+        "short": 29227159
+      },
+      "cell_counts": {
+        "Chondro-osteogenic": 20128,
+        "Endothelial": 2611,
+        "Epithelial": 4289,
+        "Erythroid": 8328,
+        "Excitatory neuron": 6936,
+        "Hepatocyte": 980,
+        "Immune": 840,
+        "Inhibitory neuron": 11094,
+        "Mesenchymal": 23913,
+        "Muscle": 5132,
+        "Neural progenitor/regional CNS": 16968,
+        "Peripheral/sensory/motor neural": 2975
+      },
+      "feature_sha256": "20d6e8587939ea52a65df1d93b036c055335a54217414b5fe1a29d8bbaa32580",
+      "n_bins": 3,
+      "n_cell_types": 12,
+      "n_cells": 104194,
+      "n_peaks": 5000,
+      "omega_max": 0.9999213007942647,
+      "omega_max_sum_error": 2.220446049250313e-16,
+      "omega_min": 9.420315998898712e-06,
+      "signature_parameter_sha256": "d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba",
+      "total_cut_sites": 71722783
+    },
+    "signature_parameter_sha256": "d83e293f95adfbe4d39ad979d3fcf58c424bea42a2dfbd372252e800e520baba"
+  },
+  "software_versions": {
+    "numpy": "1.25.2",
+    "pandas": "2.3.3",
+    "pysam": "0.24.0",
+    "torch": "2.11.0"
+  },
+  "use_shape": false
+}

@@ -1,0 +1,113 @@
+dataset_id: gse263333_shapemix_five_month_eae_brain_20um_atac_v1
+modality: atac
+feature_set: all
+registry: data/registry/datasets.yaml
+dataset_config:
+  dataset_id: gse263333_shapemix_five_month_eae_brain_20um_atac_v1
+  source: GSE263333 spatial ATAC section GSM8494157
+  description: Real spatial ATAC section projected onto a frozen, reference-only feature
+    axis with positive reconstructed reference support for ShapeMix prediction and
+    orthogonal cross-modality validation.
+  labels_key: cell_type
+  spatial_key: spatial
+  benchmark_scope: real_spatial_orthogonal_validation
+  shapemix_seeds:
+    outer_split_seed: 0
+    inner_mixture_seed: 0
+  evaluation_design:
+    comparison_key: section
+    group: five_modality_5month_eae_brain_20um_atac
+    atac_gsm: GSM8494157
+    coordinate_gsm: GSM8494157
+    reference_id: gse246791_adult_mouse_brain_broad9_v1
+    truth_limitation: No exact per-spot cell-type composition truth is available;
+      RNA, protein, histone, anatomy, and spatial-continuity endpoints are orthogonal
+      validation only.
+    reference_caveat: adult healthy regional brain reference applied to five-month
+      EAE brain
+  modalities:
+    atac:
+      reference:
+        path: data/processed/references/gse246791_adult_mouse_brain_broad9_v1/atac/reference.h5ad
+      spatial:
+        path: data/processed/datasets/gse263333_shapemix_five_month_eae_brain_20um_atac_v1/atac/spatial.h5ad
+      labels_key: cell_type
+      spatial_key: spatial
+      cell_types:
+      - Excitatory neurons
+      - Inhibitory neurons
+      - Other neurons
+      - Astroglia/ependymal
+      - Oligodendrocytes
+      - OPCs
+      - Microglia/macrophages
+      - Other immune
+      - Vascular/stromal
+      fragment_shape:
+        schema_version: 1
+        axis: parent_fragment_length_bp
+        count_unit: deduplicated_cut_sites
+        read_support_policy: ignore
+        peak_assignment: containing_nonoverlapping_peak
+        left_cut_offset: 0
+        right_cut_offset: -1
+        bins:
+        - name: short
+          min_inclusive: 0
+          max_exclusive: 100
+          layer: fragment_length_lt_100
+        - name: mono
+          min_inclusive: 100
+          max_exclusive: 250
+          layer: fragment_length_100_249
+        - name: long
+          min_inclusive: 250
+          layer: fragment_length_ge_250
+        feature_sha256: a07a3a77b78c788c09d9fa1d78b0940e8cd59f10f8a2372d52c82c4e4caae165
+        coordinate_validation:
+          audit: data/processed/shapemix/gse246791_mouse_brain_reference/manifests/representative_coordinate_audit.yaml
+          matrix_match: representative_recovered_read_concordance
+          passed: true
+          selected_right_cut_offset: -1
+          validation_method: deposited_matrix_concordance_thresholds
+      feature_sets:
+        all:
+          mode: all
+        selected_reference_features:
+          path: data/processed/datasets/gse263333_shapemix_five_month_eae_brain_20um_atac_v1/atac/features/selected_reference_features.txt
+  validation:
+    truth_status: orthogonal_validation_not_exact_composition_truth
+    exact_truth: false
+    alignment_manifest:
+      path: data/processed/datasets/gse263333_shapemix_five_month_eae_brain_20um_atac_v1/validation/alignment.yaml
+      sha256: a847fc82e961db074c7d81cdee018cc0b07171a841bb35e66c04e9b875a06bb5
+    epigenome:
+    - gsm: GSM8494157
+      assay: h3k27ac
+      path: data/processed/datasets/gse263333_shapemix_five_month_eae_brain_20um_atac_v1/validation/epigenome/h3k27ac__GSM8494157.h5ad
+      sha256: cf1c2b7f31741a119771773da65fe5ff2a01357859cc13c41850fe370224a35b
+      spots: 9994
+      features: 4996
+      interpretation: orthogonal_validation_only
+    - gsm: GSM8494157
+      assay: h3k27me3
+      path: data/processed/datasets/gse263333_shapemix_five_month_eae_brain_20um_atac_v1/validation/epigenome/h3k27me3__GSM8494157.h5ad
+      sha256: 615d7ac714f69d195d95416bfd75f93fbb31e20873966f137fe786ae0df0e387
+      spots: 10000
+      features: 4996
+      interpretation: orthogonal_validation_only
+    rna:
+      gsm: GSM8494158
+      path: data/processed/datasets/gse263333_shapemix_five_month_eae_brain_20um_atac_v1/validation/rna/rna.h5ad
+      sha256: 95525765982d7f3cd2beffea5f74d73e5d755103938bfa37f3abbd9992a9e1a4
+      observations: 10000
+      features: 48440
+      spatial_barcode_overlap: 10000
+    protein:
+      gsm: GSM8494159
+      path: data/processed/datasets/gse263333_shapemix_five_month_eae_brain_20um_atac_v1/validation/protein/protein.h5ad
+      sha256: 6fabbd31cf906c129ca955142967ed2b6778007105c62ec97df269d8572a582b
+      observations: 10000
+      features: 131
+      spatial_barcode_overlap: 10000
+  config_path: /home/ericzhuang2010/VscodeProjects/deconvATAC/data/processed/datasets/gse263333_shapemix_five_month_eae_brain_20um_atac_v1/dataset.yaml

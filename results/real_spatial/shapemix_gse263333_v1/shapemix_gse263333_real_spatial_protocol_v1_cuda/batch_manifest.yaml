@@ -1,13 +1,13 @@
 schema_version: 1
-run_group: shapemix_gse205055_real_spatial_protocol_v1_cuda
+run_group: shapemix_gse263333_real_spatial_protocol_v1_cuda
 status: completed
 metrics: []
 execution_provenance:
   schema_version: 1
   experiment_config:
-    path: configs/experiments/shapemix_gse205055_real_spatial_v1.yaml
-    source_sha256: 6cb4afe6b0138e1135baf78ea44384b5cef3b48eca5fecd6508a23e928c1df56
-    resolved_sha256: 08a1308a8359671ce1e0c55c2bc940c7b4390ace33e940059474979a08de80ea
+    path: configs/experiments/shapemix_gse263333_real_spatial_v1.yaml
+    source_sha256: e70287998e7b1615677ebedc852175ba75bfb272616e1a31754488cccf1b8bc7
+    resolved_sha256: 7683dad126ead75a0b0b733826a30b931d3e7abcb2abe6da8cf6bdae902bf2da
     resolved_hash_encoding: canonical_json_sorted_keys_compact_utf8
   benchmark_protocol:
     path: docs/ShapeMix/benchmark_protocol.md
@@ -16,24 +16,9 @@ execution_provenance:
     path: data/registry/datasets.yaml
     source_sha256: 9de830198a2e22b6534d17efa3c6047115d08d5912df5955571f77526d2d2421
   code:
-    git_commit: e505dcc7466f50e02bd04aedbe251577e698bf5f
-    git_worktree_dirty: true
-    git_status:
-    - M configs/datasets/shapemix_gse205055_real_spatial_v1.yaml
-    - ' M configs/datasets/shapemix_gse263333_real_spatial_v1.yaml'
-    - ' M docs/ShapeMix/full_evaluation_protocol.md'
-    - ' M docs/ShapeMix/implementation_plan.md'
-    - ' M scripts/__pycache__/materialize_shapemix_real_spatial.cpython-311.pyc'
-    - ' M scripts/__pycache__/prepare_shapemix_reference_marker_features.cpython-311.pyc'
-    - ' M scripts/materialize_shapemix_gse246791_reference.py'
-    - ' M scripts/materialize_shapemix_real_spatial.py'
-    - ' M scripts/prepare_shapemix_reference_marker_features.py'
-    - ' M src/deconvatac/data/__pycache__/validators.cpython-311.pyc'
-    - ' M src/deconvatac/data/validators.py'
-    - ?? scripts/__pycache__/materialize_shapemix_gse246791_reference.cpython-312.pyc
-    - ?? scripts/__pycache__/materialize_shapemix_real_spatial.cpython-312.pyc
-    - ?? scripts/__pycache__/prepare_shapemix_reference_marker_features.cpython-312.pyc
-    - ?? src/deconvatac/data/__pycache__/validators.cpython-312.pyc
+    git_commit: f5a62011606b40b5e18140f198e661b648b9a972
+    git_worktree_dirty: false
+    git_status: []
     manifest_sha256: 369a5ad143a13d65abf57f41de5b55ccc399fcfb57c19ff31bd8aecb97e0ef99
     manifest_hash_encoding: canonical_json_sorted_keys_compact_utf8
     selection:
@@ -153,165 +138,57 @@ execution_provenance:
     torch_num_threads: 8
     torch_num_interop_threads: 8
 runs:
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__shapemix_length
+- run_id: gse263333_shapemix_mouse_embryo_e13_50um_atac_v1__atac__all__shapemix_length
   method: shapemix
   method_run_id: shapemix_length
   status: success
   execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__shapemix_length
-  output_manifest_sha256: a3acbe9a847d11b742c5d83c298fda5bf3a169bdaec51a580c0dce4dfbd9b5c5
-  wall_runtime_seconds: 4046.552147497001
-  peak_rss_bytes: 4341682176
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__shapemix_count_only
+  run_dir: results/real_spatial/shapemix_gse263333_v1/shapemix_gse263333_real_spatial_protocol_v1_cuda/gse263333_shapemix_mouse_embryo_e13_50um_atac_v1__atac__all__shapemix_length
+  output_manifest_sha256: 27943416f917cc6f221cf9c1c185e3eb010001546ee6510a9ba9a926c06bc93d
+  wall_runtime_seconds: 2306.5982673629915
+  peak_rss_bytes: 4819578880
+- run_id: gse263333_shapemix_mouse_embryo_e13_50um_atac_v1__atac__all__shapemix_count_only
   method: shapemix
   method_run_id: shapemix_count_only
   status: success
   execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__shapemix_count_only
-  output_manifest_sha256: 2cc47e0a2e924975e9cfe65fc1e6013ac74c66554c59d66612b5ea1ed20ca4a5
-  wall_runtime_seconds: 2162.5212121419972
-  peak_rss_bytes: 5136773120
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__nnls
+  run_dir: results/real_spatial/shapemix_gse263333_v1/shapemix_gse263333_real_spatial_protocol_v1_cuda/gse263333_shapemix_mouse_embryo_e13_50um_atac_v1__atac__all__shapemix_count_only
+  output_manifest_sha256: 4073b9d84e675c67a8eecf365fba457e3d87773cc67b1f3a20740c7be0f1d413
+  wall_runtime_seconds: 1111.2836855720088
+  peak_rss_bytes: 5598949376
+- run_id: gse263333_shapemix_mouse_embryo_e13_50um_atac_v1__atac__all__nnls
   method: nnls
   method_run_id: nnls
   status: success
   execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_primary_v1__atac__all__nnls
-  output_manifest_sha256: a8547ba722e86c2de9d962a6b7ed56dbe2f1e35182a934a87e7e5fa1d2b862bf
-  wall_runtime_seconds: 4.48840606900194
-  peak_rss_bytes: 3995373568
-- run_id: gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__shapemix_length
+  run_dir: results/real_spatial/shapemix_gse263333_v1/shapemix_gse263333_real_spatial_protocol_v1_cuda/gse263333_shapemix_mouse_embryo_e13_50um_atac_v1__atac__all__nnls
+  output_manifest_sha256: b6f46a0b019abbca4aea6d49e86e0a097116b8f29ac03c71b23ba41b56049a82
+  wall_runtime_seconds: 5.703803240990965
+  peak_rss_bytes: 4277960704
+- run_id: gse263333_shapemix_five_month_eae_brain_20um_atac_v1__atac__all__shapemix_length
   method: shapemix
   method_run_id: shapemix_length
   status: success
   execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__shapemix_length
-  output_manifest_sha256: 7d9b963cf57b44489a0da74302a6ed4965903cae4ac99f14b143f05d502b9732
-  wall_runtime_seconds: 22681.960293453994
-  peak_rss_bytes: 5594677248
-- run_id: gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__shapemix_count_only
+  run_dir: results/real_spatial/shapemix_gse263333_v1/shapemix_gse263333_real_spatial_protocol_v1_cuda/gse263333_shapemix_five_month_eae_brain_20um_atac_v1__atac__all__shapemix_length
+  output_manifest_sha256: 2015740b43eb77bdc3817b72990a0bd18148557ee33654ea5e2f5350e7141073
+  wall_runtime_seconds: 30118.895492009004
+  peak_rss_bytes: 5159129088
+- run_id: gse263333_shapemix_five_month_eae_brain_20um_atac_v1__atac__all__shapemix_count_only
   method: shapemix
   method_run_id: shapemix_count_only
   status: success
   execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__shapemix_count_only
-  output_manifest_sha256: 505f8be23bc64de1bb36fdd0c83394c8210efd1d437c939ae3c089803b9ad524
-  wall_runtime_seconds: 12493.701861921996
-  peak_rss_bytes: 5596069888
-- run_id: gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__nnls
+  run_dir: results/real_spatial/shapemix_gse263333_v1/shapemix_gse263333_real_spatial_protocol_v1_cuda/gse263333_shapemix_five_month_eae_brain_20um_atac_v1__atac__all__shapemix_count_only
+  output_manifest_sha256: 49db0e9dd1be8d8c4e587df7dae1c1b017deb3079ededdd51f903c83bafd3bad
+  wall_runtime_seconds: 16426.15843063401
+  peak_rss_bytes: 5189701632
+- run_id: gse263333_shapemix_five_month_eae_brain_20um_atac_v1__atac__all__nnls
   method: nnls
   method_run_id: nnls
   status: success
   execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_embryo_e13_25um_v1__atac__all__nnls
-  output_manifest_sha256: 8a9c6dfcc64d518a28c3f87a345657cd78aa2c347cdd67e9249967086e2bc4ca
-  wall_runtime_seconds: 10.593234964995645
-  peak_rss_bytes: 4282130432
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__shapemix_length
-  method: shapemix
-  method_run_id: shapemix_length
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__shapemix_length
-  output_manifest_sha256: ea62b557f6bc5664f2e09c48d1be97d05c216468b38b4bb4ac36b23b740e20f6
-  wall_runtime_seconds: 3885.8222279070033
-  peak_rss_bytes: 5195726848
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__shapemix_count_only
-  method: shapemix
-  method_run_id: shapemix_count_only
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__shapemix_count_only
-  output_manifest_sha256: 0295eaad6b44620dadd3c9a55cc095d48116d5a7ae0fab2e037ba0ee5e10c521
-  wall_runtime_seconds: 2237.3809908760013
-  peak_rss_bytes: 5147840512
-- run_id: gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__nnls
-  method: nnls
-  method_run_id: nnls
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p21_20um_rep2_v1__atac__all__nnls
-  output_manifest_sha256: 92f5ddd076dbbd5a3ac8ed5166e0868540a0dae63e8ffacd0713e605a53e9d4c
-  wall_runtime_seconds: 4.449008989002323
-  peak_rss_bytes: 4006416384
-- run_id: gse205055_shapemix_mouse_brain_p22_20um_100barcodes_rep2_v1__atac__all__shapemix_length
-  method: shapemix
-  method_run_id: shapemix_length
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p22_20um_100barcodes_rep2_v1__atac__all__shapemix_length
-  output_manifest_sha256: 9edcdb9d297c47e75183477f1151a55844e64c07ef7775709393cb34b1a95eb4
-  wall_runtime_seconds: 13830.467082578994
-  peak_rss_bytes: 5252100096
-- run_id: gse205055_shapemix_mouse_brain_p22_20um_100barcodes_rep2_v1__atac__all__shapemix_count_only
-  method: shapemix
-  method_run_id: shapemix_count_only
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p22_20um_100barcodes_rep2_v1__atac__all__shapemix_count_only
-  output_manifest_sha256: a100dfc85f5b69faecb64f1d5b3d79fbde26d8f2d87e63a0145002071b217d75
-  wall_runtime_seconds: 7642.821157426006
-  peak_rss_bytes: 5243531264
-- run_id: gse205055_shapemix_mouse_brain_p22_20um_100barcodes_rep2_v1__atac__all__nnls
-  method: nnls
-  method_run_id: nnls
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_brain_p22_20um_100barcodes_rep2_v1__atac__all__nnls
-  output_manifest_sha256: 54a200627751ba23b8ac2e1d867a2e1017b31121fc8a00e797db7f7f481f7612
-  wall_runtime_seconds: 8.204839591999189
-  peak_rss_bytes: 4072591360
-- run_id: gse205055_shapemix_mouse_embryo_e13_50um_v1__atac__all__shapemix_length
-  method: shapemix
-  method_run_id: shapemix_length
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_embryo_e13_50um_v1__atac__all__shapemix_length
-  output_manifest_sha256: 1d3fdb2eb460888b14cb151f1a88c80372d4fe1581d20b23af80415e927294c6
-  wall_runtime_seconds: 2323.1448111369973
-  peak_rss_bytes: 5518520320
-- run_id: gse205055_shapemix_mouse_embryo_e13_50um_v1__atac__all__shapemix_count_only
-  method: shapemix
-  method_run_id: shapemix_count_only
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_embryo_e13_50um_v1__atac__all__shapemix_count_only
-  output_manifest_sha256: aafb0d9aed0ee6de825f2055a33c008ca4865e59960769457db3cfd7ee24c6da
-  wall_runtime_seconds: 1185.9428624350112
-  peak_rss_bytes: 5541998592
-- run_id: gse205055_shapemix_mouse_embryo_e13_50um_v1__atac__all__nnls
-  method: nnls
-  method_run_id: nnls
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_mouse_embryo_e13_50um_v1__atac__all__nnls
-  output_manifest_sha256: 68495675c85945eb6a2bc701d0f0574e428706f9ea569a864294df3333406e21
-  wall_runtime_seconds: 5.461864300988964
-  peak_rss_bytes: 4242612224
-- run_id: gse205055_shapemix_human_hippocampus_50um_v1__atac__all__shapemix_length
-  method: shapemix
-  method_run_id: shapemix_length
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_human_hippocampus_50um_v1__atac__all__shapemix_length
-  output_manifest_sha256: 3399ce50b2f3aeb1091a117ce583a269e8d23ff379bebc1df5213c77fddd61f3
-  wall_runtime_seconds: 3101.3055474800058
-  peak_rss_bytes: 2574770176
-- run_id: gse205055_shapemix_human_hippocampus_50um_v1__atac__all__shapemix_count_only
-  method: shapemix
-  method_run_id: shapemix_count_only
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_human_hippocampus_50um_v1__atac__all__shapemix_count_only
-  output_manifest_sha256: 1928e59d82a48ec3159c3504cc9f1dd9518c1f87c950ff7ad4a858a028fbb375
-  wall_runtime_seconds: 1584.7988858119934
-  peak_rss_bytes: 2569486336
-- run_id: gse205055_shapemix_human_hippocampus_50um_v1__atac__all__nnls
-  method: nnls
-  method_run_id: nnls
-  status: success
-  execution_action: executed
-  run_dir: results/real_spatial/shapemix_gse205055_v1/shapemix_gse205055_real_spatial_protocol_v1_cuda/gse205055_shapemix_human_hippocampus_50um_v1__atac__all__nnls
-  output_manifest_sha256: c658802e5fa2332bda42fdf11a590c45e7f7e45941a8a58e8b46008fd7e9bec5
-  wall_runtime_seconds: 1.7421527309925295
-  peak_rss_bytes: 2298707968
+  run_dir: results/real_spatial/shapemix_gse263333_v1/shapemix_gse263333_real_spatial_protocol_v1_cuda/gse263333_shapemix_five_month_eae_brain_20um_atac_v1__atac__all__nnls
+  output_manifest_sha256: f9a24f7c83e68b5a32d8dc88c7939ac9e7865ef56016b938df33c78a41a53c30
+  wall_runtime_seconds: 8.197908208006993
+  peak_rss_bytes: 3996753920

@@ -1,0 +1,85 @@
+dataset_id: gse205055_shapemix_human_hippocampus_50um_v1
+modality: atac
+feature_set: all
+registry: data/registry/datasets.yaml
+dataset_config:
+  dataset_id: gse205055_shapemix_human_hippocampus_50um_v1
+  source: GSE205055 spatial ATAC section GSM6206884
+  description: Real spatial ATAC section projected onto a frozen, reference-only 5,000-feature
+    axis for ShapeMix prediction and orthogonal cross-modality validation.
+  labels_key: cell_type
+  spatial_key: spatial
+  benchmark_scope: real_spatial_orthogonal_validation
+  shapemix_seeds:
+    outer_split_seed: 0
+    inner_mixture_seed: 0
+  evaluation_design:
+    comparison_key: section
+    group: human_hippocampus_50um
+    atac_gsm: GSM6206884
+    coordinate_gsm: GSM6206884
+    reference_id: gse244618_human_hippocampus_donor3_region3_v1
+    truth_limitation: No exact per-spot cell-type composition truth is available;
+      RNA, protein, histone, anatomy, and spatial-continuity endpoints are orthogonal
+      validation only.
+  modalities:
+    atac:
+      reference:
+        path: data/processed/references/gse244618_human_hippocampus_donor3_region3_v1/atac/reference.h5ad
+      spatial:
+        path: data/processed/datasets/gse205055_shapemix_human_hippocampus_50um_v1/atac/spatial.h5ad
+      labels_key: cell_type
+      spatial_key: spatial
+      cell_types:
+      - Inhibitory neurons
+      - Excitatory neurons
+      - Astrocytes
+      - Oligodendrocytes
+      - OPCs
+      - Microglia
+      fragment_shape:
+        schema_version: 1
+        axis: parent_fragment_length_bp
+        count_unit: deduplicated_cut_sites
+        read_support_policy: ignore
+        peak_assignment: containing_nonoverlapping_peak
+        left_cut_offset: 0
+        right_cut_offset: 0
+        bins:
+        - name: short
+          min_inclusive: 0
+          max_exclusive: 100
+          layer: fragment_length_lt_100
+        - name: mono
+          min_inclusive: 100
+          max_exclusive: 250
+          layer: fragment_length_100_249
+        - name: long
+          min_inclusive: 250
+          layer: fragment_length_ge_250
+        feature_sha256: a4863453ea23a99148d52f425fae001e8284317d4d69b55bf34c1bd55f9b8bfc
+        coordinate_validation:
+          matrix_match: not_available
+          selected_right_cut_offset: 0
+          semantic_match: exact
+          validation_method: deposited_strand_aware_bedpe_5prime
+      feature_sets:
+        all:
+          mode: all
+        selected_reference_features:
+          path: data/processed/datasets/gse205055_shapemix_human_hippocampus_50um_v1/atac/features/selected_reference_features.txt
+  validation:
+    truth_status: orthogonal_validation_not_exact_composition_truth
+    exact_truth: false
+    alignment_manifest:
+      path: data/processed/datasets/gse205055_shapemix_human_hippocampus_50um_v1/validation/alignment.yaml
+      sha256: 33c15f43b438a9f1129941cf23cb129ee65f02bc25318683b499a461dbe5803e
+    epigenome: []
+    rna:
+      gsm: GSM6206885
+      path: data/processed/datasets/gse205055_shapemix_human_hippocampus_50um_v1/validation/rna/rna.h5ad
+      sha256: a11fdc7600074f8621c3f1f520d448ee73d178d82d5c8600eab038ec3399f3ca
+      observations: 2500
+      features: 29293
+      spatial_barcode_overlap: 2500
+  config_path: /home/ericzhuang2010/VscodeProjects/deconvATAC/data/processed/datasets/gse205055_shapemix_human_hippocampus_50um_v1/dataset.yaml
