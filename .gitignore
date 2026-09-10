@@ -3,15 +3,15 @@
 
 # Ignore top-level working directories except tracked project trees.
 /*/
-!/docs/
 !/configs/
+!/docs/
 !/notebooks/
+# Experiment results are intentionally exposed to Git in full.
+!/results/
 !/scripts/
 !/src/
 !/tests/
 
-# Experiment results are intentionally exposed to Git in full.
-!/results/
 
 # /data/
 # /.r-lib/
