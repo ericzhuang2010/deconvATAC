@@ -1,0 +1,54 @@
+schema_version: 1
+status: complete
+evidence_class: real_spatial_orthogonal_validation
+exact_composition_truth: false
+experiment_run_group: shapemix_gse205055_real_spatial_protocol_v1_cuda
+datasets: 6
+methods:
+- shapemix_length
+- shapemix_count_only
+- nnls
+validation_config: configs/experiments/shapemix_real_spatial_validation_v1.yaml
+validation_config_sha256: d02dce71efd7bca514a47c59616a4519e661c017d88632e4946f3ee4e455a307
+tables:
+  map_concordance.csv:
+    rows: 57
+    sha256: 96d8253b56ce6fc9bc9e816396c59091b79034322361ed47c32e0b0bef99e865
+  spatial_continuity.csv:
+    rows: 171
+    sha256: 07bd932ab51d1b600e1e86d187d039e052817a659543ae372b531c9c4245c457
+  boundary_agreement.csv:
+    rows: 57
+    sha256: 6ad705e2428ed5c196da237895b34c5ebbc39f4212b2e937700af9e96ca7288d
+  cross_modality_concordance.csv:
+    rows: 477
+    sha256: 762b5bdfc2cc764ab7efb85fa515b25388bab8067a8eeb5588a0124b936256ac
+  replicate_consistency.csv:
+    rows: 27
+    sha256: 952c6ed7b6dca41c676c095aecfb03043d28e1ee537b7e3fdbaea59f94d9135a
+  spot_exclusions.csv:
+    rows: 65
+    sha256: aa6659abf4b7493feeb1c21e7fa2f6d12505601f707f66217abb290fcf6188b0
+  reconstruction_warnings.csv:
+    rows: 18
+    sha256: 4924d9de323f4bb673c36a302cc5af105cccbbd7a94d50373c32a87769631df6
+  run_resources.csv:
+    rows: 18
+    sha256: f16d8415a7ac213a6bd0c010ac62e4e4063d5990756c5709e8dab0871c0ce0ee
+zero_signal_spot_policy:
+  detection: exact_zero_collapsed_atac_on_registered_feature_axis
+  action: exclude_from_all_spotwise_real_spatial_summary_endpoints
+  excluded_spots: 65
+  audit_table: spot_exclusions.csv
+  raw_run_outputs_modified: false
+cross_modality_availability:
+  available: 474
+  unavailable_insufficient_present_marker_features: 3
+claims:
+  map_and_cross_modality_results_are_descriptive: true
+  spatial_sections_are_not_treated_as_independent_spots_for_inference: true
+  no_exact_truth_metrics_or_p_values: true
+  histone_rna_and_protein_not_used_as_shapemix_inputs: true
+  off_reference_values_are_warning_proxies_not_identified_mass: true
+  anatomical_region_labels_available: false
+  zero_signal_spots_are_explicitly_audited_not_silently_normalized: true

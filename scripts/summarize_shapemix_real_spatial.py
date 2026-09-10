@@ -30,10 +30,31 @@ OUTPUT_NAMES = (
     "boundary_agreement.csv",
     "cross_modality_concordance.csv",
     "replicate_consistency.csv",
+    "spot_exclusions.csv",
     "reconstruction_warnings.csv",
     "run_resources.csv",
     "evidence_summary.yaml",
 )
+
+
+class MarkerScoreUnavailable(ValueError):
+    """A frozen marker panel cannot produce its preregistered score."""
+
+    def __init__(
+        self,
+        reason: str,
+        present: Sequence[str],
+        missing: Sequence[str],
+        minimum_features: int,
+    ) -> None:
+        self.reason = reason
+        self.present = list(present)
+        self.missing = list(missing)
+        self.minimum_features = int(minimum_features)
+        super().__init__(
+            f"{reason}: present={self.present} missing={self.missing} "
+            f"minimum_features={self.minimum_features}"
+        )
 
 
 def read_yaml(path: Path) -> dict[str, Any]:
@@ -87,20 +108,61 @@ def run_directory(batch: Path, dataset_id: str, method_id: str) -> Path:
     return path
 
 
-def read_prediction(run_dir: Path, cell_types: Sequence[str]) -> pd.DataFrame:
+def spatial_signal_totals(spatial: ad.AnnData) -> pd.Series:
+    """Return collapsed ATAC totals on the registered model-feature axis."""
+    if spatial.obs_names.has_duplicates:
+        raise ValueError("Spatial spot identifiers are duplicated")
+    matrix = sparse.csr_matrix(spatial.X, dtype=np.float64)
+    if not np.isfinite(matrix.data).all() or (matrix.data < 0).any():
+        raise ValueError("Spatial model input must be finite and nonnegative")
+    totals = np.asarray(matrix.sum(axis=1)).ravel()
+    return pd.Series(totals, index=spatial.obs_names.astype(str), name="selected_feature_total")
+
+
+def read_prediction(
+    run_dir: Path,
+    cell_types: Sequence[str],
+    *,
+    zero_signal_spots: Iterable[str] = (),
+) -> pd.DataFrame:
     value = pd.read_csv(run_dir / "results/proportions.csv", index_col=0)
     if value.empty or value.index.has_duplicates or value.columns.has_duplicates:
         raise ValueError(f"Invalid prediction axes: {run_dir}")
     if value.columns.tolist() != list(cell_types):
         raise ValueError(f"Prediction cell-type universe changed: {run_dir}")
     matrix = value.to_numpy(dtype=np.float64)
-    if (
-        not np.isfinite(matrix).all()
-        or (matrix < 0).any()
-        or not np.allclose(matrix.sum(axis=1), 1.0, rtol=0.0, atol=1.0e-6)
-    ):
+    if not np.isfinite(matrix).all() or (matrix < 0).any():
+        raise ValueError(f"Invalid prediction proportions: {run_dir}")
+    row_sums = matrix.sum(axis=1)
+    unit_rows = np.isclose(row_sums, 1.0, rtol=0.0, atol=1.0e-6)
+    exact_zero_rows = row_sums == 0.0
+    allowed_zero = value.index.astype(str).isin(set(map(str, zero_signal_spots)))
+    if not np.all(unit_rows | (exact_zero_rows & allowed_zero)):
         raise ValueError(f"Invalid prediction proportions: {run_dir}")
     return value
+
+
+def read_dataset_predictions(
+    dataset_id: str,
+    dataset: Mapping[str, Any],
+    batch: Path,
+    spatial: ad.AnnData,
+) -> tuple[dict[str, pd.DataFrame], pd.Series]:
+    totals = spatial_signal_totals(spatial)
+    zero_signal_spots = totals.index[totals == 0.0].tolist()
+    predictions = {
+        method: read_prediction(
+            run_directory(batch, dataset_id, method),
+            list(dataset["modalities"]["atac"]["cell_types"]),
+            zero_signal_spots=zero_signal_spots,
+        )
+        for method in METHOD_IDS
+    }
+    expected_axis = spatial.obs_names.astype(str).tolist()
+    for method, value in predictions.items():
+        if value.index.astype(str).tolist() != expected_axis:
+            raise ValueError(f"Prediction/spatial spot axes differ: {dataset_id}/{method}")
+    return predictions, totals
 
 
 def load_spatial(dataset: Mapping[str, Any]) -> ad.AnnData:
@@ -167,24 +229,59 @@ def map_and_spatial_tables(
     experiment: Mapping[str, Any],
     batch: Path,
     validation_config: Mapping[str, Any],
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     map_rows: list[dict[str, Any]] = []
     continuity_rows: list[dict[str, Any]] = []
     boundary_rows: list[dict[str, Any]] = []
+    exclusion_rows: list[dict[str, Any]] = []
     neighbors = int(validation_config["spatial_graph"]["nearest_neighbors"])
     boundary_quantile = float(validation_config["spatial_graph"]["boundary_edge_quantile"])
     for dataset_id in experiment["datasets"]:
         dataset = descriptor(str(dataset_id))
         cell_types = list(dataset["modalities"]["atac"]["cell_types"])
         spatial = load_spatial(dataset)
-        edges = neighbor_edges(np.asarray(spatial.obsm["spatial"]), neighbors)
+        predictions, totals = read_dataset_predictions(
+            str(dataset_id), dataset, batch, spatial
+        )
+        informative_spots = totals.index[totals > 0.0].tolist()
+        if len(informative_spots) < 2:
+            raise ValueError(f"Fewer than two informative spatial spots: {dataset_id}")
+        for spot_id in totals.index[totals == 0.0]:
+            exclusion_rows.append(
+                {
+                    "dataset_id": dataset_id,
+                    "spot_id": spot_id,
+                    "selected_feature_total": float(totals.loc[spot_id]),
+                    "shapemix_length_prediction_row_sum": float(
+                        predictions["shapemix_length"].loc[spot_id].sum()
+                    ),
+                    "shapemix_count_only_prediction_row_sum": float(
+                        predictions["shapemix_count_only"].loc[spot_id].sum()
+                    ),
+                    "nnls_prediction_row_sum": float(
+                        predictions["nnls"].loc[spot_id].sum()
+                    ),
+                    "exclusion_reason": (
+                        "exact_zero_collapsed_atac_on_registered_feature_axis"
+                    ),
+                    "excluded_from": (
+                        "map_concordance;spatial_continuity;boundary_agreement;"
+                        "cross_modality_concordance;replicate_consistency"
+                    ),
+                }
+            )
+        coordinate_frame = pd.DataFrame(
+            np.asarray(spatial.obsm["spatial"], dtype=np.float64),
+            index=spatial.obs_names.astype(str),
+        )
+        edges = neighbor_edges(
+            coordinate_frame.loc[informative_spots].to_numpy(), neighbors
+        )
         predictions = {
-            method: read_prediction(run_directory(batch, str(dataset_id), method), cell_types)
-            for method in METHOD_IDS
+            method: value.loc[informative_spots].copy()
+            for method, value in predictions.items()
         }
         for method, value in predictions.items():
-            if value.index.tolist() != spatial.obs_names.astype(str).tolist():
-                raise ValueError(f"Prediction/spatial spot axes differ: {dataset_id}/{method}")
             for cell_type in cell_types:
                 vector = value[cell_type].to_numpy(dtype=np.float64)
                 gradients = np.abs(vector[edges[:, 0]] - vector[edges[:, 1]])
@@ -251,6 +348,19 @@ def map_and_spatial_tables(
         pd.DataFrame.from_records(map_rows),
         pd.DataFrame.from_records(continuity_rows),
         pd.DataFrame.from_records(boundary_rows),
+        pd.DataFrame.from_records(
+            exclusion_rows,
+            columns=(
+                "dataset_id",
+                "spot_id",
+                "selected_feature_total",
+                "shapemix_length_prediction_row_sum",
+                "shapemix_count_only_prediction_row_sum",
+                "nnls_prediction_row_sum",
+                "exclusion_reason",
+                "excluded_from",
+            ),
+        ),
     )
 
 
@@ -274,9 +384,11 @@ def marker_score(
     missing = [str(marker) for marker in markers if str(marker).casefold() not in lookup]
     indices = [lookup[marker.casefold()] for marker in present]
     if len(indices) < minimum_features:
-        raise ValueError(
-            f"Only {len(indices)} marker features are present; need {minimum_features}; "
-            f"available={present} missing={missing}"
+        raise MarkerScoreUnavailable(
+            "insufficient_present_marker_features",
+            present,
+            missing,
+            minimum_features,
         )
     x = sparse.csr_matrix(matrix.X)
     library = np.asarray(x.sum(axis=1)).ravel().astype(np.float64)
@@ -289,7 +401,12 @@ def marker_score(
     standard_deviation = selected.std(axis=0, ddof=0)
     variable = standard_deviation > 0
     if int(variable.sum()) < minimum_features:
-        raise ValueError("Too few nonconstant marker features remain after normalization")
+        raise MarkerScoreUnavailable(
+            "insufficient_nonconstant_marker_features",
+            [present[index] for index in np.flatnonzero(variable)],
+            missing,
+            minimum_features,
+        )
     standardized = (
         selected[:, variable] - selected[:, variable].mean(axis=0)
     ) / standard_deviation[variable]
@@ -327,6 +444,64 @@ def correlate_score(
     return len(shared), correlation, constant
 
 
+def append_marker_evidence_rows(
+    rows: list[dict[str, Any]],
+    predictions: Mapping[str, pd.DataFrame],
+    matrix: ad.AnnData,
+    markers: Sequence[str],
+    *,
+    dataset_id: str,
+    cell_type: str,
+    evidence_type: str,
+    evidence_gsm: str | None,
+    assay: str,
+    evidence_class: str,
+    scale_factor: float,
+    minimum_features: int,
+) -> None:
+    try:
+        score, present, missing = marker_score(
+            matrix,
+            markers,
+            scale_factor=scale_factor,
+            minimum_features=minimum_features,
+        )
+    except MarkerScoreUnavailable as exc:
+        score = None
+        present = exc.present
+        missing = exc.missing
+        status = f"unavailable_{exc.reason}"
+    else:
+        status = "available"
+    for method, prediction in predictions.items():
+        if score is None:
+            spots, correlation, constant = 0, float("nan"), None
+        else:
+            spots, correlation, constant = correlate_score(
+                prediction, cell_type, score
+            )
+        rows.append(
+            {
+                "dataset_id": dataset_id,
+                "method_id": method,
+                "cell_type": cell_type,
+                "evidence_type": evidence_type,
+                "evidence_gsm": evidence_gsm,
+                "assay": assay,
+                "status": status,
+                "aligned_spots": spots,
+                "spearman_r": correlation,
+                "constant_map_or_score": constant,
+                "minimum_marker_features": minimum_features,
+                "present_marker_count": len(present),
+                "missing_marker_count": len(missing),
+                "present_markers": ";".join(present),
+                "missing_markers": ";".join(missing),
+                "evidence_class": evidence_class,
+            }
+        )
+
+
 def cross_modality_table(
     experiment: Mapping[str, Any],
     batch: Path,
@@ -345,11 +520,15 @@ def cross_modality_table(
             reference_path = Path(modality["reference"]["path"])
             reference_id = reference_path.parents[1].name
         panel_config = validation_config["reference_panels"][reference_id]
-        predictions = {
-            method: read_prediction(run_directory(batch, str(dataset_id), method), cell_types)
-            for method in METHOD_IDS
-        }
         spatial = load_spatial(dataset)
+        predictions, totals = read_dataset_predictions(
+            str(dataset_id), dataset, batch, spatial
+        )
+        informative_spots = totals.index[totals > 0.0].tolist()
+        predictions = {
+            method: value.loc[informative_spots].copy()
+            for method, value in predictions.items()
+        }
         peak_panel = marker_peak_panel(reference_id, validation_config)
         matrices: list[tuple[str, str | None, ad.AnnData, Mapping[str, Any], str]] = []
         validation = dataset["validation"]
@@ -376,31 +555,24 @@ def cross_modality_table(
         for evidence_type, gsm, matrix, markers_by_type, evidence_class in matrices:
             for cell_type, markers in markers_by_type.items():
                 if cell_type not in cell_types:
-                    raise ValueError(f"Marker panel type is absent from reference: {reference_id}/{cell_type}")
-                score, present, missing = marker_score(
+                    raise ValueError(
+                        "Marker panel type is absent from reference: "
+                        f"{reference_id}/{cell_type}"
+                    )
+                append_marker_evidence_rows(
+                    rows,
+                    predictions,
                     matrix,
                     list(markers),
+                    dataset_id=str(dataset_id),
+                    cell_type=str(cell_type),
+                    evidence_type=evidence_type,
+                    evidence_gsm=gsm,
+                    assay="rna" if evidence_type.startswith("rna") else "protein",
+                    evidence_class=evidence_class,
                     scale_factor=scale_factor,
                     minimum_features=minimum_features,
                 )
-                for method, prediction in predictions.items():
-                    spots, correlation, constant = correlate_score(prediction, cell_type, score)
-                    rows.append(
-                        {
-                            "dataset_id": dataset_id,
-                            "method_id": method,
-                            "cell_type": cell_type,
-                            "evidence_type": evidence_type,
-                            "evidence_gsm": gsm,
-                            "assay": "rna" if evidence_type.startswith("rna") else "protein",
-                            "aligned_spots": spots,
-                            "spearman_r": correlation,
-                            "constant_map_or_score": constant,
-                            "present_markers": ";".join(present),
-                            "missing_markers": ";".join(missing),
-                            "evidence_class": evidence_class,
-                        }
-                    )
         marker_mapping = {
             cell_type: list(peak_panel["markers"][cell_type]["features"])
             for cell_type in cell_types
@@ -420,30 +592,20 @@ def cross_modality_table(
             )
         for evidence_type, gsm, assay, matrix, evidence_class in atac_matrices:
             for cell_type, markers in marker_mapping.items():
-                score, present, missing = marker_score(
+                append_marker_evidence_rows(
+                    rows,
+                    predictions,
                     matrix,
                     markers,
+                    dataset_id=str(dataset_id),
+                    cell_type=str(cell_type),
+                    evidence_type=evidence_type,
+                    evidence_gsm=gsm,
+                    assay=assay,
+                    evidence_class=evidence_class,
                     scale_factor=scale_factor,
                     minimum_features=minimum_features,
                 )
-                for method, prediction in predictions.items():
-                    spots, correlation, constant = correlate_score(prediction, cell_type, score)
-                    rows.append(
-                        {
-                            "dataset_id": dataset_id,
-                            "method_id": method,
-                            "cell_type": cell_type,
-                            "evidence_type": evidence_type,
-                            "evidence_gsm": gsm,
-                            "assay": assay,
-                            "aligned_spots": spots,
-                            "spearman_r": correlation,
-                            "constant_map_or_score": constant,
-                            "present_markers": ";".join(present),
-                            "missing_markers": ";".join(missing),
-                            "evidence_class": evidence_class,
-                        }
-                    )
     return pd.DataFrame.from_records(rows)
 
 
@@ -465,9 +627,17 @@ def replicate_table(
         right_types = list(right_descriptor["modalities"]["atac"]["cell_types"])
         if left_types != right_types:
             raise ValueError(f"Replicate reference axes differ: {left_id}/{right_id}")
+        left_spatial = load_spatial(left_descriptor)
+        right_spatial = load_spatial(right_descriptor)
+        left_predictions, left_totals = read_dataset_predictions(
+            left_id, left_descriptor, dataset_batch[left_id], left_spatial
+        )
+        right_predictions, right_totals = read_dataset_predictions(
+            right_id, right_descriptor, dataset_batch[right_id], right_spatial
+        )
         for method in METHOD_IDS:
-            left = read_prediction(run_directory(dataset_batch[left_id], left_id, method), left_types)
-            right = read_prediction(run_directory(dataset_batch[right_id], right_id, method), right_types)
+            left = left_predictions[method].loc[left_totals.index[left_totals > 0.0]]
+            right = right_predictions[method].loc[right_totals.index[right_totals > 0.0]]
             shared = left.index.intersection(right.index)
             if len(shared) < int(pair["minimum_shared_spots"]):
                 raise ValueError(f"Insufficient replicate spot overlap: {left_id}/{right_id}")
@@ -606,6 +776,19 @@ def write_summary(
             }
             for filename, frame in tables.items()
         },
+        "zero_signal_spot_policy": {
+            "detection": "exact_zero_collapsed_atac_on_registered_feature_axis",
+            "action": "exclude_from_all_spotwise_real_spatial_summary_endpoints",
+            "excluded_spots": len(tables["spot_exclusions.csv"]),
+            "audit_table": "spot_exclusions.csv",
+            "raw_run_outputs_modified": False,
+        },
+        "cross_modality_availability": {
+            str(status): int(count)
+            for status, count in tables["cross_modality_concordance.csv"][
+                "status"
+            ].value_counts(dropna=False).items()
+        },
         "claims": {
             "map_and_cross_modality_results_are_descriptive": True,
             "spatial_sections_are_not_treated_as_independent_spots_for_inference": True,
@@ -613,6 +796,7 @@ def write_summary(
             "histone_rna_and_protein_not_used_as_shapemix_inputs": True,
             "off_reference_values_are_warning_proxies_not_identified_mass": True,
             "anatomical_region_labels_available": False,
+            "zero_signal_spots_are_explicitly_audited_not_silently_normalized": True,
         },
     }
     with (batch / "evidence_summary.yaml").open("w") as handle:
@@ -641,7 +825,7 @@ def main() -> None:
             raise FileNotFoundError(batch)
     replicate = replicate_table(experiments, batches, validation_config)
     for experiment, batch in zip(experiments, batches, strict=True):
-        maps, continuity, boundaries = map_and_spatial_tables(
+        maps, continuity, boundaries, exclusions = map_and_spatial_tables(
             experiment, batch, validation_config
         )
         cross_modality = cross_modality_table(experiment, batch, validation_config)
@@ -663,6 +847,7 @@ def main() -> None:
                 "boundary_agreement.csv": boundaries,
                 "cross_modality_concordance.csv": cross_modality,
                 "replicate_consistency.csv": replicate_subset,
+                "spot_exclusions.csv": exclusions,
                 "reconstruction_warnings.csv": warnings,
                 "run_resources.csv": resources,
             },

@@ -1,6 +1,9 @@
 # ShapeMix-ATAC implementation plan
 
-Status: active implementation roadmap; Steps 0 through 6 completed 2026-08-23; all four planned external GEO source families acquired and source-preprocessed by 2026-08-24; full cross-dataset evaluation is active under Section 13 and resumed with the exclusive-machine resource profile on 2026-09-02
+Status: Steps 0 through 6 completed 2026-08-23; all four planned external GEO
+source families acquired and source-preprocessed by 2026-08-24; the complete
+Section 13 cross-dataset evaluation, real-spatial summaries, and non-pooled
+cross-family synthesis completed 2026-09-09
 
 This document turns the ShapeMix concept into a repository-specific engineering and research plan and records the execution status of each step. The implementation preserves all current datasets and methods, creates new ShapeMix-specific data products, and makes the shape-aware versus peak-only comparison a controlled, reproducible ablation.
 
@@ -23,7 +26,14 @@ Do not begin with variational inference, a spatial prior, motif footprints, lear
 
 No existing tracked file or current dataset should be deleted. In particular, preserve the current PBMC simulations even though they are unsuitable as the primary ShapeMix benchmark because their source-cell pool is also used as the deconvolution reference.
 
-The immediate priority after acquisition is now the full evaluation campaign in Section 13. It keeps the completed protocol-v1 PBMC result immutable, runs the already materialized GSE129785 evaluation first, builds leakage-free donor folds for GSE194122, and advances GSE205055/GSE263333 only after compatible labeled fragment-level references pass their own gates. GPU acceleration is an engineering prerequisite for that campaign, not a change to the statistical model.
+The completed full evaluation in Section 13 keeps the protocol-v1 PBMC result
+immutable, evaluates GSE129785 physical mixtures, uses leakage-free donor folds
+for GSE194122, and evaluates GSE205055/GSE263333 against separately gated
+labeled fragment-level references. GPU acceleration is an engineering change,
+not a change to the statistical model. The result narrative is in
+[the full-evaluation results summary](results_summary.md), and the canonical
+machine-readable synthesis is under
+`results/external_validation/shapemix_full_evaluation_v2/`.
 
 ## 2. Source documents and authority
 
@@ -1180,6 +1190,12 @@ Run development seeds to validate each generator, then freeze the final factor l
 
 #### Evaluation stage E5 — Obtain references and run real-spatial sections
 
+**Status 2026-09-09: complete.** All six GSE205055 and two GSE263333
+sections completed both paired ShapeMix arms and NNLS (24/24 jobs). Both family
+summaries report `complete`; their output hashes, prediction axes, finite-value
+contracts, three-restart convergence, three-bin residual coverage, deterministic
+RTX 3080 execution, and exact count-only zero shape likelihood were revalidated.
+
 Create three separately gated reference tracks rather than one universal atlas:
 
 - mouse embryo for the E13 sections;
@@ -1199,6 +1215,27 @@ For each section, freeze the reference, label universe, feature axis, and cross-
 - off-reference mass or residual warnings rather than forcing every spatial signal into a known type.
 
 Do not tune labels, peaks, smoothing, or model parameters to maximize RNA/protein concordance on the same section later used for reporting.
+
+**Analysis clarification, 2026-09-09:** the first E5 summary attempt failed
+closed before writing evidence tables when NNLS returned its configured exact
+zero vector for zero-total model inputs. The 65 affected GSE205055 embryo
+25-um spots and 70 affected GSE263333 EAE-brain spots exactly matched the
+collapsed-ATAC zero rows and the ShapeMix NNLS-fallback identifiers; all other
+prediction rows were valid. Exclude these data-uninformative spots from every
+spotwise endpoint for all methods, rebuild spatial graphs on the remaining
+spots, and preserve one row per exclusion in `spot_exclusions.csv`. Do not
+alter or normalize the run outputs. Runtime and reconstruction-warning tables
+still cover the complete runs. The normative validation details and rationale
+are in the dated clarification in
+[the full-evaluation protocol](full_evaluation_protocol.md).
+
+The same fail-closed summary pass found one unavailable marker endpoint: the
+GSE205055 embryo 50-um RNA matrix contains only `Klf1` from the four-marker
+Erythroid panel, below the frozen two-feature minimum. Keep that panel and gate
+unchanged, and emit three explicit unavailable rows (one per method) with no
+correlation estimate. The complete audit found no other unsupported
+marker/evidence combination. See the dated marker-availability clarification
+in the full-evaluation protocol.
 
 The outcome-blind ATAC marker panels use 25 ranked intervals per reference
 cell type. Marker support is frozen as
@@ -1220,6 +1257,13 @@ feature selection.
 - Relate gains or failures to depth, reference support, shape entropy/divergence, protocol mismatch, and residual diagnostics using predeclared analyses.
 - Report all failures, convergence exclusions, gated references, and unavailable baselines.
 - Preserve the negative protocol-v1 result and label all follow-up model changes as new versions.
+
+**Status 2026-09-09: complete.** The v2 synthesis contains seven separately
+labeled campaign entries, 82 effect rows, and 352 normalized resource rows.
+All source-summary and output hashes were revalidated, and evidence classes
+remain unpooled. See
+`results/external_validation/shapemix_full_evaluation_v2/evidence_summary.yaml`
+and [the results summary](results_summary.md).
 
 ### 13.5 Canonical file organization for the new campaigns
 

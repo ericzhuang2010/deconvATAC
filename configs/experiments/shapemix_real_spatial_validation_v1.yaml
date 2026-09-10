@@ -8,6 +8,36 @@ description: >-
   for the eight GSE205055/GSE263333 real-spatial ShapeMix sections. These are
   orthogonal or descriptive endpoints, never exact composition truth.
 
+analysis_amendments:
+  - date: '2026-09-09'
+    id: exact_zero_signal_spot_exclusion_v1
+    trigger: >-
+      The first summary attempt stopped before writing any evidence table because
+      the frozen NNLS zero_policy emitted an exact all-zero prediction at spots
+      with no counts on the registered ATAC feature axis.
+    biological_outcomes_reviewed: false
+    detection: exact_zero_collapsed_atac_on_registered_feature_axis
+    action: exclude_from_all_spotwise_real_spatial_summary_endpoints
+    graph_action: rebuild_each_section_spatial_graph_on_informative_spots
+    validation: >-
+      A prediction row must sum to one within absolute tolerance 1e-6, except
+      that an exact-zero row is permitted only at a detected zero-signal input
+      spot. Every excluded spot and per-method row sum is written to
+      spot_exclusions.csv; raw predictions are not changed or normalized.
+  - date: '2026-09-09'
+    id: insufficient_marker_support_visibility_v1
+    trigger: >-
+      After the zero-signal correction, the summary next stopped before writing
+      evidence because the GSE205055 embryo 50-um RNA matrix contained only one
+      of the four frozen Erythroid RNA markers, below the minimum of two.
+    biological_outcomes_reviewed: false
+    action: emit_explicit_unavailable_cross_modality_rows
+    validation: >-
+      Keep the frozen marker panel and minimum unchanged. For each unsupported
+      dataset, evidence type, and cell type, write one unavailable row per method
+      with the present and missing markers and no correlation estimate. Do not
+      replace markers or relax the threshold after inspecting validation data.
+
 spatial_graph:
   nearest_neighbors: 6
   boundary_edge_quantile: 0.90

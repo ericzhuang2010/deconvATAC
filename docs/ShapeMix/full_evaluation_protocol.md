@@ -332,6 +332,51 @@ recoverable work/development quarantine. These corrections were based only on
 contract exceptions, reference counts, and run status; no biological
 prediction value was consulted.
 
+### Real-spatial zero-signal analysis clarification (2026-09-09)
+
+The first real-spatial summary attempt stopped before writing any evidence
+table because the frozen NNLS `zero_policy: zeros` produced exact all-zero
+rows at 65 GSE205055 embryo 25-um spots and 70 GSE263333 EAE-brain spots.
+For both sections, and across all eight sections generally, an input audit
+showed that every NNLS zero row exactly matched a spot with zero total counts
+on the registered collapsed ATAC feature axis. The same identifiers were the
+ShapeMix NNLS-initialization fallback spots. There were no unexplained
+non-unit rows. No map, concordance, or biological effect result was reviewed
+before adopting this clarification.
+
+A spot with no signal on any model feature has no data-identified composition,
+so it is excluded from every spotwise real-spatial endpoint for all three
+methods. This includes map concordance, spatial continuity, boundary
+agreement, cross-modality concordance, and replicate consistency. Each
+section's spatial graph is rebuilt on its informative spots. Dataset-level
+runtime and reconstruction-warning summaries continue to describe the full
+unaltered runs.
+
+This is an explicit exclusion, not normalization or outcome-dependent
+filtering. Positive-signal spots must still have finite, nonnegative prediction
+rows summing to one within absolute tolerance `1e-6`. At a verified zero-signal
+spot, a prediction may be either an exact-zero row or a valid unit-sum row; no
+other row sum is accepted. `spot_exclusions.csv` records every excluded spot,
+its input total, and all three prediction row sums. Raw run outputs and their
+hash manifests are not modified. The exact-truth metric input contract in
+`benchmark_protocol.md` is unchanged because these real-spatial sections have
+no composition truth and are never truth-scored.
+
+### Real-spatial marker-availability clarification (2026-09-09)
+
+After the zero-signal correction, the next summary attempt also stopped before
+writing evidence tables because the GSE205055 embryo 50-um RNA feature axis
+contained only one (`Klf1`) of the four frozen Erythroid RNA markers; the
+minimum is two. An exhaustive feature-availability and nonconstant-score audit
+found no other unsupported marker/evidence combination. No correlation value
+or biological effect was reviewed before this decision.
+
+The frozen marker list and two-feature minimum remain unchanged. An unsupported
+combination is retained in `cross_modality_concordance.csv` as one explicit
+unavailable row per method, with its status, present and missing markers, and no
+correlation estimate. It is not replaced, relaxed, or omitted. All supported
+marker combinations continue to use the preregistered scoring rule.
+
 ## CUDA qualification
 
 ### Pre-external routing amendment (2026-08-25)

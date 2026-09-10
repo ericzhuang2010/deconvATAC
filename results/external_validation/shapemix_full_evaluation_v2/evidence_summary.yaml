@@ -1,0 +1,20 @@
+schema_version: 1
+status: complete
+campaign_id: shapemix_full_evaluation_v2
+completed_at: '2026-09-09T20:44:32.144970+00:00'
+config: configs/experiments/shapemix_full_evaluation_v2.yaml
+config_sha256: 6b1257ea3b388ee534c7053d18c2cc1e1fd441a6b2ee7319e5a294f216b3002c
+pooling_policy: never_pool_across_evidence_classes
+effect_definition: shapemix_length_minus_shapemix_count_only
+evidence_classes_are_not_pooled: true
+protocol_v1_result_is_preserved: true
+campaigns: 7
+effect_rows: 82
+resource_rows: 352
+outputs:
+  evidence_table.tsv:
+    sha256: 62dac1d1d3c898234270f37605bf73fe5eb09b9c520a96ef70ed2828d288b3bc
+  effect_table.tsv:
+    sha256: f1ac083e7a82d64faa56d4c24bf2b5e9a2f44c9a4653f2c4b9ab40584e02a07b
+  resource_table.tsv:
+    sha256: 821272e3fa811ad49c1297bf20293d8c43ae410905d924b2716b13d7129580f6
