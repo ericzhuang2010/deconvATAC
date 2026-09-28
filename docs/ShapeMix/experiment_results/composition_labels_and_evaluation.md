@@ -32,6 +32,36 @@ The evidence classes are intentionally kept separate. Exact pseudo-spot truth,
 nominal physical inputs, prediction-only cohorts, and real-spatial proxy
 evidence must not be pooled into a single accuracy estimate.
 
+## Dataset sizes used in the evaluation
+
+Dataset size has several meanings in these experiments. The pseudo-spot
+benchmarks start from labeled single cells but evaluate computationally
+constructed spots. GSE129785 evaluates physical mixture samples, whereas the
+real-spatial datasets evaluate spots nested within tissue sections. The source
+cell count, evaluated observation count, and number of independent biological
+samples therefore should not be treated as interchangeable.
+
+| Dataset | Source size | Evaluation size |
+|---|---:|---:|
+| 10x PBMC 10k, protocol-v1 | 9,500 labeled cells from one donor | 20 pseudo-spot datasets x 1,024 spots = **20,480 pseudo-spots** |
+| GSE194122 BMMC | 69,249 annotated cells from ten donors | 40 pseudo-spot datasets x 1,024 spots = **40,960 pseudo-spots** |
+| GSE129785 physical dilutions | 14 physical mixtures plus nine sorted reference samples | **14 evaluated mixtures**: seven CD4-memory/CD8-naive and seven monocyte/T-cell mixtures |
+| GSE205055 | Six spatial tissue sections | 29,966 input spots; **29,901 evaluated spots** after excluding 65 zero-signal spots |
+| GSE263333 | Two spatial tissue sections | 12,500 input spots; **12,430 evaluated spots** after excluding 70 zero-signal spots |
+
+The pseudo-spot totals are numbers of simulated evaluation observations, not
+numbers of independent donors. The 20 PBMC datasets are nested resamples from
+one donor. GSE194122 has ten donors, and each donor is held out in turn, so the
+donor is the population-level analysis unit even though each fold contains
+many pseudo-spots. For GSE129785, each physical dilution sample produces one
+aggregate deconvolution observation. For GSE205055 and GSE263333, the tissue
+section is the independent sample and the spatial spots are nested within that
+section.
+
+The GSE205055 and GSE263333 input totals include all registered spatial spots.
+The smaller evaluated totals remove spots with zero ATAC signal on the frozen
+feature axis from spotwise comparisons; the raw predictions remain unchanged.
+
 ## Case 1: exact held-out pseudo-spot truth
 
 ### Construction
