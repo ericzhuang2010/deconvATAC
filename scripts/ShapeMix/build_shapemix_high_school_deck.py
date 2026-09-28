@@ -1,17 +1,32 @@
 #!/usr/bin/env python3
-"""Build an approachable, results-free ShapeMix-ATAC PowerPoint deck.
+"""Build the current 19-slide ShapeMix-ATAC high-school research deck.
 
-The deck uses only editable PowerPoint shapes and text.  Run with python-pptx
-available on PYTHONPATH, for example:
+The deck uses only editable PowerPoint shapes and text.  The original builder
+created a 23-slide draft; later reviewed slides were developed in focused
+insert/update scripts and curated into the current 18-slide presentation.  This
+builder now assembles that reviewed presentation directly so the source and the
+checked-in PowerPoint stay synchronized.
+
+Run with python-pptx available on PYTHONPATH, for example:
 
     PYTHONPATH=/tmp/shapemix_pptx_deps .venv/bin/python \
         scripts/ShapeMix/build_shapemix_high_school_deck.py
 """
 
 from pathlib import Path
+import csv
+import sys
 
 from pptx import Presentation
+from pptx.chart.data import ChartData
 from pptx.dml.color import RGBColor
+from pptx.enum.chart import (
+    XL_CHART_TYPE,
+    XL_LABEL_POSITION,
+    XL_LEGEND_POSITION,
+    XL_TICK_LABEL_POSITION,
+    XL_TICK_MARK,
+)
 from pptx.enum.dml import MSO_LINE_DASH_STYLE
 from pptx.enum.shapes import MSO_CONNECTOR, MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
@@ -26,9 +41,16 @@ OUT = (
     / "presentations"
     / "ShapeMix_High_School_Research_Deck.pptx"
 )
+RESULTS_TSV = (
+    REPO_ROOT
+    / "docs"
+    / "ShapeMix"
+    / "experiment_results"
+    / "shapemix_vs_count_only_rmse_jsd.tsv"
+)
 
-W = 13.333
-H = 7.5
+SLIDE_WIDTH_EMU = 12_192_000
+SLIDE_HEIGHT_EMU = 6_858_000
 
 
 def C(value: str) -> RGBColor:
@@ -305,6 +327,557 @@ def add_notes(slide, text):
         pass
 
 
+def set_table_cell(
+    cell,
+    text,
+    *,
+    fill,
+    color=INK,
+    size=13,
+    bold=False,
+    align=PP_ALIGN.LEFT,
+):
+    """Style one native PowerPoint table cell."""
+    cell.fill.solid()
+    cell.fill.fore_color.rgb = C(fill)
+    cell.margin_left = Inches(0.12)
+    cell.margin_right = Inches(0.10)
+    cell.margin_top = Inches(0.08)
+    cell.margin_bottom = Inches(0.06)
+    cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+
+    tf = cell.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    paragraph = tf.paragraphs[0]
+    paragraph.alignment = align
+    paragraph.space_before = Pt(0)
+    paragraph.space_after = Pt(0)
+    paragraph.line_spacing = 1.0
+    run = paragraph.add_run()
+    run.text = text
+    run.font.name = FONT
+    run.font.size = Pt(size)
+    run.font.bold = bold
+    run.font.color.rgb = C(color)
+
+
+def split_table_cell_runs(cell, parts, languages=None):
+    """Preserve manual PowerPoint run boundaries inside a styled table cell."""
+    paragraph = cell.text_frame.paragraphs[0]
+    source = paragraph.runs[0]
+    source.text = parts[0]
+    runs = [source]
+    for text in parts[1:]:
+        run = paragraph.add_run()
+        run.text = text
+        run.font.name = source.font.name
+        run.font.size = source.font.size
+        run.font.bold = source.font.bold
+        run.font.italic = source.font.italic
+        run.font.color.rgb = source.font.color.rgb
+        runs.append(run)
+    for index, run in enumerate(runs):
+        properties = run._r.get_or_add_rPr()
+        properties.set("dirty", "0")
+        language = languages[index] if languages else None
+        if language:
+            properties.set("lang", language)
+    return runs
+
+
+def split_table_cell_paragraphs(cell, lines):
+    """Put manually entered table lines in separate PowerPoint paragraphs."""
+    text_frame = cell.text_frame
+    source_paragraph = text_frame.paragraphs[0]
+    source_run = source_paragraph.runs[0]
+    source_run.text = lines[0]
+    for line in lines[1:]:
+        paragraph = text_frame.add_paragraph()
+        paragraph.alignment = source_paragraph.alignment
+        paragraph.space_before = source_paragraph.space_before
+        paragraph.space_after = source_paragraph.space_after
+        paragraph.line_spacing = source_paragraph.line_spacing
+        run = paragraph.add_run()
+        run.text = line
+        run.font.name = source_run.font.name
+        run.font.size = source_run.font.size
+        run.font.bold = source_run.font.bold
+        run.font.italic = source_run.font.italic
+        run.font.color.rgb = source_run.font.color.rgb
+
+
+def _build_evaluation_dataset_slide(presentation):
+    """Summarize the three retained evidence categories and their tissues."""
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    set_bg(slide, CREAM)
+    add_title(
+        slide,
+        "Datasets in Three Categories",
+        "Evaluation design",
+    )
+    # Match the reviewed slide 18 title box and its manual run boundary exactly.
+    title_shape = _shape_by_id(slide, 3)
+    title_shape.height = 489365
+    title_paragraph = title_shape.text_frame.paragraphs[0]
+    title_paragraph.runs[0].text = "Datasets in Three C"
+    title_paragraph.runs[0].font.italic = None
+    title_run = title_paragraph.add_run()
+    title_run.text = "ategories"
+    title_run.font.name = FONT_DISPLAY
+    title_run.font.size = Pt(27)
+    title_run.font.bold = True
+    title_run.font.italic = False
+    title_run.font.color.rgb = C(NAVY)
+    add_text(
+        slide,
+        "The categories differ in how the ATAC profile is created and what composition information is available.",
+        0.70,
+        1.16,
+        11.90,
+        0.34,
+        size=15.5,
+        color=SLATE,
+        align=PP_ALIGN.CENTER,
+    )
+
+    table_shape = slide.shapes.add_table(
+        4,
+        5,
+        Inches(0.70),
+        Inches(1.68),
+        Inches(11.92),
+        Inches(4.88),
+    )
+    table = table_shape.table
+    # The final reviewed slide widens the tissue column for its plain-language
+    # descriptions and narrows the two columns to its right.
+    for column, width in zip(
+        table.columns,
+        (1508760, 1737360, 2339502, 1643975, 3670051),
+    ):
+        column.width = width
+    for row, height in zip(table.rows, (0.52, 1.18, 1.36, 1.82)):
+        row.height = Inches(height)
+
+    headers = (
+        "CATEGORY",
+        "DATASETS",
+        "SPECIES AND TISSUE",
+        "SPOT-LEVEL\nSPATIAL ATAC PROFILE",
+        "COMPOSITION LABEL",
+    )
+    for column, text in enumerate(headers):
+        set_table_cell(
+            table.cell(0, column),
+            text,
+            fill=NAVY,
+            color=WHITE,
+            size=10.5,
+            bold=True,
+            align=PP_ALIGN.CENTER,
+        )
+
+    rows = (
+        (
+            "Pseudo-spots",
+            "PBMC\nGSE194122 BMMC",
+            "Human: peripheral blood\nHuman: bone marrow",
+            "Calculated profile based on composition",
+            "Exact composition used to build each spot",
+            BLUE,
+            BLUE_PALE,
+        ),
+        (
+            "Physical\ndilutions",
+            "GSE129785\nCD4-memory + CD8-naive\nMonocytes + T cells",
+            "Human: blood immune cells",
+            "Measured real profile",
+            "Known real composition.",
+            GOLD,
+            GOLD_PALE,
+        ),
+        (
+            "Real spatial\ntissue",
+            "GSE205055\nGSE263333",
+            "Mouse: day-13 mouse embryos, brains from young mice 21–22 days "
+            "after birth, brains from 5-month-old mice with EAE\n"
+            "Human: adult hippocampus",
+            "Measured real profile",
+            "Composition unknown. Supporting evidence only.",
+            TEAL,
+            TEAL_PALE,
+        ),
+    )
+    for row_index, (
+        category,
+        datasets,
+        tissue,
+        atac_profile,
+        label,
+        accent,
+        pale,
+    ) in enumerate(rows, start=1):
+        set_table_cell(
+            table.cell(row_index, 0),
+            category,
+            fill=accent,
+            color=NAVY if accent == GOLD else WHITE,
+            size=15,
+            bold=True,
+            align=PP_ALIGN.CENTER,
+        )
+        set_table_cell(
+            table.cell(row_index, 1), datasets, fill=pale, size=13, bold=True
+        )
+        set_table_cell(table.cell(row_index, 2), tissue, fill=pale, size=13)
+        set_table_cell(
+            table.cell(row_index, 3), atac_profile, fill=pale, size=12.5
+        )
+        set_table_cell(
+            table.cell(row_index, 4),
+            label,
+            fill=pale,
+            size=12.5,
+        )
+
+    # Preserve the run boundaries created by the final manual slide edits.
+    split_table_cell_runs(
+        table.cell(0, 3),
+        ("SPOT-LEVEL\n", "SPATIAL ", "ATAC PROFILE"),
+        (None, "en-US", None),
+    )
+    split_table_cell_runs(
+        table.cell(1, 0), ("P", "seudo-spots"), ("en-US", None)
+    )
+    split_table_cell_paragraphs(
+        table.cell(1, 1), ("PBMC", "GSE194122 BMMC")
+    )
+    pseudo_tissue_runs = split_table_cell_runs(
+        table.cell(1, 2),
+        ("Human:", " peripheral blood\n", "Human", ":", " bone marrow"),
+        ("en-US", None, None, "en-US", None),
+    )
+    pseudo_tissue_runs[0].font.bold = True
+    pseudo_tissue_runs[2].font.bold = True
+    pseudo_tissue_runs[3].font.bold = True
+    split_table_cell_runs(
+        table.cell(1, 3),
+        ("Calculated profile based on composition",),
+        ("en-US",),
+    )
+    split_table_cell_runs(
+        table.cell(1, 4),
+        ("Exact ", "composition", " used to build each spot"),
+        (None, "en-US", None),
+    )
+    split_table_cell_runs(
+        table.cell(2, 3),
+        ("Measured ", "real ", "profile"),
+        (None, "en-US", None),
+    )
+    split_table_cell_runs(
+        table.cell(2, 4), ("Known real composition.",), ("en-US",)
+    )
+    dilution_tissue_runs = split_table_cell_runs(
+        table.cell(2, 2),
+        ("Human", ":", " blood", " ", "immune cells"),
+        (None, "en-US", None, "en-US", None),
+    )
+    dilution_tissue_runs[0].font.bold = True
+    dilution_tissue_runs[1].font.bold = True
+    tissue_runs = split_table_cell_runs(
+        table.cell(3, 2),
+        (
+            "Mouse",
+            ": day-13 mouse embryos, brains from young mice 21–22 days after birth,",
+            " ",
+            "brains from 5-month-old mice with EAE\n",
+            "Human",
+            ": adult hippocampus",
+        ),
+    )
+    tissue_runs[0].font.bold = True
+    tissue_runs[4].font.bold = True
+    # PowerPoint retained this manually inserted spacer as an inherited-font
+    # run rather than applying the surrounding cell style to it.
+    spacer_run = tissue_runs[2]
+    spacer_run.font.name = None
+    spacer_run.font.size = Pt(14)
+    spacer_run.font.bold = None
+    spacer_run.font.italic = None
+    spacer_properties = spacer_run._r.get_or_add_rPr()
+    for child in list(spacer_properties):
+        if child.tag.endswith("}solidFill"):
+            spacer_properties.remove(child)
+    split_table_cell_runs(
+        table.cell(3, 3),
+        ("Measured ", "real profile"),
+        (None, "en-US"),
+    )
+    split_table_cell_runs(
+        table.cell(3, 4),
+        ("C", "omposition", " unknown", ". Supporting evidence only."),
+        ("en-US", None, "en-US", None),
+    )
+
+    add_footer(slide)
+    return slide
+
+
+def _read_results_table(path=RESULTS_TSV):
+    """Read the two-method RMSE/JSD table used by the final results slide."""
+    with path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle, delimiter="\t"))
+    methods = {row["method"].casefold(): row for row in rows}
+    if set(methods) != {"count-only", "shapemix"}:
+        raise RuntimeError(
+            f"Expected Count-only and ShapeMix rows in {path}; found "
+            f"{sorted(row['method'] for row in rows)}"
+        )
+
+    columns = (
+        (
+            "PBMC\nNatural frequencies",
+            "PBMC — natural cell frequencies",
+            False,
+        ),
+        (
+            "PBMC\nEqual frequencies",
+            "PBMC — equal cell frequencies",
+            False,
+        ),
+        (
+            "GSE194122 BMMC\nNatural frequencies",
+            "GSE194122 BMMC — natural cell frequencies",
+            False,
+        ),
+        (
+            "GSE194122 BMMC\nEqual frequencies",
+            "GSE194122 BMMC — equal cell frequencies",
+            False,
+        ),
+        (
+            "GSE129785\nCD4 memory vs CD8 naive*",
+            "GSE129785 — CD4 memory vs CD8 naive",
+            True,
+        ),
+        (
+            "GSE129785\nMonocytes vs total T cells*",
+            "GSE129785 — monocytes vs total T cells",
+            True,
+        ),
+    )
+
+    def parse_cell(text):
+        values = {}
+        for field in text.split(";"):
+            key, value = field.split("=", 1)
+            values[key] = float(value)
+        if set(values) != {"RMSE", "JSD"}:
+            raise RuntimeError(f"Invalid RMSE/JSD cell in {path}: {text!r}")
+        return values
+
+    result = []
+    for label, source_column, nominal in columns:
+        if source_column not in methods["count-only"]:
+            raise RuntimeError(f"Missing column {source_column!r} in {path}")
+        result.append(
+            {
+                "label": label,
+                "nominal": nominal,
+                "count_only": parse_cell(methods["count-only"][source_column]),
+                "shapemix": parse_cell(methods["shapemix"][source_column]),
+            }
+        )
+    return result
+
+
+def _build_results_slide(presentation):
+    """Compare ShapeMix with the count-only model on the six truth sets."""
+    results = _read_results_table()
+    if not all(
+        row["shapemix"][metric] < row["count_only"][metric]
+        for row in results
+        for metric in ("RMSE", "JSD")
+    ):
+        raise RuntimeError(
+            "The final results slide requires ShapeMix to have lower RMSE and "
+            "JSD in all six comparisons"
+        )
+
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    set_bg(slide, CREAM)
+    add_title(
+        slide,
+        "Compare Count-Only and ShapeMix",
+        "Evaluation results",
+        slide_num=19,
+    )
+    title_shape = _shape_by_id(slide, 3)
+    title_shape.height = 489365
+    title_paragraph = title_shape.text_frame.paragraphs[0]
+    title_paragraph.runs[0].text = "Compare Count-Only and "
+    title_paragraph.runs[0].font.italic = None
+    title_run = title_paragraph.add_run()
+    title_run.text = "ShapeMix"
+    title_run.font.name = FONT_DISPLAY
+    title_run.font.size = Pt(27)
+    title_run.font.bold = True
+    title_run.font.italic = None
+    title_run.font.color.rgb = C(NAVY)
+    metric_box = add_rich_text(
+        slide,
+        [
+            ("RMSE", {"bold": True, "color": BLUE}),
+            (": ", {"bold": True, "color": BLUE}),
+            (" ", {}),
+            ("R", {"bold": None, "italic": None}),
+            ("oot ", {}),
+            ("M", {"bold": None, "italic": None}),
+            ("ean ", {}),
+            ("S", {"bold": None, "italic": None}),
+            ("quare ", {}),
+            ("E", {"bold": None, "italic": None}),
+            ("rror", {}),
+            ("     ", {}),
+            ("JSD", {"bold": True, "color": PURPLE}),
+            (":", {"bold": True, "color": PURPLE}),
+            (" ", {"bold": None, "italic": None}),
+            (" ", {}),
+            ("Jenson-Shannon Divergence", {}),
+            ("    ", {}),
+            ("Lower is better.", {"bold": True, "color": TEAL_DARK}),
+        ],
+        0.71,
+        1.196,
+        11.91,
+        0.30,
+        size=13,
+        color=SLATE,
+        align=PP_ALIGN.CENTER,
+    )
+    metric_box.left = 649224
+    metric_box.top = 1093583
+    metric_box.width = 10890504
+    metric_box.height = 273921
+
+    chart_rows = list(reversed(results))
+    categories = (
+        "Monocytes / total T cells",
+        "CD4 memory / CD8 naive",
+        "BMMC: equal",
+        "BMMC: natural",
+        "PBMC: equal",
+        "PBMC: natural",
+    )
+    rmse_reductions = [
+        round(
+            100
+            * (row["count_only"]["RMSE"] - row["shapemix"]["RMSE"])
+            / row["count_only"]["RMSE"],
+            1,
+        )
+        for row in chart_rows
+    ]
+    jsd_reductions = [
+        round(
+            100
+            * (row["count_only"]["JSD"] - row["shapemix"]["JSD"])
+            / row["count_only"]["JSD"],
+            1,
+        )
+        for row in chart_rows
+    ]
+    chart_data = ChartData()
+    chart_data.categories = categories
+    chart_data.add_series("JSD", jsd_reductions)
+    chart_data.add_series("RMSE", rmse_reductions)
+    chart = slide.shapes.add_chart(
+        XL_CHART_TYPE.BAR_CLUSTERED,
+        582978,
+        1627656,
+        11022995,
+        4448371,
+        chart_data,
+    ).chart
+    chart.has_title = True
+    chart.chart_title.text_frame.text = "Error Reduction with ShapeMix vs Count-Only (%)"
+    chart_title_run = chart.chart_title.text_frame.paragraphs[0].runs[0]
+    chart_title_run.font.name = FONT
+    chart_title_run.font.size = Pt(12)
+    chart_title_run.font.bold = True
+    chart_title_run.font.color.rgb = C(NAVY)
+    chart.has_legend = True
+    chart.legend.position = XL_LEGEND_POSITION.TOP
+    chart.legend.include_in_layout = False
+    chart.legend.font.name = FONT
+    chart.legend.font.size = Pt(12)
+    chart.legend.font.bold = True
+
+    plot = chart.plots[0]
+    plot.gap_width = 78
+    plot.overlap = 0
+    plot.has_data_labels = True
+    data_labels = plot.data_labels
+    data_labels.position = XL_LABEL_POSITION.OUTSIDE_END
+    data_labels.show_value = True
+    data_labels.number_format = '0.0"%";-0.0"%";0.0"%"'
+    data_labels.number_format_is_linked = False
+    data_labels.font.name = FONT
+    data_labels.font.size = Pt(10.5)
+    data_labels.font.bold = True
+    data_labels.font.color.rgb = C(NAVY)
+
+    for series, color in zip(chart.series, (PURPLE, BLUE)):
+        series.format.fill.solid()
+        series.format.fill.fore_color.rgb = C(color)
+        series.format.line.color.rgb = C(color)
+
+    category_axis = chart.category_axis
+    category_axis.reverse_order = False
+    category_axis.tick_label_position = XL_TICK_LABEL_POSITION.LOW
+    category_axis.major_tick_mark = XL_TICK_MARK.NONE
+    category_axis.minor_tick_mark = XL_TICK_MARK.NONE
+    category_axis.tick_labels.font.name = FONT
+    category_axis.tick_labels.font.size = Pt(11)
+    category_axis.tick_labels.font.bold = True
+    category_axis.tick_labels.font.color.rgb = C(NAVY)
+
+    value_axis = chart.value_axis
+    value_axis.minimum_scale = 0.0
+    value_axis.maximum_scale = 30.0
+    value_axis.major_unit = 5.0
+    value_axis.has_major_gridlines = True
+    value_axis.major_tick_mark = XL_TICK_MARK.NONE
+    value_axis.minor_tick_mark = XL_TICK_MARK.NONE
+    value_axis.tick_labels.number_format = '0"%"'
+    value_axis.tick_labels.number_format_is_linked = False
+    value_axis.tick_labels.font.name = FONT
+    value_axis.tick_labels.font.size = Pt(10)
+    value_axis.tick_labels.font.color.rgb = C(SLATE)
+
+    add_rich_text(
+        slide,
+        [
+            ("Natural:", {"bold": True, "color": NAVY}),
+            (" cell types are sampled using their observed frequencies.    ", {}),
+            ("Equal:", {"bold": True, "color": NAVY}),
+            (" every cell type is sampled with the same probability.", {}),
+        ],
+        0.70,
+        6.72,
+        11.92,
+        0.28,
+        size=10.5,
+        color=SLATE,
+        align=PP_ALIGN.CENTER,
+    )
+
+    add_footer(slide)
+    return slide
+
+
 def add_stacked_bar(slide, x, y, w, h, values, colors, labels=None, outline=NAVY):
     total = sum(values)
     cursor = x
@@ -400,10 +973,708 @@ def add_atac_fragment(slide, x, y, w, color):
         add_circle(slide, end_x - 0.035, y - 0.035, 0.07, NAVY, line=NAVY, line_width=0.3)
 
 
+def _shape_by_id(slide, shape_id):
+    for shape in slide.shapes:
+        if shape.shape_id == shape_id:
+            return shape
+    raise KeyError(f"Slide is missing shape id {shape_id}")
+
+
+def _remove_shape(shape):
+    shape._element.getparent().remove(shape._element)
+
+
+def _remove_shape_ids(slide, shape_ids):
+    for shape in list(slide.shapes):
+        if shape.shape_id in shape_ids:
+            _remove_shape(shape)
+
+
+def _set_shape_geometry(slide, shape_id, x, y, width, height):
+    shape = _shape_by_id(slide, shape_id)
+    shape.left = Inches(x)
+    shape.top = Inches(y)
+    shape.width = Inches(width)
+    shape.height = Inches(height)
+
+
+def _replace_text_in_runs(slide, old, new):
+    replacements = 0
+    for shape in slide.shapes:
+        if not getattr(shape, "has_text_frame", False):
+            continue
+        for paragraph in shape.text_frame.paragraphs:
+            for run in paragraph.runs:
+                if old in run.text:
+                    run.text = run.text.replace(old, new)
+                    replacements += 1
+    return replacements
+
+
+def _remove_shapes_with_text(slide, prefixes):
+    """Remove text-bearing shapes whose stripped text starts with a prefix."""
+    for shape in list(slide.shapes):
+        text = getattr(shape, "text", "").strip()
+        if any(text.startswith(prefix) for prefix in prefixes):
+            _remove_shape(shape)
+
+
+def _remove_shapes_with_exact_text(slide, labels):
+    """Remove text-bearing shapes whose stripped text exactly matches a label."""
+    for shape in list(slide.shapes):
+        if getattr(shape, "text", "").strip() in labels:
+            _remove_shape(shape)
+
+
+def _replace_exact_shape_text(slide, old, new, *, remove_extra_runs=False):
+    """Replace one complete shape label while preserving its first-run style."""
+    matches = [
+        shape
+        for shape in slide.shapes
+        if getattr(shape, "has_text_frame", False) and shape.text == old
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(
+            f"Expected one shape containing {old!r}; found {len(matches)}"
+        )
+
+    shape = matches[0]
+    paragraphs = shape.text_frame.paragraphs
+    all_runs = [run for paragraph in paragraphs for run in paragraph.runs]
+    first_run = all_runs[0] if all_runs else None
+    if first_run is None:
+        shape.text = new
+        return
+
+    first_run.text = new
+    for run in all_runs[1:]:
+        if remove_extra_runs:
+            run._r.getparent().remove(run._r)
+        else:
+            run.text = ""
+
+
+def _add_step_label(slide, number, name, y, color):
+    add_circle(slide, 0.94, y, 0.38, color, line=color, line_width=0.8)
+    add_text(
+        slide,
+        str(number),
+        0.94,
+        y,
+        0.38,
+        0.34,
+        size=14,
+        color=WHITE,
+        bold=True,
+        align=PP_ALIGN.CENTER,
+        valign=MSO_ANCHOR.MIDDLE,
+        margin=0,
+    )
+    add_text(
+        slide,
+        name,
+        1.43,
+        y + (0.009 if number == 2 else 0.06),
+        1.40,
+        0.27,
+        size=12,
+        color=color if number != 1 else TEAL_DARK,
+        bold=True,
+    )
+
+
+def _build_reviewed_atac_slide(presentation, *, detailed):
+    """Build the aligned total-count or fragment-length ATAC explainer slide."""
+    slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+    set_bg(slide, WHITE)
+    add_title(
+        slide,
+        "ATAC-seq turns accessible DNA into peak counts",
+        "ATAC-seq basics",
+        slide_num=None if detailed else 3,
+    )
+    add_text(
+        slide,
+        "The same genomic regions line up from chromatin → fragments → counts.",
+        0.70,
+        1.15,
+        11.90,
+        0.32,
+        size=15.5,
+        color=SLATE,
+        align=PP_ALIGN.CENTER,
+    )
+
+    # Three rows share the same horizontal genomic coordinate system.  The
+    # pale vertical bands align each selected peak across all three rows.
+    add_card(slide, 0.72, 1.571, 11.90, 1.390, fill=PALE, line=MID)
+    add_card(slide, 0.73, 3.088, 11.90, 1.560, fill=WHITE, line=MID)
+    add_card(slide, 0.72, 4.801, 11.91, 1.779, fill=BLUE_PALE, line=BLUE)
+    peak_columns = (
+        (2.977, 2.300, "F2F6FE"),
+        (6.050, 2.600, "EEF9F7"),
+        (9.380, 2.350, "FFF8E8"),
+    )
+    for x, width, fill in peak_columns:
+        add_shape(
+            slide,
+            MSO_SHAPE.RECTANGLE,
+            x,
+            1.680 if x == 2.977 else 1.669 if x == 6.050 else 1.671,
+            width,
+            1.170,
+            fill,
+            line=fill,
+            line_width=0.2,
+        )
+        add_shape(
+            slide,
+            MSO_SHAPE.RECTANGLE,
+            x,
+            3.175 if x != 9.380 else 3.184,
+            width,
+            1.340,
+            fill,
+            line=fill,
+            line_width=0.2,
+        )
+
+    # Row 1: chromatin and accessible linker DNA.
+    _add_step_label(slide, 1, "CHROMATIN", 1.760, TEAL)
+    add_line(slide, 2.194, 2.350, 12.180, 2.350, color="654640", width=1.7)
+    for center_x in (5.533, 6.820, 7.820, 10.792, 12.020):
+        add_nucleosome(slide, center_x, 2.350, scale=0.92)
+    for marker_x in (3.480, 4.007, 4.581, 6.200, 8.520, 9.941, 11.364):
+        add_tn5_marker(slide, marker_x, 2.350)
+    add_pill(slide, "Tn5", 3.021, 1.860, 0.560, 0.240, BLUE, size=8.2)
+    add_text(
+        slide,
+        "DNA wrapped around histones",
+        6.355,
+        2.641,
+        1.920,
+        0.180,
+        size=9.5,
+        color=PURPLE,
+        bold=True,
+        align=PP_ALIGN.CENTER,
+    )
+    add_text(
+        slide,
+        "exposed linker DNA",
+        3.373,
+        2.639,
+        1.380,
+        0.180,
+        size=9.5,
+        color=TEAL_DARK,
+        bold=True,
+        align=PP_ALIGN.CENTER,
+    )
+
+    # Row 2: six distinct paired-end fragments.  The detailed version adds a
+    # vertical legend; the total-count version deliberately omits that legend.
+    _add_step_label(slide, 2, "FRAGMENTS", 3.190, CORAL)
+    if detailed:
+        add_pill(
+            slide, "SHORT • OPEN DNA", 0.912, 3.655, 1.828, 0.240, CORAL, size=8.0
+        )
+        add_pill(
+            slide,
+            "MEDIUM • SPANS 1 NUCLEOSOME",
+            0.912,
+            3.986,
+            1.828,
+            0.240,
+            GOLD,
+            color=NAVY,
+            size=7.3,
+        )
+        add_pill(
+            slide,
+            "LONG • SPANS 2 NUCLEOSOMES",
+            0.912,
+            4.301,
+            1.828,
+            0.240,
+            PURPLE,
+            size=7.3,
+        )
+    for x, y, width, color in (
+        (3.464, 3.700, 0.630, CORAL),
+        (4.040, 3.885, 0.730, CORAL),
+        (4.685, 3.695, 1.480, GOLD),
+        (6.265, 4.220, 2.220, PURPLE),
+        (8.435, 3.695, 1.480, GOLD),
+        (9.907, 3.908, 1.480, GOLD),
+    ):
+        add_atac_fragment(slide, x, y, width, color)
+
+    # Row 3: identical total heights in both views.  Slide 13 subdivides the
+    # same totals by fragment-length category, which is ShapeMix's extra input.
+    _add_step_label(slide, 3, "PEAK COUNTS", 4.980, BLUE)
+    add_pill(
+        slide,
+        "HEIGHT = COUNT    \nCOLOR = FRAGMENT  LENGTH",
+        0.914,
+        5.737,
+        1.780,
+        0.340,
+        NAVY,
+        size=7.5,
+    )
+    chart_x1, chart_x2, baseline = 2.950, 12.180, 6.230
+    for value in (0, 2, 4, 6):
+        y = baseline - value * 0.17
+        add_line(slide, chart_x1, y, chart_x2, y, color=MID, width=0.7)
+        add_text(
+            slide,
+            str(value),
+            2.620,
+            y - 0.09,
+            0.240,
+            0.180,
+            size=8.5,
+            color=SLATE,
+            align=PP_ALIGN.RIGHT,
+        )
+    add_line(slide, chart_x1, 5.210, chart_x1, baseline, color=NAVY, width=1.0)
+
+    if detailed:
+        for x, y, width, height, color in (
+            (3.050, 5.550, 2.300, 0.680, CORAL),
+            (3.050, 5.380, 2.300, 0.170, GOLD),
+            (6.050, 5.890, 2.600, 0.340, GOLD),
+            (6.050, 5.550, 2.600, 0.340, PURPLE),
+            (9.450, 5.720, 2.350, 0.510, GOLD),
+        ):
+            add_shape(
+                slide, MSO_SHAPE.RECTANGLE, x, y, width, height, color, line=color
+            )
+        for label, x, y, width, height, color in (
+            ("4", 3.050, 5.550, 2.300, 0.680, WHITE),
+            ("1", 3.050, 5.380, 2.300, 0.170, NAVY),
+            ("2", 6.050, 5.890, 2.600, 0.340, NAVY),
+            ("2", 6.050, 5.550, 2.600, 0.340, WHITE),
+            ("3", 9.450, 5.720, 2.350, 0.510, NAVY),
+        ):
+            add_text(
+                slide,
+                label,
+                x,
+                y,
+                width,
+                height,
+                size=10,
+                color=color,
+                bold=True,
+                align=PP_ALIGN.CENTER,
+                valign=MSO_ANCHOR.MIDDLE,
+                margin=0,
+            )
+        rule = (
+            "P1: 4 short + 1 medium = 5   |   P2: 2 medium + 2 long = 4   |   "
+            "P3: 3 medium = 3"
+        )
+    else:
+        for x, y, width, height in (
+            (3.050, 5.360, 2.300, 0.870),
+            (6.050, 5.560, 2.600, 0.670),
+            (9.450, 5.720, 2.350, 0.510),
+        ):
+            add_shape(
+                slide, MSO_SHAPE.RECTANGLE, x, y, width, height, GOLD, line=GOLD
+            )
+        rule = "P1: 5   |   P2: 4   |   P3: 3"
+
+    for total, x, y, width in (
+        ("5", 3.050, 5.140, 2.300),
+        ("4", 6.050, 5.310, 2.600),
+        ("3", 9.450, 5.480, 2.350),
+    ):
+        add_text(
+            slide,
+            total,
+            x,
+            y,
+            width,
+            0.200,
+            size=13,
+            color=NAVY,
+            bold=True,
+            align=PP_ALIGN.CENTER,
+        )
+    for label, x, width in (
+        ("Peak 1", 3.050, 2.300),
+        ("Peak 2", 6.050, 2.600),
+        ("Peak 3", 9.450, 2.350),
+    ):
+        add_text(
+            slide,
+            label,
+            x,
+            6.280,
+            width,
+            0.200,
+            size=9.5,
+            color=NAVY,
+            bold=True,
+            align=PP_ALIGN.CENTER,
+        )
+    add_pill(slide, rule, 2.140, 6.720, 9.050, 0.290, TEAL, size=9.7)
+    add_footer(slide)
+    add_notes(
+        slide,
+        "Read the slide from top to bottom at the same horizontal genomic "
+        "position. Tn5 cuts exposed DNA, sequencing produces fragments, and "
+        "the aligned bars summarize each selected peak."
+        + (
+            " This view preserves how each peak's total is divided among "
+            "short, medium, and long fragments."
+            if detailed
+            else " This introductory view shows only the total count per peak."
+        ),
+    )
+    return slide
+
+
+def _patch_title_slide(slide):
+    kicker = _shape_by_id(slide, 2)
+    kicker.text_frame.paragraphs[0].runs[0].text = "PROJECT OVERVIEW"
+
+    title = _shape_by_id(slide, 3)
+    title.left = 658366
+    title.top = 1018034
+    title.width = 10898633
+    title.height = 1181862
+    tf = title.text_frame
+    tf.clear()
+    tf.word_wrap = True
+    paragraph = tf.paragraphs[0]
+    paragraph.alignment = None
+    paragraph.space_before = None
+    paragraph.space_after = None
+    run = paragraph.add_run()
+    run.text = (
+        "ShapeMix-ATAC: A Novel Fragment-Shape-Aware Bayesian Model for "
+        "Spatial ATAC-seq Deconvolution"
+    )
+    run.font.name = FONT_DISPLAY
+    run.font.size = Pt(36)
+    run.font.bold = True
+    run.font.color.rgb = C(WHITE)
+
+    subtitle = _shape_by_id(slide, 4)
+    subtitle.top = 2965702
+
+    # The reviewed title slide moved the mixed-spot illustration down and to
+    # the right to make room for the full project title.
+    for shape_id in range(6, 37):
+        shape = _shape_by_id(slide, shape_id)
+        shape.left += 524934
+        shape.top += 1371601
+
+
+def _add_slide_number(slide, number, *, height=0.249):
+    add_text(
+        slide,
+        f"{number:02d}",
+        12.18,
+        0.34,
+        0.45,
+        height,
+        size=10,
+        color=SLATE,
+        bold=True,
+        align=PP_ALIGN.RIGHT,
+    )
+
+
+def _reorder_and_prune(presentation, selected_slides):
+    selected_ids = [slide.slide_id for slide in selected_slides]
+    if len(selected_ids) != len(set(selected_ids)):
+        raise RuntimeError("Final slide selection contains a duplicate slide")
+
+    slide_id_list = presentation.slides._sldIdLst
+    id_to_element = {int(item.id): item for item in list(slide_id_list)}
+    missing = [slide_id for slide_id in selected_ids if slide_id not in id_to_element]
+    if missing:
+        raise RuntimeError(f"Could not resolve selected slide ids: {missing}")
+
+    for item in list(slide_id_list):
+        slide_id_list.remove(item)
+    for slide_id in selected_ids:
+        slide_id_list.append(id_to_element[slide_id])
+
+
+def _assemble_reviewed_deck(path):
+    """Apply reviewed patches and curate the current 19-slide presentation."""
+    script_dir = str(Path(__file__).resolve().parent)
+    if script_dir not in sys.path:
+        sys.path.insert(0, script_dir)
+
+    import insert_hypothesis_slide as hypothesis
+    import insert_length_binned_deconvolution_slide as length_variant
+    import insert_likelihood_slide as likelihood
+    import insert_prior_slide as prior
+    import insert_shapemix_bayesian_model_slide as shapemix_model
+    import insert_shapemix_multinomial_slide as shapemix_multinomial
+    import insert_spatial_atac_novelty_slide as novelty
+    import insert_spatial_atac_slides as spatial
+    import rename_barcode_on_spatial_slides as barcode_wording
+    import update_slide2_chromatin_tn5 as chromatin_patch
+    import update_slide5_spot_grid as spot_grid
+    import update_slide6_fix_overlaps as spot_overlap_patch
+    import update_slide6_square_spot as square_spot
+    import update_slide6_two_cell_atac_profiles as two_cell
+    import update_slide7_bayes_simplify as count_bayes
+    import update_slide7_deconvolution_impact as impact
+
+    # These reviewed patches operate on the base slides and intentionally
+    # round-trip the temporary output deck before final curation.
+    for module in (chromatin_patch, two_cell):
+        module.DECK = path
+        module.main()
+
+    presentation = Presentation(path)
+    if len(presentation.slides) != 23:
+        raise RuntimeError(
+            f"Expected the 23-slide base deck before curation; found {len(presentation.slides)}"
+        )
+
+    title_slide = presentation.slides[0]
+    chromatin_slide = presentation.slides[1]
+    count_deconvolution_slide = presentation.slides[4]
+    dataset_slide = presentation.slides[14]
+
+    _patch_title_slide(title_slide)
+    _replace_exact_shape_text(
+        chromatin_slide, "Same DNA, different cells", "Same DNA,\ndifferent cells"
+    )
+    _remove_shapes_with_text(chromatin_slide, ("Source: Buenrostro",))
+    _replace_text_in_runs(
+        count_deconvolution_slide,
+        "BEST RECONSTRUCT THE OBSERVED ATAC COUNTS",
+        "BEST REPRESENT THE OBSERVED ATAC PEAK COUNTS",
+    )
+    slide_number = _shape_by_id(count_deconvolution_slide, 4)
+    slide_number.text_frame.paragraphs[0].runs[0].text = "06"
+
+    # The two reviewed ATAC slides share one coordinate system.  Slide 3 shows
+    # only the total peak count; slide 13 preserves the fragment-length split.
+    atac_count_slide = _build_reviewed_atac_slide(presentation, detailed=False)
+    atac_length_slide = _build_reviewed_atac_slide(presentation, detailed=True)
+
+    # Clone the reviewed count-only deconvolution slide and convert only the
+    # bars/annotations that distinguish the length-binned version.
+    length_variant.build_variant_in_memory(presentation)
+    length_deconvolution_slide = presentation.slides[5]
+    for shape in list(length_deconvolution_slide.shapes):
+        if getattr(shape, "text", "").strip() == "06":
+            _remove_shape(shape)
+
+    blank = presentation.slide_layouts[6]
+
+    spatial_slide = presentation.slides.add_slide(blank)
+    spatial.build_slide_a(spatial_slide)
+    spot_grid.clear_slide_body(spatial_slide)
+    spot_grid.draw_figure(spatial_slide)
+    spot_grid.set_notes(spatial_slide)
+    barcode_wording.apply_replacements(spatial_slide, barcode_wording.REPLACEMENTS_A)
+    _replace_exact_shape_text(
+        spatial_slide,
+        "One spot barcode per square",
+        "One spot barcode per spot (square)",
+    )
+    _remove_shapes_with_text(spatial_slide, ("Source: Deng",))
+    _add_slide_number(spatial_slide, 4)
+
+    blend_slide = presentation.slides.add_slide(blank)
+    spatial.build_slide_b(blend_slide)
+    square_spot.remove_old_left_diagram(blend_slide)
+    square_spot.draw_square_spot(blend_slide)
+    square_spot.set_notes(blend_slide)
+    barcode_wording.apply_replacements(blend_slide, barcode_wording.REPLACEMENTS_B)
+    spot_overlap_patch.fix_cell_size_callout(blend_slide)
+    spot_overlap_patch.fix_blended_profile_pill(blend_slide)
+    _replace_exact_shape_text(
+        blend_slide,
+        "Spots are bigger than cells, so each spot reports a blend",
+        "Spots are bigger than cells, so each spot reports blended peak counts",
+    )
+    _replace_exact_shape_text(
+        blend_slide,
+        "Un-mixing each spot back into a cell-type recipe is DECONVOLUTION — "
+        "the next slides show how.",
+        "Un-mixing each spot back into breakdown of cell counts by cell-type  "
+        "is called DECONVOLUTION.",
+        remove_extra_runs=True,
+    )
+    _remove_shapes_with_text(blend_slide, ("Sources: Deng",))
+    _add_slide_number(blend_slide, 5, height=0.26)
+
+    impact_slide = presentation.slides.add_slide(blank)
+    impact.build(impact_slide)
+
+    novelty_slide = presentation.slides.add_slide(blank)
+    novelty.build(novelty_slide)
+    _replace_exact_shape_text(
+        novelty_slide,
+        "Peak totals only  →  fragment lengths are collapsed away",
+        "Peak totals only  →  fragment lengths are ignored",
+    )
+    _remove_shapes_with_exact_text(novelty_slide, {"1", "2"})
+    _remove_shapes_with_text(novelty_slide, ("Source: Ouologuem",))
+    _remove_shape_ids(novelty_slide, {34, 41, 43})
+    _replace_exact_shape_text(
+        novelty_slide,
+        "NOVELTY: model the fragment-length composition inside each peak—not peak counts alone",
+        "NOVELTY: model the fragment-length composition inside each peak, not "
+        "peak counts alone\nNote: RNA measurements have no equivalent "
+        "fragment-length feature.",
+    )
+    _remove_shapes_with_text(
+        novelty_slide, ("RNA measurements have no equivalent fragment-length feature.",)
+    )
+    # The reviewed slide uses clean fragment-length lines rather than drawing
+    # literal nucleosome circles inside them.  Re-center that simplified key.
+    novelty_geometry = {
+        24: (7.100, 2.926, 5.200, 0.480),
+        25: (7.160, 3.566, 0.930, 0.280),
+        26: (8.500, 3.666, 0.820, 0.045),
+        27: (8.460, 3.601, 0.130, 0.130),
+        28: (9.280, 3.601, 0.130, 0.130),
+        29: (9.976, 3.556, 2.230, 0.350),
+        30: (7.160, 4.046, 0.930, 0.280),
+        31: (8.360, 4.146, 1.280, 0.045),
+        32: (8.320, 4.081, 0.130, 0.130),
+        33: (9.600, 4.081, 0.130, 0.130),
+        36: (9.976, 4.036, 2.230, 0.350),
+        37: (7.160, 4.526, 0.930, 0.280),
+        38: (8.200, 4.626, 1.620, 0.045),
+        39: (8.160, 4.561, 0.130, 0.130),
+        40: (9.780, 4.561, 0.130, 0.130),
+        45: (9.994, 4.516, 2.230, 0.350),
+        46: (0.700, 5.720, 11.920, 0.956),
+        47: (0.950, 5.769, 11.420, 0.602),
+    }
+    for shape_id, geometry in novelty_geometry.items():
+        _set_shape_geometry(novelty_slide, shape_id, *geometry)
+
+    hypothesis_slide = presentation.slides.add_slide(blank)
+    hypothesis.build(hypothesis_slide)
+
+    count_bayes_slide = presentation.slides.add_slide(blank)
+    count_bayes.rebuild(count_bayes_slide)
+
+    prior_slide = presentation.slides.add_slide(blank)
+    prior.build(prior_slide)
+
+    likelihood_slide = presentation.slides.add_slide(blank)
+    likelihood.build(likelihood_slide)
+    _replace_exact_shape_text(
+        likelihood_slide,
+        "N  ~  NegBinomial( mean = n ,   inverse-dispersion = φref · Σ z )",
+        "N  ~  NegBinomial( mean n=z · R ,   inverse-dispersion = φref · Σ z )",
+    )
+
+    shapemix_model_slide = presentation.slides.add_slide(blank)
+    shapemix_model.build(shapemix_model_slide)
+
+    shapemix_multinomial_slide = presentation.slides.add_slide(blank)
+    shapemix_multinomial.build(shapemix_multinomial_slide)
+    add_line(
+        shapemix_multinomial_slide,
+        2.056,
+        2.260,
+        2.056,
+        2.622,
+        color=TEAL,
+        width=1.5,
+    )
+
+    evaluation_dataset_slide = _build_evaluation_dataset_slide(presentation)
+    results_slide = _build_results_slide(presentation)
+
+    # The final reviewed dataset slide omits its legacy slide number and source
+    # footer.  The evaluation dataset slide replaces the older broad roadmap.
+    _remove_shape_ids(dataset_slide, {4, 35})
+
+    selected_slides = [
+        title_slide,
+        chromatin_slide,
+        atac_count_slide,
+        spatial_slide,
+        blend_slide,
+        count_deconvolution_slide,
+        impact_slide,
+        novelty_slide,
+        hypothesis_slide,
+        count_bayes_slide,
+        prior_slide,
+        likelihood_slide,
+        atac_length_slide,
+        length_deconvolution_slide,
+        shapemix_model_slide,
+        shapemix_multinomial_slide,
+        dataset_slide,
+        evaluation_dataset_slide,
+        results_slide,
+    ]
+    _reorder_and_prune(presentation, selected_slides)
+
+    expected_titles = [
+        "ShapeMix-ATAC: A Novel Fragment-Shape-Aware Bayesian Model for Spatial ATAC-seq Deconvolution",
+        "Chromatin controls which DNA instructions can be used",
+        "ATAC-seq turns accessible DNA into peak counts",
+        "Spatial ATAC maps open chromatin across a tissue",
+        "Spots are bigger than cells, so each spot reports blended peak counts",
+        "Deconvolution works like identifying ingredients in a smoothie",
+        "A better deconvolution method can help many studies",
+        "ShapeMix uses an ATAC-specific signal that RNA methods miss",
+        "Our hypothesis",
+        "Bayesian model to find the number of cells for each cell type",
+        "The prior: what is plausible before seeing any data",
+        "The likelihood: the probability of seeing N, given z",
+        "ATAC-seq turns accessible DNA into peak counts",
+        "Deconvolution works like identifying ingredients in a smoothie",
+        "Bayesian model for ShapeMix",
+        "ShapeMix adds a likelihood for the length-bin split",
+        "Primary dataset: human blood immune cells",
+        "Datasets in Three Categories",
+        "Compare Count-Only and ShapeMix",
+    ]
+    if len(presentation.slides) != len(expected_titles):
+        raise RuntimeError(
+            f"Expected {len(expected_titles)} reviewed slides; found {len(presentation.slides)}"
+        )
+    for number, (slide, expected_title) in enumerate(
+        zip(presentation.slides, expected_titles), start=1
+    ):
+        slide_text = " ".join(
+            shape.text
+            for shape in slide.shapes
+            if getattr(shape, "has_text_frame", False)
+        )
+        if expected_title not in slide_text:
+            raise RuntimeError(
+                f"Slide {number} is missing expected title {expected_title!r}"
+            )
+
+    # The reviewed presentation is intentionally clean of draft speaker notes.
+    for slide in presentation.slides:
+        try:
+            slide.notes_slide.notes_text_frame.text = ""
+        except Exception:
+            pass
+
+    presentation.save(path)
+
+
 def build_deck():
     prs = Presentation()
-    prs.slide_width = Inches(W)
-    prs.slide_height = Inches(H)
+    prs.slide_width = SLIDE_WIDTH_EMU
+    prs.slide_height = SLIDE_HEIGHT_EMU
     blank = prs.slide_layouts[6]
 
     # 1 — Title
@@ -1396,14 +2667,16 @@ def build_deck():
 
     # Core metadata
     prs.core_properties.title = "ShapeMix-ATAC: High School Science Research Deck"
-    prs.core_properties.subject = "Results-free introduction, existing algorithms, Bayesian ShapeMix model, datasets, and evaluation plan"
+    prs.core_properties.subject = "Introduction, Bayesian ShapeMix model, datasets, evaluation design, and results"
     prs.core_properties.author = "Andy Zhuang"
     prs.core_properties.keywords = "ShapeMix, ATAC-seq, spatial deconvolution, Bayesian model, MAP inference, high school research"
-    prs.core_properties.comments = "Draft deck generated from the deconvATAC repository; no study results included."
+    prs.core_properties.comments = "Deck generated from the deconvATAC repository with finalized RMSE and JSD comparisons."
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     prs.save(OUT)
-    print(f"Wrote {OUT} ({len(prs.slides)} slides)")
+    _assemble_reviewed_deck(OUT)
+    final = Presentation(OUT)
+    print(f"Wrote {OUT} ({len(final.slides)} slides)")
 
 
 if __name__ == "__main__":
