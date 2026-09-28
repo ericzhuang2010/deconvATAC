@@ -789,73 +789,75 @@ def _build_results_slide(presentation):
         )
         for row in chart_rows
     ]
-    chart_data = ChartData()
-    chart_data.categories = categories
-    chart_data.add_series("JSD", jsd_reductions)
-    chart_data.add_series("RMSE", rmse_reductions)
-    chart = slide.shapes.add_chart(
-        XL_CHART_TYPE.BAR_CLUSTERED,
-        582978,
-        1627656,
-        11022995,
-        4448371,
-        chart_data,
-    ).chart
-    chart.has_title = True
-    chart.chart_title.text_frame.text = "Error Reduction with ShapeMix vs Count-Only (%)"
-    chart_title_run = chart.chart_title.text_frame.paragraphs[0].runs[0]
-    chart_title_run.font.name = FONT
-    chart_title_run.font.size = Pt(12)
-    chart_title_run.font.bold = True
-    chart_title_run.font.color.rgb = C(NAVY)
-    chart.has_legend = True
-    chart.legend.position = XL_LEGEND_POSITION.TOP
-    chart.legend.include_in_layout = False
-    chart.legend.font.name = FONT
-    chart.legend.font.size = Pt(12)
-    chart.legend.font.bold = True
+    def add_metric_chart(metric, values, x, width, color, maximum):
+        """Add one metric panel so RMSE and JSD are never interleaved."""
+        chart_data = ChartData()
+        chart_data.categories = categories
+        chart_data.add_series(metric, values)
+        chart = slide.shapes.add_chart(
+            XL_CHART_TYPE.BAR_CLUSTERED,
+            Inches(x),
+            Inches(1.74),
+            Inches(width),
+            Inches(4.78),
+            chart_data,
+        ).chart
+        chart.has_title = True
+        chart.chart_title.text_frame.text = f"{metric} error reduction (%)"
+        chart_title_run = chart.chart_title.text_frame.paragraphs[0].runs[0]
+        chart_title_run.font.name = FONT
+        chart_title_run.font.size = Pt(12)
+        chart_title_run.font.bold = True
+        chart_title_run.font.color.rgb = C(color)
+        chart.has_legend = False
 
-    plot = chart.plots[0]
-    plot.gap_width = 78
-    plot.overlap = 0
-    plot.has_data_labels = True
-    data_labels = plot.data_labels
-    data_labels.position = XL_LABEL_POSITION.OUTSIDE_END
-    data_labels.show_value = True
-    data_labels.number_format = '0.0"%";-0.0"%";0.0"%"'
-    data_labels.number_format_is_linked = False
-    data_labels.font.name = FONT
-    data_labels.font.size = Pt(10.5)
-    data_labels.font.bold = True
-    data_labels.font.color.rgb = C(NAVY)
+        plot = chart.plots[0]
+        plot.gap_width = 64
+        plot.has_data_labels = True
+        data_labels = plot.data_labels
+        data_labels.position = XL_LABEL_POSITION.OUTSIDE_END
+        data_labels.show_value = True
+        data_labels.number_format = '0.0"%";-0.0"%";0.0"%"'
+        data_labels.number_format_is_linked = False
+        data_labels.font.name = FONT
+        data_labels.font.size = Pt(9.5)
+        data_labels.font.bold = True
+        data_labels.font.color.rgb = C(NAVY)
 
-    for series, color in zip(chart.series, (PURPLE, BLUE)):
+        series = chart.series[0]
         series.format.fill.solid()
         series.format.fill.fore_color.rgb = C(color)
         series.format.line.color.rgb = C(color)
 
-    category_axis = chart.category_axis
-    category_axis.reverse_order = False
-    category_axis.tick_label_position = XL_TICK_LABEL_POSITION.LOW
-    category_axis.major_tick_mark = XL_TICK_MARK.NONE
-    category_axis.minor_tick_mark = XL_TICK_MARK.NONE
-    category_axis.tick_labels.font.name = FONT
-    category_axis.tick_labels.font.size = Pt(11)
-    category_axis.tick_labels.font.bold = True
-    category_axis.tick_labels.font.color.rgb = C(NAVY)
+        category_axis = chart.category_axis
+        category_axis.reverse_order = False
+        category_axis.tick_label_position = XL_TICK_LABEL_POSITION.LOW
+        category_axis.major_tick_mark = XL_TICK_MARK.NONE
+        category_axis.minor_tick_mark = XL_TICK_MARK.NONE
+        category_axis.tick_labels.font.name = FONT
+        category_axis.tick_labels.font.size = Pt(9)
+        category_axis.tick_labels.font.bold = True
+        category_axis.tick_labels.font.color.rgb = C(NAVY)
 
-    value_axis = chart.value_axis
-    value_axis.minimum_scale = 0.0
-    value_axis.maximum_scale = 30.0
-    value_axis.major_unit = 5.0
-    value_axis.has_major_gridlines = True
-    value_axis.major_tick_mark = XL_TICK_MARK.NONE
-    value_axis.minor_tick_mark = XL_TICK_MARK.NONE
-    value_axis.tick_labels.number_format = '0"%"'
-    value_axis.tick_labels.number_format_is_linked = False
-    value_axis.tick_labels.font.name = FONT
-    value_axis.tick_labels.font.size = Pt(10)
-    value_axis.tick_labels.font.color.rgb = C(SLATE)
+        value_axis = chart.value_axis
+        value_axis.minimum_scale = 0.0
+        value_axis.maximum_scale = maximum
+        value_axis.major_unit = 5.0
+        value_axis.has_major_gridlines = True
+        gridline = value_axis.major_gridlines.format.line
+        gridline.color.rgb = C(MID)
+        gridline.width = Pt(0.7)
+        value_axis.major_tick_mark = XL_TICK_MARK.NONE
+        value_axis.minor_tick_mark = XL_TICK_MARK.NONE
+        value_axis.tick_labels.number_format = '0"%"'
+        value_axis.tick_labels.number_format_is_linked = False
+        value_axis.tick_labels.font.name = FONT
+        value_axis.tick_labels.font.size = Pt(9)
+        value_axis.tick_labels.font.color.rgb = C(SLATE)
+        return chart
+
+    add_metric_chart("RMSE", rmse_reductions, 0.55, 6.08, BLUE, 25.0)
+    add_metric_chart("JSD", jsd_reductions, 6.72, 6.08, PURPLE, 30.0)
 
     add_rich_text(
         slide,
@@ -863,13 +865,14 @@ def _build_results_slide(presentation):
             ("Natural:", {"bold": True, "color": NAVY}),
             (" cell types are sampled using their observed frequencies.    ", {}),
             ("Equal:", {"bold": True, "color": NAVY}),
-            (" every cell type is sampled with the same probability.", {}),
+            (" every cell type is sampled with the same probability.    ", {}),
+            ("Each metric uses its own scale.", {"italic": True}),
         ],
         0.70,
-        6.72,
+        6.69,
         11.92,
-        0.28,
-        size=10.5,
+        0.32,
+        size=10,
         color=SLATE,
         align=PP_ALIGN.CENTER,
     )
